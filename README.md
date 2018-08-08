@@ -131,5 +131,12 @@ Type-theoretic analysis of ML-style modules.
              Programming_ 17\(4&5\), pp. 433–471, 2007.                              
 \[DR2008\]   Derek Dreyer and Andreas Rossberg, “Mixin’ up the ML module system,” In 
              _Proc. ICFP_, pp. 307–320, 2008.                                        
+\[Ros2010\]  Andreas Rossberg, Claudio V. Russo, and Derek Dreyer, “F-ing Modules,”  
+             In _Proc. Types in Language Design and Implementation_, 2010; 2014      
+             \(JFP\).                                                                
+\[Ros2015\]  Andreas Rossberg, “1ML — Core and modules united \(F-ing first-class    
+             modules\),” In _Proc. ICFP_, 2015; 2016 \(JFP\); 2018 \(updated draft\).
+\[Ros2016\]  Andreas Rossberg, “1ML with Special Effects \(F-ing Generativity        
+             Polymorphism\),” In WadlerFest, 2016.                                   
 \[Cra2017\]  Karl Crary, “Modules, Abstraction, and Parametric Polymorphism,” In     
              _Proc. POPL_, 2017.                                                     

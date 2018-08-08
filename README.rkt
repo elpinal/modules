@@ -13,6 +13,7 @@ Type-theoretic analysis of ML-style modules.
 @(define popl "POPL")
 @(define ppdp "Principles and Practice of Declarative Programming")
 @(define tapsoft "TAPSOFT")
+@(define tldi "Types in Language Design and Implementation")
 
 @(define ancona "Davide Ancona")
 @(define cardelli "Luca Cardelli")
@@ -21,6 +22,7 @@ Type-theoretic analysis of ML-style modules.
 @(define macqueen "David B. MacQueen")
 @(define mitchell "John C. Mitchell")
 @(define moggi "Eugenio Moggi")
+@(define rossberg "Andreas Rossberg")
 @(define russo "Claudio V. Russo")
 @(define tofte "Mads Tofte")
 @(define zucca "Elena Zucca")
@@ -416,9 +418,30 @@ Type-theoretic analysis of ML-style modules.
    (bib-entry
     #:key      "DR2008"
     #:title    "Mixin' up the ML module system"
-    #:author   (authors "Derek Dreyer" "Andreas Rossberg")
+    #:author   (authors "Derek Dreyer" rossberg)
     #:date     "2008"
     #:location (proceedings-location icfp #:pages '(307 320)))
+
+   (bib-entry
+    #:key      "Ros2010"
+    #:title    "F-ing Modules"
+    #:author   (authors rossberg russo "Derek Dreyer")
+    #:date     "2010; 2014 (JFP)"
+    #:location (proceedings-location tldi))
+
+   (bib-entry
+    #:key      "Ros2015"
+    #:title    "1ML — Core and modules united (F-ing first-class modules)"
+    #:author   rossberg
+    #:date     "2015; 2016 (JFP); 2018 (updated draft)"
+    #:location (proceedings-location icfp))
+
+   (bib-entry
+    #:key      "Ros2016"
+    #:title    "1ML with Special Effects (F-ing Generativity Polymorphism)"
+    #:author   rossberg
+    #:date     "2016"
+    #:location "In WadlerFest")
 
    (bib-entry
     #:key      "Cra2017"
