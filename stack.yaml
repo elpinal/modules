@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-12.4
+resolver: lts-12.14
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -64,3 +64,6 @@ packages:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+
+ghc-options:
+  "$locals": -Wall -Werror=overflowed-literals -Wno-simplifiable-class-constraints
