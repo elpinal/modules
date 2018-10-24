@@ -1,7 +1,7 @@
 name:                modules
 version:             0.1.0.0
 github:              "elpinal/modules"
-license:             BSD3
+license:             MIT
 author:              "El Pin Al"
 maintainer:          ""
 copyright:           "2018 El Pin Al"
