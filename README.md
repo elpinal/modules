@@ -74,6 +74,8 @@ Type-theoretic analysis of ML-style modules.
              1997.                                                                   
 \[Rus1998\]  Claudio V. Russo, “Types for modules,” PhD dissertation, University of  
              Edinburgh, UK, 1998.                                                    
+\[Sha1998\]  Zhong Shao, “Typed cross-module compilation,” In _Proc. ICFP_, pp.      
+             141–152, 1998.                                                          
 \[DS1998\]   Dominic Duggan and Constantinos Sourelis, “Parameterized modules,       
              recursive modules and mixin modules,” In ACM SIGPLAN Workshop on ML,    
              pages 87–96, Baltimore, MA, USA, September 1998, 1998.                  

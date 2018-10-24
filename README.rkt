@@ -248,6 +248,13 @@ Type-theoretic analysis of ML-style modules.
     #:location (dissertation-location #:institution "University of Edinburgh, UK" #:degree "PhD"))
 
    (bib-entry
+    #:key      "Sha1998"
+    #:title    "Typed cross-module compilation"
+    #:author   "Zhong Shao"
+    #:date     "1998"
+    #:location (proceedings-location icfp #:pages '(141 152)))
+
+   (bib-entry
     #:key      "DS1998"
     #:title    "Parameterized modules, recursive modules and mixin modules"
     #:author   (authors "Dominic Duggan" "Constantinos Sourelis")
