@@ -20,6 +20,7 @@ description:         Please see the README on GitHub at <https://github.com/elpi
 
 dependencies:
 - base >= 4.7 && < 5
+- containers >= 0.5.11.0
 
 library:
   source-dirs: src
