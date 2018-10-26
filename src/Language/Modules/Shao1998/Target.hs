@@ -1,5 +1,7 @@
 module Language.Modules.Shao1998.Target
-  (
+  ( TyCon(..)
+  , Type(..)
+  , KindEnv(..)
   ) where
 
 import qualified Data.Map.Lazy as Map
@@ -43,4 +45,7 @@ data Term
   deriving (Eq, Show)
 
 newtype Decl = Decl [Term]
+  deriving (Eq, Show)
+
+newtype KindEnv = KindEnv [Kind]
   deriving (Eq, Show)
