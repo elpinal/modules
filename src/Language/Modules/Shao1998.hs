@@ -31,7 +31,6 @@ instance S.ModuleCalculus MC where
   type TypePath MC = TypePath
   type Spec MC = Spec
 
-type Basis = S.Basis MC
 type RealEnv = S.RealEnv MC
 type SpecEnv = S.SpecEnv Spec
 
@@ -118,7 +117,7 @@ data TypeError
   deriving (Eq, Show)
 
 class SigSubsume a where
-  sigSubsume :: Members '[State Basis, Error TypeError] r => a -> a -> Eff r ()
+  sigSubsume :: Members '[State RealEnv, Error TypeError] r => a -> a -> Eff r ()
 
 instance SigSubsume Sig where
   sigSubsume s @ (Sig xs) s' @ (Sig ys)
@@ -145,14 +144,14 @@ defSubsume (x, y) (x', y') e
     | x == x' && y == y' = return ()
     | otherwise          = throwError e
 
-c2m :: Members '[State Basis, Error TypeError] r => TyCon -> Eff r (S.TyCon Kind)
+c2m :: Members '[State RealEnv, Error TypeError] r => TyCon -> Eff r (S.TyCon Kind)
 c2m = evalState ([] :: [TypeIdent]) . c2m'
 
-c2m' :: Members '[State [TypeIdent], State Basis, Error TypeError] r => TyCon -> Eff r (S.TyCon Kind)
+c2m' :: Members '[State [TypeIdent], State RealEnv, Error TypeError] r => TyCon -> Eff r (S.TyCon Kind)
 c2m' (TyConPath tp @ (TypePath _ tid)) = gets (elemIndex tid) >>= maybe f (return . S.TyConVar)
   where
     f = do
-      re <- gets S.realEnv
+      re <- get
       case S.lookupTReal tid (re :: RealEnv) of
         Just tr -> return $ S.getTReal tr
         Nothing -> throwError $ CouldNotRealizeTypePath tp
@@ -164,7 +163,7 @@ c2m' (TyConApp tc1 tc2) = S.TyConApp <$> c2m' tc1 <*> c2m' tc2
 escape :: Member (State [TypeIdent]) r => Eff r ()
 escape = modify (tail :: [TypeIdent] -> [TypeIdent])
 
-transDecl :: Members '[State Basis, State RealEnv, State SpecEnv, Error TypeError] r => Decl -> Eff r T.Decl
+transDecl :: Members '[State RealEnv, State SpecEnv, Error TypeError] r => Decl -> Eff r T.Decl
 transDecl (TypeDecl tid k tc) = do
   tcm <- c2m tc
   k' <- kindOf tcm
