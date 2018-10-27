@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.Modules.Shao1998
   (
@@ -66,8 +69,11 @@ data Spec
   | FctDef FctIdent FSig
   deriving (Eq, Show)
 
-newtype Sig = Sig [Spec]
+type Sig = Sig' Spec
+
+newtype Sig' a = Sig { getSig :: [a] }
   deriving (Eq, Show)
+  deriving (Functor, Applicative) via ZipList
 
 data FSig = FSig StrIdent Sig Sig
   deriving (Eq, Show)
@@ -108,8 +114,8 @@ class SigSubsume a where
   sigSubsume :: Members '[State Basis, Error TypeError] r => a -> a -> Eff r ()
 
 instance SigSubsume Sig where
-  sigSubsume (Sig xs) (Sig ys)
-    | length xs == length ys = sequence_ $ getZipList $ sigSubsume <$> ZipList xs <*> ZipList ys
+  sigSubsume s @ (Sig xs) s' @ (Sig ys)
+    | length xs == length ys = sequence_ $ getSig $ sigSubsume <$> s <*> s'
     | otherwise              = throwError SigLengthMismatch
 
 instance SigSubsume Spec where
