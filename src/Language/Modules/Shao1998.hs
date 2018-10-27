@@ -303,6 +303,11 @@ instance TransModule Struct where
     stenv <- get
     return (T.Let d p, stenv, Sig ss, S.SReal re)
 
+  transModule (Asc sid sig) = do
+    (t, sig', sr) <- modType $ StrPath [] sid
+    sigSubsume sig' sig
+    return (t, mempty, sig, sr)
+
 root :: StrPath -> (StrIdent, PathRest StrIdent)
 root (StrPath [] sid)       = (sid, Empty)
 root (StrPath (sid : xs) x) = (sid, xs :. x)
