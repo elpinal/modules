@@ -15,8 +15,10 @@ import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.State
 import Data.List
+import qualified Data.Map.Lazy as Map
 
 import qualified Language.Modules.Shao1998.Semantics as S
+import qualified Language.Modules.Shao1998.Target as T
 
 data MC
 
@@ -30,6 +32,8 @@ instance S.ModuleCalculus MC where
   type Spec MC = Spec
 
 type Basis = S.Basis MC
+type RealEnv = S.RealEnv MC
+type SpecEnv = S.SpecEnv Spec
 
 newtype StrIdent = StrIdent Int
   deriving (Eq, Show)
@@ -79,7 +83,7 @@ data FSig = FSig StrIdent Sig Sig
   deriving (Eq, Show)
 
 data Decl
-  = TypeDecl TypeIdent TyCon
+  = TypeDecl TypeIdent Kind TyCon
   | StrDecl StrIdent Struct
   | FctDecl FctIdent Fct
   | Local [Decl] [Decl]
@@ -108,6 +112,9 @@ data TypeError
   | FctDefMismatch Spec Spec
   | CouldNotRealizeTypePath TypePath
   | ComponentMismatch Spec Spec
+  | IllegalKindApplication Kind Kind
+  | KindMismatch Kind Kind
+  | NotMono Kind
   deriving (Eq, Show)
 
 class SigSubsume a where
@@ -146,7 +153,7 @@ c2m' (TyConPath tp @ (TypePath _ tid)) = gets (elemIndex tid) >>= maybe f (retur
   where
     f = do
       re <- gets S.realEnv
-      case S.lookupTReal tid (re :: S.RealEnv MC) of
+      case S.lookupTReal tid (re :: RealEnv) of
         Just tr -> return $ S.getTReal tr
         Nothing -> throwError $ CouldNotRealizeTypePath tp
 c2m' TyConInt = return S.TyConInt
@@ -156,3 +163,45 @@ c2m' (TyConApp tc1 tc2) = S.TyConApp <$> c2m' tc1 <*> c2m' tc2
 
 escape :: Member (State [TypeIdent]) r => Eff r ()
 escape = modify (tail :: [TypeIdent] -> [TypeIdent])
+
+transDecl :: Members '[State Basis, State RealEnv, State SpecEnv, Error TypeError] r => Decl -> Eff r T.Decl
+transDecl (TypeDecl tid k tc) = do
+  tcm <- c2m tc
+  k' <- kindOf tcm
+  if k /= k'
+    then throwError $ KindMismatch k k'
+    else do
+      modify $ realize tid $ S.TReal tcm
+      modify $ \(S.SpecEnv xs) -> S.SpecEnv $ ManTypeDef tid k tc : xs
+      return mempty
+
+-- | Obtains the kind of a (possibly open) semantic type constructor.
+kindOf :: Member (Error TypeError) r => S.TyCon Kind -> Eff r Kind
+kindOf (S.TypeStamp _ k _)  = return k
+kindOf (S.TyConVar _)       = return Mono
+kindOf S.TyConInt           = return Mono
+kindOf (S.TyConFun tc1 tc2) = mono tc1 >> mono tc2 >> return Mono
+kindOf (S.TyConAbs tc)      = KFun <$> kindOf tc
+kindOf (S.TyConApp tc1 tc2) = do
+  k1 <- kindOf tc1
+  k2 <- kindOf tc2
+  case k1 of
+    Mono -> throwError $ IllegalKindApplication k1 k2
+    KFun k
+      | k2 == Mono -> return k
+      | otherwise  -> throwError $ IllegalKindApplication k1 k2
+
+mono :: Member (Error TypeError) r => S.TyCon Kind -> Eff r ()
+mono tc = do
+  k <- kindOf tc
+  unless (k == Mono) $
+    throwError $ NotMono k
+
+class Realize i where
+  type Realizer i
+  realize :: i -> Realizer i -> RealEnv -> RealEnv
+
+instance Realize TypeIdent where
+  type Realizer TypeIdent = S.TReal Kind
+
+  realize tid tr re = re { S.tReal = Map.insert tid tr $ S.tReal re }

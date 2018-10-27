@@ -5,7 +5,8 @@
 module Language.Modules.Shao1998.Semantics
   ( ModuleCalculus(..)
   , Basis(..)
-  , RealEnv
+  , SpecEnv(..)
+  , RealEnv(..)
   , lookupTReal
   , TReal(..)
   , TyCon(..)
@@ -85,17 +86,17 @@ deriving instance ModuleCalculus mc => Show (Basis mc)
 newtype StampEnv tp = StampEnv (Map.Map Stamp tp)
   deriving (Eq, Show)
 
-newtype SpecEnv sp = SpecEnv sp
+newtype SpecEnv sp = SpecEnv [sp]
   deriving (Eq, Show)
 
 data RealEnv mc = RealEnv
-  { t :: Map.Map (TypeIdent mc) (TReal (Kind mc))
-  , s :: Map.Map (StrIdent mc) (SReal mc)
-  , f :: Map.Map (FctIdent mc) (FReal mc)
+  { tReal :: Map.Map (TypeIdent mc) (TReal (Kind mc))
+  , sReal :: Map.Map (StrIdent mc) (SReal mc)
+  , fReal :: Map.Map (FctIdent mc) (FReal mc)
   }
 
 deriving instance ModuleCalculus mc => Eq (RealEnv mc)
 deriving instance ModuleCalculus mc => Show (RealEnv mc)
 
 lookupTReal :: (ModuleCalculus mc, Ord (TypeIdent mc)) => TypeIdent mc -> RealEnv mc -> Maybe (TReal (Kind mc))
-lookupTReal tid re = Map.lookup tid $ t re
+lookupTReal tid re = Map.lookup tid $ tReal re
