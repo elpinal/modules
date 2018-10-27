@@ -6,6 +6,7 @@ module Language.Modules.Shao1998
   (
   ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
@@ -107,10 +108,9 @@ class SigSubsume a where
   sigSubsume :: Members '[State Basis, Error TypeError] r => a -> a -> Eff r ()
 
 instance SigSubsume Sig where
-  sigSubsume (Sig []) (Sig [])             = return ()
-  sigSubsume (Sig []) (Sig _)              = throwError SigLengthMismatch
-  sigSubsume (Sig _) (Sig [])              = throwError SigLengthMismatch
-  sigSubsume (Sig (x : xs)) (Sig (y : ys)) = sigSubsume x y >> sigSubsume (Sig xs) (Sig ys)
+  sigSubsume (Sig xs) (Sig ys)
+    | length xs == length ys = sequence_ $ getZipList $ sigSubsume <$> ZipList xs <*> ZipList ys
+    | otherwise              = throwError SigLengthMismatch
 
 instance SigSubsume Spec where
   sigSubsume s @ (AbsTypeDef tid k)    s' @ (AbsTypeDef tid' k')     = defSubsume (tid, k) (tid', k') $ TypeDefMismatch s s'
