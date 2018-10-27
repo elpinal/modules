@@ -1,14 +1,18 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Language.Modules.Shao1998.Semantics
   ( ModuleCalculus(..)
   , Basis(..)
+  , StampEnv(..)
   , SpecEnv(..)
   , RealEnv(..)
   , lookupTReal
   , TReal(..)
+  , SReal(..)
+  , FReal(..)
   , TyCon(..)
   , tyConStampEq
   ) where
@@ -42,7 +46,7 @@ class
   type Spec a
 
 newtype Stamp = Stamp Int
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 data TyCon k
   = TypeStamp Stamp k T.TyCon
@@ -84,7 +88,7 @@ deriving instance ModuleCalculus mc => Eq (Basis mc)
 deriving instance ModuleCalculus mc => Show (Basis mc)
 
 newtype StampEnv tp = StampEnv (Map.Map Stamp tp)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Semigroup, Monoid)
 
 newtype SpecEnv sp = SpecEnv [sp]
   deriving (Eq, Show)

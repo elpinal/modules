@@ -31,14 +31,17 @@ instance S.ModuleCalculus MC where
   type TypePath MC = TypePath
   type Spec MC = Spec
 
+type SReal = S.SReal MC
+type FReal = S.FReal MC
 type RealEnv = S.RealEnv MC
 type SpecEnv = S.SpecEnv Spec
+type StampEnv = S.StampEnv TypePath
 
 newtype StrIdent = StrIdent Int
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 newtype FctIdent = FctIdent Int
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 newtype TypeIdent = TypeIdent Int
   deriving (Eq, Ord, Show)
@@ -114,6 +117,7 @@ data TypeError
   | IllegalKindApplication Kind Kind
   | KindMismatch Kind Kind
   | NotMono Kind
+  | NonEmptyStampEnv StampEnv
   deriving (Eq, Show)
 
 class SigSubsume a where
@@ -163,7 +167,7 @@ c2m' (TyConApp tc1 tc2) = S.TyConApp <$> c2m' tc1 <*> c2m' tc2
 escape :: Member (State [TypeIdent]) r => Eff r ()
 escape = modify (tail :: [TypeIdent] -> [TypeIdent])
 
-transDecl :: Members '[State RealEnv, State SpecEnv, Error TypeError] r => Decl -> Eff r T.Decl
+transDecl :: Members '[State RealEnv, State SpecEnv, State StampEnv, Error TypeError] r => Decl -> Eff r T.Decl
 transDecl (TypeDecl tid k tc) = do
   tcm <- c2m tc
   k' <- kindOf tcm
@@ -173,6 +177,19 @@ transDecl (TypeDecl tid k tc) = do
       modify $ realize tid $ S.TReal tcm
       modify $ \(S.SpecEnv xs) -> S.SpecEnv $ ManTypeDef tid k tc : xs
       return mempty
+transDecl (StrDecl sid s) = do
+  (t, stenv, sig, r) <- transModule s
+  modify $ realize sid r
+  modify $ \(S.SpecEnv xs) -> S.SpecEnv $ StrDef sid sig : xs
+  modify (stenv <>) -- FIXME: lift type-paths with `sid`
+  return $ T.Decl [t]
+transDecl (FctDecl fid f) = do
+  (t, stenv, fsig, r) <- transModule f
+  unless (stenv == mempty) $
+    throwError $ NonEmptyStampEnv stenv
+  modify $ realize fid r
+  modify $ \(S.SpecEnv xs) -> S.SpecEnv $ FctDef fid fsig : xs
+  return $ T.Decl [t]
 
 -- | Obtains the kind of a (possibly open) semantic type constructor.
 kindOf :: Member (Error TypeError) r => S.TyCon Kind -> Eff r Kind
@@ -204,3 +221,31 @@ instance Realize TypeIdent where
   type Realizer TypeIdent = S.TReal Kind
 
   realize tid tr re = re { S.tReal = Map.insert tid tr $ S.tReal re }
+
+instance Realize StrIdent where
+  type Realizer StrIdent = SReal
+
+  realize sid sr re = re { S.sReal = Map.insert sid sr $ S.sReal re }
+
+instance Realize FctIdent where
+  type Realizer FctIdent = FReal
+
+  realize fid fr re = re { S.fReal = Map.insert fid fr $ S.fReal re }
+
+class TransModule m where
+  type TransModuleSig m
+  type TransModuleReal m
+
+  transModule :: m -> Eff r (T.Term, StampEnv, TransModuleSig m, TransModuleReal m)
+
+instance TransModule Struct where
+  type TransModuleSig Struct = Sig
+  type TransModuleReal Struct = SReal
+
+  transModule = undefined
+
+instance TransModule Fct where
+  type TransModuleSig Fct = FSig
+  type TransModuleReal Fct = FReal
+
+  transModule = undefined
