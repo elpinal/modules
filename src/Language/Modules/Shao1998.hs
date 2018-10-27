@@ -101,7 +101,7 @@ data Fct
   deriving (Eq, Show)
 
 data TypeError
-  = SigLengthMismatch
+  = SigLengthMismatch Sig Sig
   | TypeDefMismatch Spec Spec
   | ManTypeDefMismatch TyCon TyCon
   | StrDefIdentMismatch StrIdent StrIdent
@@ -116,7 +116,7 @@ class SigSubsume a where
 instance SigSubsume Sig where
   sigSubsume s @ (Sig xs) s' @ (Sig ys)
     | length xs == length ys = sequence_ $ getSig $ sigSubsume <$> s <*> s'
-    | otherwise              = throwError SigLengthMismatch
+    | otherwise              = throwError $ SigLengthMismatch s s'
 
 instance SigSubsume Spec where
   sigSubsume s @ (AbsTypeDef tid k)    s' @ (AbsTypeDef tid' k')     = defSubsume (tid, k) (tid', k') $ TypeDefMismatch s s'
