@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.Modules.Shao1998
@@ -263,16 +264,19 @@ transDefStruct :: Members '[State RealEnv, State SpecEnv, State StampEnv, Error 
 transDefStruct (DefStruct ds) = mconcat <$> mapM transDecl ds
 
 class TransModule m where
+  type TransModulePath m = r | r -> m
   type TransModuleSig m
   type TransModuleReal m
 
+  modType     :: Members '[State RealEnv, State SpecEnv, State StampEnv, Error TypeError] r => TransModulePath m -> Eff r (T.Term, TransModuleSig m, TransModuleReal m)
   transModule :: Members '[State RealEnv, State SpecEnv, State StampEnv, Error TypeError] r => m -> Eff r (T.Term, StampEnv, TransModuleSig m, TransModuleReal m)
 
 instance TransModule Struct where
+  type TransModulePath Struct = StrPath
   type TransModuleSig Struct = Sig
   type TransModuleReal Struct = SReal
 
-  transModule (StrP sp @ (StrPath _ sid)) = do
+  modType sp @ (StrPath _ sid) = do
     re <- get
     se <- get
     sr <- case S.lookupSReal sid (re :: RealEnv) of
@@ -281,6 +285,10 @@ instance TransModule Struct where
     (sig, t) <- case lookupStrSpec sp se of
       Just (sig, t) -> return (sig, t)
       Nothing -> throwError $ NoStrSpec sp
+    return (t, sig, sr)
+
+  transModule (StrP sp) = do
+    (t, sig, sr) <- modType sp
     return (t, mempty, sig, sr)
 
   transModule (DefStr ds) = do
@@ -328,7 +336,9 @@ getSignature' sid0 (StrDef sid sig)
 getSignature' _ _ = Nothing
 
 instance TransModule Fct where
+  type TransModulePath Fct = FctPath
   type TransModuleSig Fct = FSig
   type TransModuleReal Fct = FReal
 
+  modType = undefined
   transModule = undefined
