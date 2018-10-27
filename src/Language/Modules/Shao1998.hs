@@ -286,8 +286,10 @@ instance TransModule Struct where
   transModule (DefStr ds) = do
     d <- transDefStruct ds
     S.SpecEnv ss <- get
-    -- FIXME: ignore type components.
-    let p = T.Product $ fst $ foldr (\s (m, n) -> (Map.insert (fromIdent $ fromSpec s) (T.Var n) m, n + 1)) (mempty, 0) ss
+    let f s (m, n) = case fromSpec s of
+          TIdent _ -> (m, n)
+          i        -> (Map.insert (fromIdent i) (T.Var n) m, n + 1)
+    let p = T.Product $ fst $ foldr f (mempty, 0) ss
 
     re <- get
     stenv <- get
