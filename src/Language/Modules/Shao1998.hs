@@ -190,6 +190,7 @@ transDecl (FctDecl fid f) = do
   modify $ realize fid r
   modify $ \(S.SpecEnv xs) -> S.SpecEnv $ FctDef fid fsig : xs
   return $ T.Decl [t]
+transDecl (Local ds ds') = mconcat <$> liftM2 (++) (mapM transDecl ds) (put (S.SpecEnv [] :: SpecEnv) >> mapM transDecl ds')
 
 -- | Obtains the kind of a (possibly open) semantic type constructor.
 kindOf :: Member (Error TypeError) r => S.TyCon Kind -> Eff r Kind
