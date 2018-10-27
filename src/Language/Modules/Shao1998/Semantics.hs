@@ -3,7 +3,13 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Language.Modules.Shao1998.Semantics
-  (
+  ( ModuleCalculus(..)
+  , Basis(..)
+  , RealEnv
+  , lookupTReal
+  , TReal(..)
+  , TyCon(..)
+  , tyConStampEq
   ) where
 
 import qualified Data.Map.Lazy as Map
@@ -46,7 +52,11 @@ data TyCon k
   | TyConApp (TyCon k) (TyCon k)
   deriving (Eq, Show)
 
-newtype TReal k = TReal (TyCon k)
+tyConStampEq :: Eq k => TyCon k -> TyCon k -> Bool
+tyConStampEq (TypeStamp s1 _ _) (TypeStamp s2 _ _) = s1 == s2
+tyConStampEq tc1 tc2                               = tc1 == tc2
+
+newtype TReal k = TReal { getTReal :: TyCon k }
   deriving (Eq, Show)
 
 newtype SReal mc = SReal (RealEnv mc)
@@ -86,3 +96,6 @@ data RealEnv mc = RealEnv
 
 deriving instance ModuleCalculus mc => Eq (RealEnv mc)
 deriving instance ModuleCalculus mc => Show (RealEnv mc)
+
+lookupTReal :: (ModuleCalculus mc, Ord (TypeIdent mc)) => TypeIdent mc -> RealEnv mc -> Maybe (TReal (Kind mc))
+lookupTReal tid re = Map.lookup tid $ t re
