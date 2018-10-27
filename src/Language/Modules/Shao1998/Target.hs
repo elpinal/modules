@@ -6,6 +6,7 @@ module Language.Modules.Shao1998.Target
   , KindEnv(..)
   , Decl(..)
   , Term(..)
+  , Label(..)
   ) where
 
 import qualified Data.Map.Lazy as Map

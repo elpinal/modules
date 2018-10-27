@@ -10,6 +10,7 @@ module Language.Modules.Shao1998.Semantics
   , SpecEnv(..)
   , RealEnv(..)
   , lookupTReal
+  , lookupSReal
   , TReal(..)
   , SReal(..)
   , FReal(..)
@@ -103,4 +104,7 @@ deriving instance ModuleCalculus mc => Eq (RealEnv mc)
 deriving instance ModuleCalculus mc => Show (RealEnv mc)
 
 lookupTReal :: (ModuleCalculus mc, Ord (TypeIdent mc)) => TypeIdent mc -> RealEnv mc -> Maybe (TReal (Kind mc))
-lookupTReal tid re = Map.lookup tid $ tReal re
+lookupTReal tid = Map.lookup tid . tReal
+
+lookupSReal :: (ModuleCalculus mc, Ord (StrIdent mc)) => StrIdent mc -> RealEnv mc -> Maybe (SReal mc)
+lookupSReal sid = Map.lookup sid . sReal

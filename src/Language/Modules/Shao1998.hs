@@ -16,6 +16,7 @@ import Control.Monad.Freer.Error
 import Control.Monad.Freer.State
 import Data.List
 import qualified Data.Map.Lazy as Map
+import Data.Monoid
 
 import qualified Language.Modules.Shao1998.Semantics as S
 import qualified Language.Modules.Shao1998.Target as T
@@ -37,6 +38,12 @@ type RealEnv = S.RealEnv MC
 type SpecEnv = S.SpecEnv Spec
 type StampEnv = S.StampEnv TypePath
 
+data Ident
+  = SIdent StrIdent
+  | FIdent FctIdent
+  | TIdent TypeIdent
+  deriving (Eq, Show)
+
 newtype StrIdent = StrIdent Int
   deriving (Eq, Ord, Show)
 
@@ -54,6 +61,14 @@ data FctPath = FctPath (Maybe StrPath) FctIdent
 
 data TypePath = TypePath (Maybe StrPath) TypeIdent
   deriving (Eq, Show)
+
+data PathRest a
+  = [a] :. a
+  | Empty
+
+instance Foldable PathRest where
+  foldMap f (xs :. x) = foldMap f xs <> f x
+  foldMap _ Empty     = mempty
 
 data Kind
   = Mono
@@ -74,6 +89,15 @@ data Spec
   | StrDef StrIdent Sig
   | FctDef FctIdent FSig
   deriving (Eq, Show)
+
+fromSpec :: Spec -> Ident
+fromSpec (AbsTypeDef tid _)   = TIdent tid
+fromSpec (ManTypeDef tid _ _) = TIdent tid
+fromSpec (StrDef sid _)       = SIdent sid
+fromSpec (FctDef fid _)       = FIdent fid
+
+fromIdent :: Ident -> T.Label
+fromIdent i = undefined
 
 type Sig = Sig' Spec
 
@@ -113,11 +137,13 @@ data TypeError
   | StrDefIdentMismatch StrIdent StrIdent
   | FctDefMismatch Spec Spec
   | CouldNotRealizeTypePath TypePath
+  | CouldNotRealizeStrPath StrPath
   | ComponentMismatch Spec Spec
   | IllegalKindApplication Kind Kind
   | KindMismatch Kind Kind
   | NotMono Kind
   | NonEmptyStampEnv StampEnv
+  | NoStrSpec StrPath
   deriving (Eq, Show)
 
 class SigSubsume a where
@@ -233,17 +259,71 @@ instance Realize FctIdent where
 
   realize fid fr re = re { S.fReal = Map.insert fid fr $ S.fReal re }
 
+transDefStruct :: Members '[State RealEnv, State SpecEnv, State StampEnv, Error TypeError] r => DefStruct -> Eff r T.Decl
+transDefStruct (DefStruct ds) = mconcat <$> mapM transDecl ds
+
 class TransModule m where
   type TransModuleSig m
   type TransModuleReal m
 
-  transModule :: m -> Eff r (T.Term, StampEnv, TransModuleSig m, TransModuleReal m)
+  transModule :: Members '[State RealEnv, State SpecEnv, State StampEnv, Error TypeError] r => m -> Eff r (T.Term, StampEnv, TransModuleSig m, TransModuleReal m)
 
 instance TransModule Struct where
   type TransModuleSig Struct = Sig
   type TransModuleReal Struct = SReal
 
-  transModule = undefined
+  transModule (StrP sp @ (StrPath _ sid)) = do
+    re <- get
+    se <- get
+    sr <- case S.lookupSReal sid (re :: RealEnv) of
+      Just sr -> return sr
+      Nothing -> throwError $ CouldNotRealizeStrPath sp
+    (sig, t) <- case lookupStrSpec sp se of
+      Just (sig, t) -> return (sig, t)
+      Nothing -> throwError $ NoStrSpec sp
+    return (t, mempty, sig, sr)
+
+  transModule (DefStr ds) = do
+    d <- transDefStruct ds
+    S.SpecEnv ss <- get
+    -- FIXME: ignore type components.
+    let p = T.Product $ fst $ foldr (\s (m, n) -> (Map.insert (fromIdent $ fromSpec s) (T.Var n) m, n + 1)) (mempty, 0) ss
+
+    re <- get
+    stenv <- get
+    return (T.Let d p, stenv, Sig ss, S.SReal re)
+
+root :: StrPath -> (StrIdent, PathRest StrIdent)
+root (StrPath [] sid)       = (sid, Empty)
+root (StrPath (sid : xs) x) = (sid, xs :. x)
+
+lookupStrSpec :: StrPath -> SpecEnv -> Maybe (Sig, T.Term)
+lookupStrSpec sp (S.SpecEnv xs) = f 0 xs
+  where
+    sid0 :: StrIdent
+    sid0 = fst $ root sp
+
+    f _ [] = Nothing
+    f n (StrDef sid sig : ss)
+      | sid == sid0 = do
+        let rest = snd $ root sp
+        x <- getSignature rest sig
+        return (x, foldl (\t -> T.Select t . fromIdent . SIdent) (T.Var n) rest)
+      | otherwise   = f (n + 1) ss
+    f n (FctDef _ _ : ss) = f (n + 1) ss
+    f n (_ : ss)          = f n ss -- Ignore type definitions.
+
+getSignature :: Foldable t => t StrIdent -> Sig -> Maybe Sig
+getSignature sids sig0 = foldl f (return sig0) sids
+  where
+    f :: Maybe Sig -> StrIdent -> Maybe Sig
+    f msig sid = getSig <$> msig >>= getFirst . foldMap (First . getSignature' sid)
+
+getSignature' :: StrIdent -> Spec -> Maybe Sig
+getSignature' sid0 (StrDef sid sig)
+  | sid == sid0 = return sig
+  | otherwise   = Nothing
+getSignature' _ _ = Nothing
 
 instance TransModule Fct where
   type TransModuleSig Fct = FSig
