@@ -335,10 +335,8 @@ getSignature sids sig0 = foldl f (return sig0) sids
     f msig sid = getSig <$> msig >>= getFirst . foldMap (First . getSignature' sid)
 
 getSignature' :: StrIdent -> Spec -> Maybe Sig
-getSignature' sid0 (StrDef sid sig)
-  | sid == sid0 = return sig
-  | otherwise   = Nothing
-getSignature' _ _ = Nothing
+getSignature' sid0 (StrDef sid sig) | sid == sid0 = return sig
+getSignature' _ _                                 = Nothing
 
 instance TransModule Fct where
   type TransModulePath Fct = FctPath
