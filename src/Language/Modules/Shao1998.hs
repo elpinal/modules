@@ -15,6 +15,7 @@ import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.State
+import Data.Foldable
 import Data.List
 import qualified Data.Map.Lazy as Map
 import Data.Monoid
@@ -139,12 +140,14 @@ data TypeError
   | FctDefMismatch Spec Spec
   | CouldNotRealizeTypePath TypePath
   | CouldNotRealizeStrPath StrPath
+  | CouldNotRealizeFctPath FctPath
   | ComponentMismatch Spec Spec
   | IllegalKindApplication Kind Kind
   | KindMismatch Kind Kind
   | NotMono Kind
   | NonEmptyStampEnv StampEnv
   | NoStrSpec StrPath
+  | NoFctSpec FctPath
   deriving (Eq, Show)
 
 class SigSubsume a where
@@ -343,5 +346,36 @@ instance TransModule Fct where
   type TransModuleSig Fct = FSig
   type TransModuleReal Fct = FReal
 
-  modType = undefined
+  modType fp @ (FctPath _ fid) = do
+    re <- get
+    se <- get
+    fr <- case S.lookupFReal fid (re :: RealEnv) of
+      Just fr -> return fr
+      Nothing -> throwError $ CouldNotRealizeFctPath fp
+    (fsig, t) <- case lookupFctSpec fp se of
+      Just (fsig, t) -> return (fsig, t)
+      Nothing -> throwError $ NoFctSpec fp
+    return (t, fsig, fr)
+
   transModule = undefined
+
+lookupFctSpec :: FctPath -> SpecEnv -> Maybe (FSig, T.Term)
+lookupFctSpec (FctPath Nothing fid0) se = either return (const Nothing) $ foldlM f 0 se
+  where
+    f n (FctDef fid fsig)
+      | fid == fid0 = Left (fsig, T.Var n)
+      | otherwise   = return $ n + 1
+    f n (StrDef _ _) = return $ n + 1
+    f n _            = return n
+lookupFctSpec (FctPath (Just sp) fid) se = lookupStrSpec sp se >>= f
+  where
+    f (sig, t) = do
+      fsig <- search fid sig
+      return (fsig, T.Select t $ fromIdent $ FIdent fid)
+
+search :: FctIdent -> Sig -> Maybe FSig
+search fid (Sig ss) = getFirst $ foldMap (First . getFSignature fid) ss
+
+getFSignature :: FctIdent -> Spec -> Maybe FSig
+getFSignature fid0 (FctDef fid fsig) | fid == fid0 = return fsig
+getFSignature _ _                                  = Nothing

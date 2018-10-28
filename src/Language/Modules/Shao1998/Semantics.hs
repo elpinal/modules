@@ -11,6 +11,7 @@ module Language.Modules.Shao1998.Semantics
   , RealEnv(..)
   , lookupTReal
   , lookupSReal
+  , lookupFReal
   , TReal(..)
   , SReal(..)
   , FReal(..)
@@ -92,7 +93,7 @@ newtype StampEnv tp = StampEnv (Map.Map Stamp tp)
   deriving (Eq, Show, Semigroup, Monoid)
 
 newtype SpecEnv sp = SpecEnv [sp]
-  deriving (Eq, Show)
+  deriving (Eq, Show, Foldable)
 
 data RealEnv mc = RealEnv
   { tReal :: Map.Map (TypeIdent mc) (TReal (Kind mc))
@@ -108,3 +109,6 @@ lookupTReal tid = Map.lookup tid . tReal
 
 lookupSReal :: (ModuleCalculus mc, Ord (StrIdent mc)) => StrIdent mc -> RealEnv mc -> Maybe (SReal mc)
 lookupSReal sid = Map.lookup sid . sReal
+
+lookupFReal :: (ModuleCalculus mc, Ord (FctIdent mc)) => FctIdent mc -> RealEnv mc -> Maybe (FReal mc)
+lookupFReal fid = Map.lookup fid . fReal
