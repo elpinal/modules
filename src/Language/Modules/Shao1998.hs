@@ -357,7 +357,9 @@ instance TransModule Fct where
       Nothing -> throwError $ NoFctSpec fp
     return (t, fsig, fr)
 
-  transModule = undefined
+  transModule (FctP fp) = do
+    (t, fsig, fr) <- modType fp
+    return (t, mempty, fsig, fr)
 
 lookupFctSpec :: FctPath -> SpecEnv -> Maybe (FSig, T.Term)
 lookupFctSpec (FctPath Nothing fid0) se = either return (const Nothing) $ foldlM f 0 se
