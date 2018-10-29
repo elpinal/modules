@@ -462,5 +462,11 @@ instance ToTargetType FSig where
 
   toTargetType fr _ = return $ coerce $ S.auxInfo fr
 
+-- | Translates a semantic type constructor into a target type constructor.
 m2t :: S.TyCon Kind -> T.TyCon
-m2t = undefined
+m2t (S.TypeStamp _ _ tc) = tc
+m2t (S.TyConVar n)       = T.TyConVar n
+m2t S.TyConInt           = T.TyConInt
+m2t (S.TyConFun tc1 tc2) = T.TyConFun (m2t tc1) (m2t tc2)
+m2t (S.TyConAbs tc)      = T.TyConAbs T.Mono $ m2t tc
+m2t (S.TyConApp tc1 tc2) = T.TyConApp (m2t tc1) (m2t tc2)
