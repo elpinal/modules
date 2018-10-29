@@ -106,6 +106,7 @@ type Sig = Sig' Spec
 newtype Sig' a = Sig { getSig :: [a] }
   deriving (Eq, Show)
   deriving (Functor, Applicative) via ZipList
+  deriving Foldable via []
 
 data FSig = FSig StrIdent Sig Sig
   deriving (Eq, Show)
@@ -381,3 +382,32 @@ search fid (Sig ss) = getFirst $ foldMap (First . getFSignature fid) ss
 getFSignature :: FctIdent -> Spec -> Maybe FSig
 getFSignature fid0 (FctDef fid fsig) | fid == fid0 = return fsig
 getFSignature _ _                                  = Nothing
+
+class ToTargetKind a where
+  type TargetKind a
+
+  toTargetKind :: a -> TargetKind a
+
+instance ToTargetKind Sig where
+  type TargetKind Sig = T.Kind
+
+  toTargetKind = T.KProduct . foldMap toTargetKind
+
+instance ToTargetKind Spec where
+  type TargetKind Spec = Map.Map T.Label T.Kind
+
+  toTargetKind (AbsTypeDef tid k) = Map.singleton (fromIdent $ TIdent tid) $ toTargetKind k
+  toTargetKind (ManTypeDef _ _ _) = mempty
+  toTargetKind (StrDef sid sig)   = Map.singleton (fromIdent $ SIdent sid) $ toTargetKind sig
+  toTargetKind (FctDef fid fsig)  = Map.singleton (fromIdent $ FIdent fid) $ toTargetKind fsig
+
+instance ToTargetKind Kind where
+  type TargetKind Kind = T.Kind
+
+  toTargetKind Mono     = T.Mono
+  toTargetKind (KFun k) = T.KFun T.Mono $ toTargetKind k
+
+instance ToTargetKind FSig where
+  type TargetKind FSig = T.Kind
+
+  toTargetKind (FSig _ sig1 sig2) = toTargetKind sig1 `T.KFun` toTargetKind sig2

@@ -3,6 +3,7 @@
 module Language.Modules.Shao1998.Target
   ( TyCon(..)
   , Type(..)
+  , Kind(..)
   , KindEnv(..)
   , Decl(..)
   , Term(..)
