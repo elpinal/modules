@@ -34,7 +34,7 @@ data TyCon
 data Type
   = Type TyCon
   | TyFun Type Type
-  | TyProduct (Map.Map Label TyCon)
+  | TyProduct (Map.Map Label Type)
   | Forall Kind Type
   deriving (Eq, Show)
 
