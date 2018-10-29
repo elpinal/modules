@@ -5,11 +5,13 @@ module Language.Modules.Shao1998.Target
   , Type(..)
   , Kind(..)
   , KindEnv(..)
+  , pushKind
   , Decl(..)
   , Term(..)
   , Label(..)
   ) where
 
+import Data.Coerce
 import qualified Data.Map.Lazy as Map
 
 newtype Label = Label Int
@@ -55,3 +57,6 @@ newtype Decl = Decl [Term]
 
 newtype KindEnv = KindEnv [Kind]
   deriving (Eq, Show)
+
+pushKind :: Kind -> KindEnv -> KindEnv
+pushKind k = coerce (k :)
