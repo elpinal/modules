@@ -15,6 +15,8 @@ module Language.Modules.Shao1998.Semantics
   , TReal(..)
   , SReal(..)
   , FReal(..)
+  , AuxInfo(..)
+  , auxInfo
   , TyCon(..)
   , tyConStampEq
   ) where
@@ -76,8 +78,12 @@ data FReal mc
 deriving instance ModuleCalculus mc => Eq (FReal mc)
 deriving instance ModuleCalculus mc => Show (FReal mc)
 
-data AuxInfo = AuxInfo T.TyCon T.Type
+newtype AuxInfo = AuxInfo (T.TyCon, T.Type)
   deriving (Eq, Show)
+
+auxInfo :: FReal mc -> AuxInfo
+auxInfo (Closure _ _ a) = a
+auxInfo (Template a)    = a
 
 data Basis mc = Basis
   { kindEnv :: T.KindEnv

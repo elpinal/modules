@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -15,6 +16,8 @@ import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.State
+import Data.Bifunctor
+import Data.Coerce
 import Data.Foldable
 import Data.List
 import qualified Data.Map.Lazy as Map
@@ -104,7 +107,7 @@ fromIdent i = undefined
 type Sig = Sig' Spec
 
 newtype Sig' a = Sig { getSig :: [a] }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Traversable)
   deriving (Functor, Applicative) via ZipList
   deriving Foldable via []
 
@@ -149,6 +152,9 @@ data TypeError
   | NonEmptyStampEnv StampEnv
   | NoStrSpec StrPath
   | NoFctSpec FctPath
+  | MissingTReal TypeIdent
+  | MissingSReal StrIdent
+  | MissingFReal FctIdent
   deriving (Eq, Show)
 
 class SigSubsume a where
@@ -411,3 +417,50 @@ instance ToTargetKind FSig where
   type TargetKind FSig = T.Kind
 
   toTargetKind (FSig _ sig1 sig2) = toTargetKind sig1 `T.KFun` toTargetKind sig2
+
+class ToTargetType a where
+  type TargetType a
+  type Rlzn a
+
+  toTargetType :: Member (Error TypeError) r => Rlzn a -> a -> Eff r (TargetType a)
+
+instance ToTargetType Sig where
+  type TargetType Sig = (T.TyCon, T.Type)
+  type Rlzn Sig = SReal
+
+  toTargetType (S.SReal re) sig = bimap T.TyConProduct T.TyProduct . fold <$> mapM (toTargetType re) sig
+
+instance ToTargetType Spec where
+  type TargetType Spec = (Map.Map T.Label T.TyCon, Map.Map T.Label T.Type)
+  type Rlzn Spec = RealEnv
+
+  toTargetType re (AbsTypeDef tid _) = do
+    tc <- maybe (throwError $ MissingTReal tid) return $ S.lookupTReal tid re
+    return (Map.singleton (fromIdent $ TIdent tid) $ m2t $ coerce tc, mempty)
+
+  toTargetType _ (ManTypeDef _ _ _) = return (mempty, mempty)
+
+  toTargetType re (StrDef sid sig) =
+    case S.lookupSReal sid re of
+      Nothing -> throwError $ MissingSReal sid
+      Just sr -> bimap f f <$> toTargetType sr sig
+    where
+      f :: a -> Map.Map T.Label a
+      f = Map.singleton $ fromIdent $ SIdent sid
+
+  toTargetType re (FctDef fid fsig) =
+    case S.lookupFReal fid re of
+      Nothing -> throwError $ MissingFReal fid
+      Just fr -> bimap f f <$> toTargetType fr fsig
+    where
+      f :: a -> Map.Map T.Label a
+      f = Map.singleton $ fromIdent $ FIdent fid
+
+instance ToTargetType FSig where
+  type TargetType FSig = (T.TyCon, T.Type)
+  type Rlzn FSig = FReal
+
+  toTargetType fr _ = return $ coerce $ S.auxInfo fr
+
+m2t :: S.TyCon Kind -> T.TyCon
+m2t = undefined
