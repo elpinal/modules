@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -302,9 +303,7 @@ instance TransModule Struct where
       Nothing -> throwError $ NoStrSpec sp
     return (t, sig, sr)
 
-  transModule (StrP sp) = do
-    (t, sig, sr) <- modType sp
-    return (t, mempty, sig, sr)
+  transModule (StrP sp) = [ (t, mempty, sig, sr) | (t, sig, sr) <- modType sp ]
 
   transModule (DefStr ds) = do
     d <- transDefStruct ds
@@ -369,9 +368,7 @@ instance TransModule Fct where
       Nothing -> throwError $ NoFctSpec fp
     return (t, fsig, fr)
 
-  transModule (FctP fp) = do
-    (t, fsig, fr) <- modType fp
-    return (t, mempty, fsig, fr)
+  transModule (FctP fp) = [ (t, mempty, fsig, fr) | (t, fsig, fr) <- modType fp ]
 
 lookupFctSpec :: FctPath -> SpecEnv -> Maybe (FSig, T.Term)
 lookupFctSpec (FctPath Nothing fid0) se = either return (const Nothing) $ foldlM f 0 se
@@ -439,9 +436,10 @@ instance ToTargetType Spec where
   type TargetType Spec = (Map.Map T.Label T.TyCon, Map.Map T.Label T.Type)
   type Rlzn Spec = RealEnv
 
-  toTargetType re (AbsTypeDef tid _) = do
-    tc <- maybe (throwError $ MissingTReal tid) return $ S.lookupTReal tid re
-    return (Map.singleton (fromIdent $ TIdent tid) $ m2t $ coerce tc, mempty)
+  toTargetType re (AbsTypeDef tid _) =
+    [ (Map.singleton (fromIdent $ TIdent tid) $ m2t $ coerce tc, mempty)
+    | tc <- maybe (throwError $ MissingTReal tid) return $ S.lookupTReal tid re
+    ]
 
   toTargetType _ (ManTypeDef _ _ _) = return (mempty, mempty)
 
@@ -524,7 +522,4 @@ instantiateSpec (FctDef fid (FSig sid sig1 sig2)) = do
   return $ Map.singleton l ty''
 
 newStamp :: Member (State Int) r => Eff r S.Stamp
-newStamp = do
-  n <- get
-  put $ n + 1
-  return $ S.stamp n
+newStamp = [ S.stamp n | n <- get, _ <- put $ n + 1 ]
