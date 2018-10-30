@@ -15,6 +15,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
+import Control.Monad.Freer.Reader
 import Control.Monad.Freer.State
 import Data.Bifunctor
 import Data.Coerce
@@ -60,6 +61,9 @@ newtype TypeIdent = TypeIdent Int
 
 data StrPath = StrPath [StrIdent] StrIdent
   deriving (Eq, Show)
+
+fromStrIdent :: StrIdent -> StrPath
+fromStrIdent = StrPath mempty
 
 data FctPath = FctPath (Maybe StrPath) FctIdent
   deriving (Eq, Show)
@@ -185,6 +189,7 @@ defSubsume (x, y) (x', y') e
     | x == x' && y == y' = return ()
     | otherwise          = throwError e
 
+-- TODO: Perhaps it should be given [TypeIdent].
 c2m :: Members '[State RealEnv, Error TypeError] r => TyCon -> Eff r (S.TyCon Kind)
 c2m = evalState ([] :: [TypeIdent]) . c2m'
 
@@ -470,3 +475,56 @@ m2t S.TyConInt           = T.TyConInt
 m2t (S.TyConFun tc1 tc2) = T.TyConFun (m2t tc1) (m2t tc2)
 m2t (S.TyConAbs tc)      = T.TyConAbs T.Mono $ m2t tc
 m2t (S.TyConApp tc1 tc2) = T.TyConApp (m2t tc1) (m2t tc2)
+
+instantiate :: Members '[State StampEnv, State Int, Reader T.TyCon, Reader (Maybe StrPath), Reader T.KindEnv, Error TypeError] r => Sig -> RealEnv -> Eff r (T.Type, RealEnv)
+instantiate sig re = runState re $ T.TyProduct . fold <$> mapM instantiateSpec sig
+
+instantiateSpec :: Members '[State StampEnv, State RealEnv, State Int, Reader T.TyCon, Reader (Maybe StrPath), Reader T.KindEnv, Error TypeError] r => Spec -> Eff r (Map.Map T.Label T.Type)
+instantiateSpec (AbsTypeDef tid k) = do
+  s <- newStamp
+  msp <- ask
+  modify (coerce $ Map.insert s $ TypePath msp tid :: StampEnv -> StampEnv)
+  tct <- ask
+  modify $ realize tid $ S.TReal $ S.TypeStamp s k $ T.TyConSelect tct $ fromIdent $ TIdent tid
+  return mempty
+instantiateSpec (ManTypeDef tid k tc) = do
+  tcm <- c2m tc
+  k' <- kindOf tcm
+  when (k /= k') $
+    throwError $ KindMismatch k k'
+  modify $ realize tid $ S.TReal tcm
+  return mempty
+instantiateSpec (StrDef sid sig) = do
+  re <- get
+  (ty, re') <- local g $ local f $ instantiate sig re
+  modify $ realize sid $ S.SReal re'
+  return $ Map.singleton (fromIdent $ SIdent sid) ty
+    where
+      f :: Maybe StrPath -> Maybe StrPath
+      f Nothing               = Just $ StrPath [] sid
+      f (Just (StrPath xs x)) = Just $ StrPath (xs ++ [x]) sid
+
+      g :: T.TyCon -> T.TyCon
+      g tc = T.TyConSelect tc $ fromIdent $ SIdent sid
+instantiateSpec (FctDef fid (FSig sid sig1 sig2)) = do
+  let k = toTargetKind sig1
+  re <- get
+  -- `tcSid` represents `sid` in the Target calculus.
+  let tcSid = T.TyConVar 0 -- TODO: `T.TyConVar 0` is determined at a guess. It may be wrong.
+  (ty, re') <- local (const tcSid) $ local (const $ Just $ fromStrIdent sid) $ local (T.pushKind k) $ instantiate sig1 re
+
+  tc <- ask
+  let l = fromIdent $ FIdent fid
+  let tc'' = T.TyConSelect tc l
+
+  (ty', _) <- local (const $ T.TyConApp tc'' tcSid) $ local (\_ -> Nothing :: Maybe StrPath) $ local (T.pushKind k) $ instantiate sig2 $ realize sid (S.SReal re') re
+
+  let ty'' = T.Forall k $ T.TyFun ty ty'
+  modify $ realize fid $ S.Template $ coerce (tc'', ty'')
+  return $ Map.singleton l ty''
+
+newStamp :: Member (State Int) r => Eff r S.Stamp
+newStamp = do
+  n <- get
+  put $ n + 1
+  return $ S.stamp n

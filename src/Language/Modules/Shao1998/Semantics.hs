@@ -19,6 +19,8 @@ module Language.Modules.Shao1998.Semantics
   , auxInfo
   , TyCon(..)
   , tyConStampEq
+  , Stamp
+  , stamp
   ) where
 
 import qualified Data.Map.Lazy as Map
@@ -51,6 +53,9 @@ class
 
 newtype Stamp = Stamp Int
   deriving (Eq, Ord, Show)
+
+stamp :: Int -> Stamp
+stamp = Stamp
 
 data TyCon k
   = TypeStamp Stamp k T.TyCon
