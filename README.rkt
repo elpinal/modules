@@ -430,7 +430,7 @@ Type-theoretic analysis of ML-style modules.
     #:location (proceedings-location icfp #:pages '(307 320)))
 
    (bib-entry
-    #:key      "Ros2010"
+    #:key      "RRD2010"
     #:title    "F-ing Modules"
     #:author   (authors rossberg russo "Derek Dreyer")
     #:date     "2010; 2014 (JFP)"

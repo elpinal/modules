@@ -133,7 +133,7 @@ Type-theoretic analysis of ML-style modules.
              Programming_ 17\(4&5\), pp. 433–471, 2007.                              
 \[DR2008\]   Derek Dreyer and Andreas Rossberg, “Mixin’ up the ML module system,” In 
              _Proc. ICFP_, pp. 307–320, 2008.                                        
-\[Ros2010\]  Andreas Rossberg, Claudio V. Russo, and Derek Dreyer, “F-ing Modules,”  
+\[RRD2010\]  Andreas Rossberg, Claudio V. Russo, and Derek Dreyer, “F-ing Modules,”  
              In _Proc. Types in Language Design and Implementation_, 2010; 2014      
              \(JFP\).                                                                
 \[Ros2015\]  Andreas Rossberg, “1ML — Core and modules united \(F-ing first-class    
