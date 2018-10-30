@@ -246,10 +246,8 @@ kindOf (S.TyConApp tc1 tc2) = do
   k1 <- kindOf tc1
   k2 <- kindOf tc2
   case k1 of
-    Mono -> throwError $ IllegalKindApplication k1 k2
-    KFun k
-      | k2 == Mono -> return k
-      | otherwise  -> throwError $ IllegalKindApplication k1 k2
+    KFun k | k2 == Mono -> return k
+    _                   -> throwError $ IllegalKindApplication k1 k2
 
 mono :: Member (Error TypeError) r => S.TyCon Kind -> Eff r ()
 mono tc = do
