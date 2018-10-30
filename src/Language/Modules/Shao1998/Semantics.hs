@@ -77,7 +77,7 @@ newtype SReal mc = SReal (RealEnv mc)
   deriving (Eq, Show)
 
 data FReal mc
-  = Closure (DefStr mc) (Basis mc) AuxInfo
+  = Closure (DefStr mc) (SpecEnv (Spec mc)) (RealEnv mc) AuxInfo
   | Template AuxInfo
 
 deriving instance ModuleCalculus mc => Eq (FReal mc)
@@ -87,7 +87,7 @@ newtype AuxInfo = AuxInfo (T.TyCon, T.Type)
   deriving (Eq, Show)
 
 auxInfo :: FReal mc -> AuxInfo
-auxInfo (Closure _ _ a) = a
+auxInfo (Closure _ _ _ a) = a
 auxInfo (Template a)    = a
 
 data Basis mc = Basis
