@@ -152,7 +152,7 @@ class Subst a where
   subst :: Map.Map I.Variable I.Type -> a -> a
 
 instance Subst a => Subst (Quantified a) where
-  subst s e @ (Quantified (m, x)) = Quantified (m, subst (s Map.\\ m) x) -- TODO: It might cause variable capturing.
+  subst s (Quantified (m, x)) = Quantified (m, subst (s Map.\\ m) x) -- TODO: It might cause variable capturing.
 
 instance (Subst a, Subst b) => Subst (Fun a b) where
   subst m (x :-> y) = subst m x :-> subst m y
