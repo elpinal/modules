@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Modules.RRD2010
@@ -169,9 +170,11 @@ addReason r (TypeError rs p) = TypeError (r : rs) p
 annotate :: Member (Error TypeError) r => Eff r a -> Reason -> Eff r a
 annotate x r = x `catchError` (throwError . addReason r)
 
+type Env = '[State I.Env, Error TypeError]
+
 class Elaboration a where
   type Output a
-  elaborate :: Members '[Fresh, State I.Env, Error TypeError] r => a -> Eff r (Output a)
+  elaborate :: Members (Fresh ': Env) r => a -> Eff r (Output a)
 
 instance Elaboration Kind where
   type Output Kind = I.Kind
@@ -190,7 +193,7 @@ transaction e = do
   put (env :: I.Env)
   return x
 
-updateEnv :: Members '[State I.Env, Error TypeError] r => Existential (Map.Map I.Label SemanticSig) -> Eff r ()
+updateEnv :: Members Env r => Existential (Map.Map I.Label SemanticSig) -> Eff r ()
 updateEnv (Existential is m) = do
   _ <- Map.traverseWithKey (\i -> modify . I.insertKind (coerce i)) is
   _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
@@ -201,7 +204,7 @@ instance Elaboration Sig where
 
   elaborate (Decls ds) = transaction $ mapM f ds >>= fmap (fmap StructureSig) . foldrM (merge g) (Existential mempty mempty)
     where
-      f :: Members '[Fresh, State I.Env, Error TypeError] r => Decl -> Eff r (Existential (Map.Map I.Label SemanticSig))
+      f :: Members (Fresh ': Env) r => Decl -> Eff r (Existential (Map.Map I.Label SemanticSig))
       f d = do
         e <- elaborate d
         updateEnv e
