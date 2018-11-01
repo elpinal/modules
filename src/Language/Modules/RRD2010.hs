@@ -216,6 +216,8 @@ data Problem
   | KindMismatch I.Kind I.Kind
   | NotAbstractType I.Variable
   | NotTypeVariable SemanticSig
+  | NotEqual I.Type I.Type
+  | NoInstantiation I.Variable
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -345,3 +347,27 @@ lookupInst (AtomicType ty1 k1) (AtomicType (I.TVar v) k2) v0
   | otherwise                                    = First Nothing
 lookupInst (StructureSig m1) (StructureSig m2) v = foldMap (\(x, y) -> lookupInst x y v) $ Map.intersectionWith (,) m1 m2
 lookupInst _ _ _                                 = First Nothing
+
+class Subtype a where
+  (<:) :: Members Env r => a -> a -> Eff r I.Term
+
+(.=) :: I.Type -> I.Type -> Bool
+(.=) = (==)
+
+instance Subtype I.Type where
+  t1 <: t2
+    | t1 .= t2  = return $ I.Abs (I.Variable 0) t1 $ (I.Var $ I.Variable 0)
+    | otherwise = throwProblem $ NotEqual t1 t2
+
+match :: Members Env r => SemanticSig -> AbstractSig -> Eff r (I.Term, Map.Map I.Variable I.Type)
+match ssig (Existential (m, s)) = do
+  m1 <- Map.traverseWithKey f $ Map.fromSet (coerce . lookupInst ssig s) $ Map.keysSet m
+  t <- ssig <: subst m1 s
+  return (t, m1)
+  where
+    f :: Member (Error TypeError) r => I.Variable -> Maybe I.Type -> Eff r I.Type
+    f v Nothing   = throwProblem $ NoInstantiation v
+    f _ (Just ty) = return ty
+
+instance Subtype SemanticSig where
+  (<:) = undefined
