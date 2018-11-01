@@ -138,6 +138,47 @@ proj' (StructureSig m) (embedIntoLabel -> l) =
     Just ssig -> return ssig
 proj' ssig _ = throwProblem $ NotStructureSig ssig
 
+class Subst a where
+  subst :: I.Variable -> I.Type -> a -> a
+
+instance Subst a => Subst (Existential a) where
+  subst v ity e @ (Existential m x)
+    | v `Map.member` m = e
+    | otherwise        = Existential m $ subst v ity x -- TODO: It might cause variable capturing.
+
+instance Subst a => Subst (Universal a) where
+  subst v ity u @ (Universal m x)
+    | v `Map.member` m = u
+    | otherwise        = Universal m $ subst v ity x -- TODO: It might cause variable capturing.
+
+instance (Subst a, Subst b) => Subst (Fun a b) where
+  subst v ity (x :-> y) = subst v ity x :-> subst v ity y
+
+sub :: I.Variable -> I.Variable -> I.Type -> I.Type -> I.Type
+sub v0 v ty0 ty
+  | v == v0   = ty
+  | otherwise = subst v0 ty0 ty
+
+-- TODO: It might cause variable capturing.
+instance Subst I.Type where
+  subst v0 ty0 ty @ (I.TVar v)
+    | v == v0                    = ty0
+    | otherwise                  = ty
+  subst v ty0 (I.TFun ty1 ty2)   = I.TFun (subst v ty0 ty1) (subst v ty0 ty2)
+  subst v ty0 (I.TRecord rt)     = I.TRecord $ subst v ty0 <$> rt
+  subst v0 ty0 (I.Forall v k ty) = I.Forall v k $ sub v0 v ty0 ty
+  subst v0 ty0 (I.Some v k ty)   = I.Some v k $ sub v0 v ty0 ty
+  subst v0 ty0 (I.TAbs v k ty)   = I.TAbs v k $ sub v0 v ty0 ty
+  subst v ty0 (I.TApp ty1 ty2)   = I.TApp (subst v ty0 ty1) (subst v ty0 ty2)
+  subst _ _ I.Int                = I.Int
+
+instance Subst SemanticSig where
+  subst v ity0 (AtomicTerm ity)    = AtomicTerm $ subst v ity0 ity
+  subst v ity0 (AtomicType ity ik) = AtomicType (subst v ity0 ity) ik
+  subst v ity0 (AtomicSig asig)    = AtomicSig $ subst v ity0 asig
+  subst v ity0 (StructureSig m)    = StructureSig $ subst v ity0 <$> m
+  subst v ity0 (FunctorSig u)      = FunctorSig $ subst v ity0 u
+
 class Encode a where
   encode :: a -> I.Type
 
