@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -101,11 +102,16 @@ data Decl
   | IncludeDecl Sig
   deriving (Eq, Show)
 
-data Existential a = Existential (Map.Map I.Variable I.Kind) a
+newtype Quantified a = Quantified (Map.Map I.Variable I.Kind, a)
   deriving (Eq, Show, Functor)
 
-data Universal a = Universal (Map.Map I.Variable I.Kind) a
+newtype Existential a = Existential (Map.Map I.Variable I.Kind, a)
   deriving (Eq, Show, Functor)
+  deriving Subst via (Quantified a)
+
+newtype Universal a = Universal (Map.Map I.Variable I.Kind, a)
+  deriving (Eq, Show, Functor)
+  deriving Subst via (Quantified a)
 
 type AbstractSig = Existential SemanticSig
 
@@ -120,14 +126,17 @@ data SemanticSig
   | FunctorSig (Universal (Fun SemanticSig AbstractSig))
   deriving (Eq, Show)
 
+mkExistential :: Map.Map I.Variable I.Kind -> a -> Existential a
+mkExistential = curry Existential
+
 existential :: a -> Existential a
-existential = Existential mempty
+existential x = Existential (mempty, x)
 
 toUniversal :: Existential a -> Universal a
-toUniversal (Existential m x) = Universal m x
+toUniversal = coerce
 
 merge :: Functor f => (a -> a -> f a) -> Existential a -> Existential a -> f (Existential a)
-merge f (Existential m1 x) (Existential m2 y) = Existential (Map.union m1 m2) <$> f x y
+merge f (Existential (m1, x)) (Existential (m2, y)) = mkExistential (Map.union m1 m2) <$> f x y
 
 proj :: Member (Error TypeError) r => Foldable t => SemanticSig -> t Ident -> Eff r SemanticSig
 proj = foldlM proj'
@@ -142,15 +151,10 @@ proj' ssig _ = throwProblem $ NotStructureSig ssig
 class Subst a where
   subst :: I.Variable -> I.Type -> a -> a
 
-instance Subst a => Subst (Existential a) where
-  subst v ity e @ (Existential m x)
+instance Subst a => Subst (Quantified a) where
+  subst v ity e @ (Quantified (m, x))
     | v `Map.member` m = e
-    | otherwise        = Existential m $ subst v ity x -- TODO: It might cause variable capturing.
-
-instance Subst a => Subst (Universal a) where
-  subst v ity u @ (Universal m x)
-    | v `Map.member` m = u
-    | otherwise        = Universal m $ subst v ity x -- TODO: It might cause variable capturing.
+    | otherwise        = Quantified (m, subst v ity x) -- TODO: It might cause variable capturing.
 
 instance (Subst a, Subst b) => Subst (Fun a b) where
   subst v ity (x :-> y) = subst v ity x :-> subst v ity y
@@ -184,10 +188,10 @@ class Encode a where
   encode :: a -> I.Type
 
 instance Encode a => Encode (Existential a) where
-  encode (Existential m x) = I.some (Map.mapKeys coerce m) $ encode x
+  encode (Existential (m, x)) = I.some (Map.mapKeys coerce m) $ encode x
 
 instance Encode a => Encode (Universal a) where
-  encode (Universal m x) = I.forall (Map.mapKeys coerce m) $ encode x
+  encode (Universal (m, x)) = I.forall (Map.mapKeys coerce m) $ encode x
 
 instance (Encode a, Encode b) => Encode (Fun a b) where
   encode (x :-> y) = encode x `I.TFun` encode y
@@ -256,7 +260,7 @@ transaction e = do
   return x
 
 updateEnv :: Members Env r => Existential (Map.Map I.Label SemanticSig) -> Eff r ()
-updateEnv (Existential vs m) = do
+updateEnv (Existential (vs, m)) = do
   _ <- Map.traverseWithKey (\v -> modify . I.insertKind v) vs
   _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
   return ()
@@ -264,7 +268,7 @@ updateEnv (Existential vs m) = do
 instance Elaboration Sig where
   type Output Sig = AbstractSig
 
-  elaborate (Decls ds) = transaction $ mapM f ds >>= fmap (fmap StructureSig) . foldrM (merge g) (Existential mempty mempty)
+  elaborate (Decls ds) = transaction $ mapM f ds >>= fmap (fmap StructureSig) . foldrM (merge g) (Existential mempty)
     where
       f :: Members (Fresh ': Env) r => Decl -> Eff r (Existential (Map.Map I.Label SemanticSig))
       f d = do
@@ -284,12 +288,12 @@ instance Elaboration Sig where
     return $ existential $ FunctorSig $ (:-> asig2) <$> toUniversal asig1
 
   elaborate (Where sig p ty) = do
-    Existential m ssig <- elaborate sig
+    Existential (m, ssig) <- elaborate sig
     (ity, ik) <- elaborate ty
     ssig' <- proj ssig p
     case ssig' of
       AtomicType (I.TVar v) ik'
-        | ik' == ik, v `Map.member` m -> return $ Existential (v `Map.delete` m) $ subst v ity ssig
+        | ik' == ik, v `Map.member` m -> return $ Existential (v `Map.delete` m, subst v ity ssig)
         | ik' == ik                   -> throwProblem $ KindMismatch ik ik'
         | otherwise                   -> throwProblem $ NotAbstractType v
       _                               -> throwProblem $ NotTypeVariable ssig'
@@ -311,7 +315,7 @@ instance Elaboration Decl where
     ]
 
   elaborate (AbsTypeDecl i k) =
-    [ Existential (Map.singleton (coerce n) ik) $ Map.singleton (embedIntoLabel i) $ AtomicType (I.TVar $ coerce n) ik
+    [ Existential (Map.singleton (coerce n) ik, Map.singleton (embedIntoLabel i) $ AtomicType (I.TVar $ coerce n) ik)
     | n <- fresh
     , ik <- elaborate k
     ]
@@ -327,9 +331,9 @@ instance Elaboration Decl where
     ]
 
   elaborate (IncludeDecl s) = do
-    Existential m ssig <- elaborate s
+    Existential (m, ssig) <- elaborate s
     case ssig of
-      StructureSig x -> return $ Existential m x
+      StructureSig x -> return $ Existential (m, x)
       _              -> throwProblem $ IncludeNonStructureSig ssig
 
 extractMonoType :: Member (Error TypeError) r => (I.Type, I.Kind) -> Eff r I.Type
