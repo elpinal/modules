@@ -183,15 +183,17 @@ instance Elaboration Type where
 
   elaborate Int = return (I.Int, I.Mono)
 
+transaction :: Member (State I.Env) r => Eff r a -> Eff r a
+transaction e = do
+  env <- get
+  x <- e
+  put (env :: I.Env)
+  return x
+
 instance Elaboration Sig where
   type Output Sig = AbstractSig
 
-  elaborate (Decls ds) = do
-    env <- get
-    ems <- mapM f ds
-    put (env :: I.Env)
-    -- It is guessed that quantifiers are always distinct.
-    fmap StructureSig <$> foldrM (merge g) (Existential mempty mempty) ems
+  elaborate (Decls ds) = transaction $ mapM f ds >>= fmap (fmap StructureSig) . foldrM (merge g) (Existential mempty mempty)
     where
       f :: Members '[Fresh, State I.Env, Error TypeError] r => Decl -> Eff r (Existential (Map.Map I.Label SemanticSig))
       f d = do
