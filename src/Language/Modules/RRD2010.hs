@@ -214,6 +214,9 @@ data Problem
   | DuplicateDecls (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
   | NotStructureSig SemanticSig
   | NoSuchLabel (Map.Map I.Label SemanticSig) I.Label
+  | KindMismatch I.Kind I.Kind
+  | NotAbstractType I.Variable
+  | NotTypeVariable SemanticSig
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -278,6 +281,17 @@ instance Elaboration Sig where
     updateEnv $ Map.singleton (embedIntoLabel i) <$> asig1
     asig2 <- elaborate sig2
     return $ existential $ FunctorSig $ (:-> asig2) <$> toUniversal asig1
+
+  elaborate (Where sig p ty) = do
+    Existential m ssig <- elaborate sig
+    (ity, ik) <- elaborate ty
+    ssig' <- proj ssig p
+    case ssig' of
+      AtomicType (I.TVar v) ik'
+        | ik' == ik, v `Map.member` m -> return $ Existential (v `Map.delete` m) $ subst v ity ssig
+        | ik' == ik                   -> throwProblem $ KindMismatch ik ik'
+        | otherwise                   -> throwProblem $ NotAbstractType v
+      _                               -> throwProblem $ NotTypeVariable ssig'
 
 atomic :: Ident -> a -> Existential (Map.Map I.Label a)
 atomic i = existential . Map.singleton (embedIntoLabel i)
