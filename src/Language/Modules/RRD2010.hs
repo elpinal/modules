@@ -100,11 +100,10 @@ data Decl
   | IncludeDecl Sig
   deriving (Eq, Show)
 
--- TODO: perhaps instead of Ident, I.Variable should be used here.
-data Existential a = Existential (Map.Map Ident I.Kind) a
+data Existential a = Existential (Map.Map I.Variable I.Kind) a
   deriving (Eq, Show, Functor)
 
-data Universal a = Universal (Map.Map Ident I.Kind) a
+data Universal a = Universal (Map.Map I.Variable I.Kind) a
   deriving (Eq, Show, Functor)
 
 type AbstractSig = Existential SemanticSig
@@ -143,10 +142,10 @@ class Encode a where
   encode :: a -> I.Type
 
 instance Encode a => Encode (Existential a) where
-  encode (Existential is x) = I.some (Map.mapKeys coerce is) $ encode x
+  encode (Existential m x) = I.some (Map.mapKeys coerce m) $ encode x
 
 instance Encode a => Encode (Universal a) where
-  encode (Universal is x) = I.forall (Map.mapKeys coerce is) $ encode x
+  encode (Universal m x) = I.forall (Map.mapKeys coerce m) $ encode x
 
 instance (Encode a, Encode b) => Encode (Fun a b) where
   encode (x :-> y) = encode x `I.TFun` encode y
@@ -212,8 +211,8 @@ transaction e = do
   return x
 
 updateEnv :: Members Env r => Existential (Map.Map I.Label SemanticSig) -> Eff r ()
-updateEnv (Existential is m) = do
-  _ <- Map.traverseWithKey (\i -> modify . I.insertKind (coerce i)) is
+updateEnv (Existential vs m) = do
+  _ <- Map.traverseWithKey (\v -> modify . I.insertKind v) vs
   _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
   return ()
 
