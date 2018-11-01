@@ -190,6 +190,12 @@ transaction e = do
   put (env :: I.Env)
   return x
 
+updateEnv :: Members '[State I.Env, Error TypeError] r => Existential (Map.Map I.Label SemanticSig) -> Eff r ()
+updateEnv (Existential is m) = do
+  _ <- Map.traverseWithKey (\i -> modify . I.insertKind (coerce i)) is
+  _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
+  return ()
+
 instance Elaboration Sig where
   type Output Sig = AbstractSig
 
@@ -197,10 +203,9 @@ instance Elaboration Sig where
     where
       f :: Members '[Fresh, State I.Env, Error TypeError] r => Decl -> Eff r (Existential (Map.Map I.Label SemanticSig))
       f d = do
-        Existential is m <- elaborate d
-        _ <- Map.traverseWithKey (\i -> modify . I.insertKind (coerce i)) is
-        _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
-        return (Existential is m)
+        e <- elaborate d
+        updateEnv e
+        return e
 
       g m1 m2 = do
         if Map.keysSet m1 `Set.disjoint` Map.keysSet m2
