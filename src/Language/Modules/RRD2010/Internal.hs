@@ -1,17 +1,21 @@
 {-# LANGUAGE DeriveTraversable #-}
 
 module Language.Modules.RRD2010.Internal
-  ( Label
-  , Variable
+  ( Label(..)
+  , Variable(..)
   , Record(..)
   , Kind(..)
   , Type(..)
+  , some
+  , forall
   , Term(..)
 
   -- * Environment
   , Env
   , lookupKind
   , lookupType
+  , insertKind
+  , insertType
   ) where
 
 import qualified Data.Map.Lazy as Map
@@ -24,7 +28,7 @@ data Label
   deriving (Eq, Ord, Show)
 
 newtype Variable = Variable Int
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 newtype Record a = Record (Map.Map Label a)
   deriving (Eq, Show, Functor, Foldable, Traversable)
@@ -42,7 +46,14 @@ data Type
   | Some Variable Kind Type
   | TAbs Variable Kind Type
   | TApp Type Type
+  | Int
   deriving (Eq, Show)
+
+some :: Map.Map Variable Kind -> Type -> Type
+some m ty = Map.foldrWithKey Some ty m
+
+forall :: Map.Map Variable Kind -> Type -> Type
+forall m ty = Map.foldrWithKey Forall ty m
 
 data Term
   = Var Variable
@@ -67,3 +78,9 @@ lookupKind v e = lookupEnv v e >>= either Just (const Nothing)
 
 lookupType :: Variable -> Env -> Maybe Type
 lookupType v e = lookupEnv v e >>= either (const Nothing) Just
+
+insertKind :: Variable -> Kind -> Env -> Env
+insertKind v k (Env e) = Env $ (v, Left k) : e
+
+insertType :: Variable -> Type -> Env -> Env
+insertType v k (Env e) = Env $ (v, Right k) : e
