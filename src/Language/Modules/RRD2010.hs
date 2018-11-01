@@ -205,16 +205,19 @@ instance Elaboration Sig where
           then return $ m1 <> m2
           else throwError $ fromProblem $ DuplicateDecls m1 m2
 
+atomic :: Ident -> a -> Existential (Map.Map I.Label a)
+atomic i = existential . Map.singleton (embedIntoLabel i)
+
 instance Elaboration Decl where
   type Output Decl = Existential (Map.Map I.Label SemanticSig)
 
   elaborate (ValDecl i ty) =
-    [ existential $ Map.singleton (embedIntoLabel i) $ AtomicTerm ity
+    [ atomic i $ AtomicTerm ity
     | ity <- elaborate ty >>= extractMonoType
     ]
 
   elaborate (ManTypeDecl i ty) =
-    [ existential $ Map.singleton (embedIntoLabel i) $ AtomicType ity ik
+    [ atomic i $ AtomicType ity ik
     | (ity, ik) <- elaborate ty
     ]
 
@@ -230,7 +233,7 @@ instance Elaboration Decl where
     ]
 
   elaborate (SignatureDecl i s) =
-    [ existential $ Map.singleton (embedIntoLabel i) $ AtomicSig asig
+    [ atomic i $ AtomicSig asig
     | asig <- elaborate s
     ]
 
