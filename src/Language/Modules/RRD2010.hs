@@ -46,7 +46,7 @@ embedIntoLabel = embed . embed
 
 extractLabel :: Member (Error TypeError) r => I.Label -> Eff r I.Variable
 extractLabel (extract -> Just x) = return x
-extractLabel l                   = throwError $ fromProblem $ NoCorrespondVariable l
+extractLabel l                   = throwProblem $ NoCorrespondVariable l
 
 data Kind = Mono
   deriving (Eq, Show)
@@ -135,9 +135,9 @@ proj = foldlM proj'
 proj' :: Member (Error TypeError) r => SemanticSig -> Ident -> Eff r SemanticSig
 proj' (StructureSig m) (embedIntoLabel -> l) =
   case Map.lookup l m of
-    Nothing -> throwError $ fromProblem $ NoSuchLabel m l
+    Nothing -> throwProblem $ NoSuchLabel m l
     Just ssig -> return ssig
-proj' ssig _ = throwError $ fromProblem $ NotStructureSig ssig
+proj' ssig _ = throwProblem $ NotStructureSig ssig
 
 class Encode a where
   encode :: a -> I.Type
@@ -178,6 +178,9 @@ data Problem
 
 fromProblem :: Problem -> TypeError
 fromProblem = TypeError []
+
+throwProblem :: Member (Error TypeError) r => Problem -> Eff r a
+throwProblem = throwError . fromProblem
 
 addReason :: Reason -> TypeError -> TypeError
 addReason r (TypeError rs p) = TypeError (r : rs) p
@@ -228,7 +231,7 @@ instance Elaboration Sig where
       g m1 m2 = do
         if Map.keysSet m1 `Set.disjoint` Map.keysSet m2
           then return $ m1 <> m2
-          else throwError $ fromProblem $ DuplicateDecls m1 m2
+          else throwProblem $ DuplicateDecls m1 m2
 
   elaborate (FunSig i sig1 sig2) = transaction $ do
     asig1 <- elaborate sig1
@@ -272,7 +275,7 @@ instance Elaboration Decl where
     Existential m ssig <- elaborate s
     case ssig of
       StructureSig x -> return $ Existential m x
-      _              -> throwError $ fromProblem $ IncludeNonStructureSig ssig
+      _              -> throwProblem $ IncludeNonStructureSig ssig
 
 extractMonoType :: Member (Error TypeError) r => (I.Type, I.Kind) -> Eff r I.Type
 extractMonoType (ity, ik) = do
@@ -281,4 +284,4 @@ extractMonoType (ity, ik) = do
 
 expectMono :: Member (Error TypeError) r => I.Kind -> Eff r ()
 expectMono I.Mono = return ()
-expectMono ik     = throwError $ fromProblem $ NotMono ik
+expectMono ik     = throwProblem $ NotMono ik
