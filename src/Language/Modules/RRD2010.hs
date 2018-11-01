@@ -42,6 +42,9 @@ instance Embed I.Variable where
 embedIntoLabel :: Ident -> I.Label
 embedIntoLabel = embed . embed
 
+extractLabel :: Member (Error TypeError) r => I.Label -> Eff r I.Variable
+extractLabel l = maybe (throwError $ fromProblem $ NoCorrespondVariable l) return $ extract l
+
 data Kind = Mono
   deriving (Eq, Show)
 
@@ -192,10 +195,7 @@ instance Elaboration Sig where
       f d = do
         Existential is m <- elaborate d
         _ <- Map.traverseWithKey (\i -> modify . I.insertKind (coerce i)) is
-        _ <- Map.traverseWithKey (\l s -> do
-            v <- maybe (throwError $ fromProblem $ NoCorrespondVariable l) return $ extract l
-            modify $ I.insertType v $ encode s
-          ) m
+        _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
         return (Existential is m)
 
       g m1 m2 = do
