@@ -149,40 +149,34 @@ proj' (StructureSig m) (embedIntoLabel -> l) =
 proj' ssig _ = throwProblem $ NotStructureSig ssig
 
 class Subst a where
-  subst :: I.Variable -> I.Type -> a -> a
+  subst :: Map.Map I.Variable I.Type -> a -> a
 
 instance Subst a => Subst (Quantified a) where
-  subst v ity e @ (Quantified (m, x))
-    | v `Map.member` m = e
-    | otherwise        = Quantified (m, subst v ity x) -- TODO: It might cause variable capturing.
+  subst s e @ (Quantified (m, x)) = Quantified (m, subst (s Map.\\ m) x) -- TODO: It might cause variable capturing.
 
 instance (Subst a, Subst b) => Subst (Fun a b) where
-  subst v ity (x :-> y) = subst v ity x :-> subst v ity y
+  subst m (x :-> y) = subst m x :-> subst m y
 
-sub :: I.Variable -> I.Variable -> I.Type -> I.Type -> I.Type
-sub v0 v ty0 ty
-  | v == v0   = ty
-  | otherwise = subst v0 ty0 ty
+sub :: Map.Map I.Variable I.Type -> I.Variable -> I.Type -> I.Type
+sub m v ty = subst (Map.delete v m) ty
 
 -- TODO: It might cause variable capturing.
 instance Subst I.Type where
-  subst v0 ty0 ty @ (I.TVar v)
-    | v == v0                    = ty0
-    | otherwise                  = ty
-  subst v ty0 (I.TFun ty1 ty2)   = I.TFun (subst v ty0 ty1) (subst v ty0 ty2)
-  subst v ty0 (I.TRecord rt)     = I.TRecord $ subst v ty0 <$> rt
-  subst v0 ty0 (I.Forall v k ty) = I.Forall v k $ sub v0 v ty0 ty
-  subst v0 ty0 (I.Some v k ty)   = I.Some v k $ sub v0 v ty0 ty
-  subst v0 ty0 (I.TAbs v k ty)   = I.TAbs v k $ sub v0 v ty0 ty
-  subst v ty0 (I.TApp ty1 ty2)   = I.TApp (subst v ty0 ty1) (subst v ty0 ty2)
-  subst _ _ I.Int                = I.Int
+  subst m ty @ (I.TVar v)   = Map.findWithDefault ty v m
+  subst m (I.TFun ty1 ty2)  = I.TFun (subst m ty1) (subst m ty2)
+  subst m (I.TRecord rt)    = I.TRecord $ subst m<$> rt
+  subst m (I.Forall v k ty) = I.Forall v k $ sub m v ty
+  subst m (I.Some v k ty)   = I.Some v k $ sub m v ty
+  subst m (I.TAbs v k ty)   = I.TAbs v k $ sub m v ty
+  subst m (I.TApp ty1 ty2)  = I.TApp (subst m ty1) (subst m ty2)
+  subst _ I.Int             = I.Int
 
 instance Subst SemanticSig where
-  subst v ity0 (AtomicTerm ity)    = AtomicTerm $ subst v ity0 ity
-  subst v ity0 (AtomicType ity ik) = AtomicType (subst v ity0 ity) ik
-  subst v ity0 (AtomicSig asig)    = AtomicSig $ subst v ity0 asig
-  subst v ity0 (StructureSig m)    = StructureSig $ subst v ity0 <$> m
-  subst v ity0 (FunctorSig u)      = FunctorSig $ subst v ity0 u
+  subst s (AtomicTerm ity)    = AtomicTerm $ subst s ity
+  subst s (AtomicType ity ik) = AtomicType (subst s ity) ik
+  subst s (AtomicSig asig)    = AtomicSig $ subst s asig
+  subst s (StructureSig m)    = StructureSig $ subst s <$> m
+  subst s (FunctorSig u)      = FunctorSig $ subst s u
 
 class Encode a where
   encode :: a -> I.Type
@@ -293,7 +287,7 @@ instance Elaboration Sig where
     ssig' <- proj ssig p
     case ssig' of
       AtomicType (I.TVar v) ik'
-        | ik' == ik, v `Map.member` m -> return $ Existential (v `Map.delete` m, subst v ity ssig)
+        | ik' == ik, v `Map.member` m -> return $ Existential (v `Map.delete` m, subst (Map.singleton v ity) ssig)
         | ik' == ik                   -> throwProblem $ KindMismatch ik ik'
         | otherwise                   -> throwProblem $ NotAbstractType v
       _                               -> throwProblem $ NotTypeVariable ssig'
