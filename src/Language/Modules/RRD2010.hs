@@ -123,6 +123,9 @@ data SemanticSig
 existential :: a -> Existential a
 existential = Existential mempty
 
+toUniversal :: Existential a -> Universal a
+toUniversal (Existential m x) = Universal m x
+
 merge :: Functor f => (a -> a -> f a) -> Existential a -> Existential a -> f (Existential a)
 merge f (Existential m1 x) (Existential m2 y) = Existential (Map.union m1 m2) <$> f x y
 
@@ -214,6 +217,12 @@ instance Elaboration Sig where
         if Map.keysSet m1 `Set.disjoint` Map.keysSet m2
           then return $ m1 <> m2
           else throwError $ fromProblem $ DuplicateDecls m1 m2
+
+  elaborate (FunSig i sig1 sig2) = transaction $ do
+    asig1 <- elaborate sig1
+    updateEnv $ Map.singleton (embedIntoLabel i) <$> asig1
+    asig2 <- elaborate sig2
+    return $ existential $ FunctorSig $ (:-> asig2) <$> toUniversal asig1
 
 atomic :: Ident -> a -> Existential (Map.Map I.Label a)
 atomic i = existential . Map.singleton (embedIntoLabel i)
