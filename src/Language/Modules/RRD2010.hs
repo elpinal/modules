@@ -129,6 +129,16 @@ toUniversal (Existential m x) = Universal m x
 merge :: Functor f => (a -> a -> f a) -> Existential a -> Existential a -> f (Existential a)
 merge f (Existential m1 x) (Existential m2 y) = Existential (Map.union m1 m2) <$> f x y
 
+proj :: Member (Error TypeError) r => Foldable t => SemanticSig -> t Ident -> Eff r SemanticSig
+proj = foldlM proj'
+
+proj' :: Member (Error TypeError) r => SemanticSig -> Ident -> Eff r SemanticSig
+proj' (StructureSig m) (embedIntoLabel -> l) =
+  case Map.lookup l m of
+    Nothing -> throwError $ fromProblem $ NoSuchLabel m l
+    Just ssig -> return ssig
+proj' ssig _ = throwError $ fromProblem $ NotStructureSig ssig
+
 class Encode a where
   encode :: a -> I.Type
 
@@ -162,6 +172,8 @@ data Problem
   | NoCorrespondVariable I.Label
   | IncludeNonStructureSig SemanticSig
   | DuplicateDecls (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
+  | NotStructureSig SemanticSig
+  | NoSuchLabel (Map.Map I.Label SemanticSig) I.Label
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
