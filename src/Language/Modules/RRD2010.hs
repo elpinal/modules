@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Language.Modules.RRD2010
   (
@@ -43,7 +44,8 @@ embedIntoLabel :: Ident -> I.Label
 embedIntoLabel = embed . embed
 
 extractLabel :: Member (Error TypeError) r => I.Label -> Eff r I.Variable
-extractLabel l = maybe (throwError $ fromProblem $ NoCorrespondVariable l) return $ extract l
+extractLabel (extract -> Just x) = return x
+extractLabel l                   = throwError $ fromProblem $ NoCorrespondVariable l
 
 data Kind = Mono
   deriving (Eq, Show)
