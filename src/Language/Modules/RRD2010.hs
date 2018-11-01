@@ -17,6 +17,7 @@ import Control.Monad.Freer.State
 import Data.Coerce
 import Data.Foldable
 import qualified Data.Map.Lazy as Map
+import Data.Monoid
 import qualified Data.Set as Set
 
 import qualified Language.Modules.RRD2010.Internal as I
@@ -339,3 +340,10 @@ extractMonoType (ity, ik) = do
 expectMono :: Member (Error TypeError) r => I.Kind -> Eff r ()
 expectMono I.Mono = return ()
 expectMono ik     = throwProblem $ NotMono ik
+
+lookupInst :: SemanticSig -> SemanticSig -> I.Variable -> First I.Type
+lookupInst (AtomicType ty1 k1) (AtomicType (I.TVar v) k2) v0
+  | k1 == k2, v == v0                            = return ty1
+  | otherwise                                    = First Nothing
+lookupInst (StructureSig m1) (StructureSig m2) v = foldMap (\(x, y) -> lookupInst x y v) $ Map.intersectionWith (,) m1 m2
+lookupInst _ _ _                                 = First Nothing
