@@ -178,6 +178,10 @@ instance Subst SemanticSig where
   subst s (StructureSig m)    = StructureSig $ subst s <$> m
   subst s (FunctorSig u)      = FunctorSig $ subst s u
 
+-- FIXME: Don't use.
+tempVar :: I.Variable
+tempVar = I.Variable 0
+
 class Encode a where
   encode :: a -> I.Type
 
@@ -193,7 +197,7 @@ instance (Encode a, Encode b) => Encode (Fun a b) where
 instance Encode SemanticSig where
   encode (AtomicTerm ity)    = I.TRecord $ coerce $ Map.singleton I.Val ity
   encode (AtomicType ity ik) = I.TRecord $ coerce $ Map.singleton I.Typ $ I.Forall v (I.KFun ik I.Mono) $ I.TFun t t
-    where v = I.Variable 0
+    where v = tempVar
           t = I.TApp (I.TVar v) ity
   encode (AtomicSig asig)    = I.TRecord $ coerce $ Map.singleton I.Sig $ encode asig `I.TFun` encode asig
   encode (StructureSig m)    = I.TRecord $ coerce $ encode <$> m
@@ -356,7 +360,7 @@ class Subtype a where
 
 instance Subtype I.Type where
   t1 <: t2
-    | t1 .= t2  = return $ I.Abs (I.Variable 0) t1 $ (I.Var $ I.Variable 0)
+    | t1 .= t2  = return $ I.Abs tempVar t1 $ (I.Var tempVar)
     | otherwise = throwProblem $ NotEqual t1 t2
 
 match :: Members Env r => SemanticSig -> AbstractSig -> Eff r (I.Term, Map.Map I.Variable I.Type)
