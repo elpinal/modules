@@ -11,6 +11,7 @@ module Language.Modules.RRD2010
   (
   ) where
 
+import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.Fresh
@@ -274,9 +275,12 @@ transaction e = do
   put (env :: I.Env)
   return x
 
+updateEnvWithVars :: Members Env r => Map.Map I.Variable I.Kind -> Eff r ()
+updateEnvWithVars = void . Map.traverseWithKey (\v -> modify . I.insertKind v)
+
 updateEnv :: Members Env r => Existential (Map.Map I.Label SemanticSig) -> Eff r ()
 updateEnv (Existential (vs, m)) = do
-  _ <- Map.traverseWithKey (\v -> modify . I.insertKind v) vs
+  updateEnvWithVars vs
   _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
   return ()
 
