@@ -238,6 +238,7 @@ data Problem
   | NotTypeVariable SemanticSig
   | NotEqual I.Type I.Type
   | NoInstantiation I.Variable
+  | NotSubmap (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -392,5 +393,38 @@ match ssig (Existential (m, s)) = do
     f v Nothing   = throwProblem $ NoInstantiation v
     f _ (Just ty) = return ty
 
-instance Subtype SemanticSig where
+instance Subtype a => Subtype (Existential a) where
   (<:) = undefined
+
+instance Subtype SemanticSig where
+  (AtomicTerm t) <: (AtomicTerm u) =
+    let v = tempVar in
+      [ I.Abs v t $ I.App c $ I.Proj (I.Var v) I.Val
+      | c <- t <: u
+      ]
+
+  s @ (AtomicType t k) <: (AtomicType u l)
+    | k /= l    = throwProblem $ KindMismatch k l
+    | t .= u    = return $ I.Abs tempVar (encode s) $ I.Var tempVar
+    | otherwise = throwProblem $ NotEqual t u
+
+  (AtomicSig a) <: (AtomicSig b) = do
+    _ <- a <: b
+    _ <- b <: a
+    return $ I.Abs tempVar (encode a) $ encodeAsTerm $ SAbstractSig b
+
+  s @ (StructureSig m) <: (StructureSig n)
+    | Map.keysSet n `Set.isSubsetOf` Map.keysSet m =
+      let v = tempVar in
+        [ I.Abs v (encode s) $ I.TmRecord $ coerce $ Map.mapWithKey (\l c -> I.App c $ I.Var v `I.Proj` l) o
+        | o <- sequence $ Map.intersectionWith (<:) m n
+        ]
+    | otherwise                                    = throwProblem $ NotSubmap n m
+
+  ssig @ (FunctorSig (Universal (m, s :-> a))) <: (FunctorSig (Universal (n, t :-> b))) = transaction $ do
+    updateEnvWithVars n
+    (c, o) <- t `match` Existential (m, s)
+    d <- subst o a <: b
+    return $ I.Abs v (encode ssig) $ I.poly n $ I.Abs v1 (encode t) $ I.App d $ I.inst (I.Var v) o `I.App` I.App c (I.Var v1)
+      where v = tempVar
+            v1 = I.Variable 1 -- FIXME

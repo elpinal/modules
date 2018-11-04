@@ -9,6 +9,8 @@ module Language.Modules.RRD2010.Internal
   , some
   , forall
   , Term(..)
+  , poly
+  , inst
 
   -- * Environment
   , Env
@@ -62,10 +64,16 @@ data Term
   | TmRecord (Record Term)
   | Proj Term Label
   | Poly Variable Kind Term
-  | Inst Term Type
+  | Inst Term Variable Type
   | Pack Type Term Type
   | Unpack Variable Variable Term Term
   deriving (Eq, Show)
+
+poly :: Map.Map Variable Kind -> Term -> Term
+poly m t = Map.foldrWithKey Poly t m
+
+inst :: Term -> Map.Map Variable Type -> Term
+inst t m = Map.foldlWithKey Inst t m
 
 newtype Env = Env [(Variable, Either Kind Type)]
   deriving (Eq, Show)
