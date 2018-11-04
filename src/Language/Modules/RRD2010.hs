@@ -397,23 +397,23 @@ instance Subtype a => Subtype (Existential a) where
   (<:) = undefined
 
 instance Subtype SemanticSig where
-  (AtomicTerm t) <: (AtomicTerm u) =
+  AtomicTerm t <: AtomicTerm u =
     let v = tempVar in
       [ I.Abs v t $ I.App c $ I.Proj (I.Var v) I.Val
       | c <- t <: u
       ]
 
-  s @ (AtomicType t k) <: (AtomicType u l)
+  s @ (AtomicType t k) <: AtomicType u l
     | k /= l    = throwProblem $ KindMismatch k l
     | t .= u    = return $ I.Abs tempVar (encode s) $ I.Var tempVar
     | otherwise = throwProblem $ NotEqual t u
 
-  (AtomicSig a) <: (AtomicSig b) = do
+  AtomicSig a <: AtomicSig b = do
     _ <- a <: b
     _ <- b <: a
     return $ I.Abs tempVar (encode a) $ encodeAsTerm $ SAbstractSig b
 
-  s @ (StructureSig m) <: (StructureSig n)
+  s @ (StructureSig m) <: StructureSig n
     | Map.keysSet n `Set.isSubsetOf` Map.keysSet m =
       let v = tempVar in
         [ I.Abs v (encode s) $ I.TmRecord $ coerce $ Map.mapWithKey (\l c -> I.App c $ I.Var v `I.Proj` l) o
@@ -421,7 +421,7 @@ instance Subtype SemanticSig where
         ]
     | otherwise                                    = throwProblem $ NotSubmap n m
 
-  ssig @ (FunctorSig (Universal (m, s :-> a))) <: (FunctorSig (Universal (n, t :-> b))) = transaction $ do
+  ssig @ (FunctorSig (Universal (m, s :-> a))) <: FunctorSig (Universal (n, t :-> b)) = transaction $ do
     updateEnvWithVars n
     (c, o) <- t `match` Existential (m, s)
     d <- subst o a <: b
