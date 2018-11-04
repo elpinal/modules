@@ -203,6 +203,21 @@ instance Encode SemanticSig where
   encode (StructureSig m)    = I.TRecord $ coerce $ encode <$> m
   encode (FunctorSig u)      = encode u
 
+data SemanticTerm
+  = STerm I.Term
+  | SType I.Type I.Kind
+  | SAbstractSig AbstractSig
+  deriving (Eq, Show)
+
+encodeAsTerm :: SemanticTerm -> I.Term
+encodeAsTerm (STerm t)           = I.TmRecord $ coerce $ Map.singleton I.Val $ t
+encodeAsTerm (SType ity ik)      = I.TmRecord $ coerce $ Map.singleton I.Typ $ I.Poly v (I.KFun ik I.Mono) $ I.Abs v1 t $ I.Var v1
+  where v = tempVar
+        v1 = I.Variable 1 -- FIXME
+        t = I.TApp (I.TVar v) ity
+encodeAsTerm (SAbstractSig asig) = I.TmRecord $ coerce $ Map.singleton I.Sig $ I.Abs v (encode asig) $ I.Var v
+  where v = tempVar
+
 data TypeError = TypeError [Reason] Problem
   deriving (Eq, Show)
 
