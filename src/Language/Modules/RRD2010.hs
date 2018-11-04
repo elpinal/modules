@@ -360,7 +360,7 @@ class Subtype a where
 
 instance Subtype I.Type where
   t1 <: t2
-    | t1 .= t2  = return $ I.Abs tempVar t1 $ (I.Var tempVar)
+    | t1 .= t2  = return $ I.Abs tempVar t1 $ I.Var tempVar
     | otherwise = throwProblem $ NotEqual t1 t2
 
 match :: Members Env r => SemanticSig -> AbstractSig -> Eff r (I.Term, Map.Map I.Variable I.Type)
