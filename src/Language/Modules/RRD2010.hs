@@ -313,10 +313,10 @@ instance Elaboration Sig where
     ssig' <- proj ssig p
     case ssig' of
       AtomicType (I.TVar v) ik'
-        | ik' == ik, coerce v < length ks -> return $ Existential (removeNth (coerce v) ks, subst (Map.singleton v ity) ssig)
-        | ik' == ik                       -> throwProblem $ KindMismatch ik ik' -- FIXME
-        | otherwise                       -> throwProblem $ NotAbstractType v -- FIXME
-      _                                   -> throwProblem $ NotTypeVariable ssig'
+        | coerce v >= length ks -> throwProblem $ NotAbstractType v
+        | ik' == ik             -> return $ Existential (removeNth (coerce v) ks, subst (Map.singleton v ity) ssig)
+        | otherwise             -> throwProblem $ KindMismatch ik ik'
+      _                         -> throwProblem $ NotTypeVariable ssig'
 
 removeNth :: Int -> [a] -> [a]
 removeNth n xs =
