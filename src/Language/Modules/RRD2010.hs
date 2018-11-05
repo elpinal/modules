@@ -89,11 +89,11 @@ newtype Quantified a = Quantified ([I.Kind], a)
 
 newtype Existential a = Existential ([I.Kind], a)
   deriving (Eq, Show, Functor)
-  deriving (Subst, I.Shift) via (Quantified a)
+  deriving (I.Subst, I.Shift) via (Quantified a)
 
 newtype Universal a = Universal ([I.Kind], a)
   deriving (Eq, Show, Functor)
-  deriving (Subst, I.Shift) via (Quantified a)
+  deriving (I.Subst, I.Shift) via (Quantified a)
 
 type AbstractSig = Existential SemanticSig
 
@@ -145,37 +145,21 @@ proj' (StructureSig m) (embedIntoLabel -> l) =
     Just ssig -> return ssig
 proj' ssig _ = throwProblem $ NotStructureSig ssig
 
-subst :: Subst a => Map.Map I.Variable I.Type -> a -> a
-subst = substC 0
+subst :: I.Subst a => Map.Map I.Variable I.Type -> a -> a
+subst = I.substC 0
 
-class Subst a where
-  -- Assumes @Map.keys m == coerce [0 .. Map.size m - 1]@ where @m@ ranges over the second argument of @substC@.
-  substC :: Int -> Map.Map I.Variable I.Type -> a -> a
+instance I.Subst a => I.Subst (Quantified a) where
+  substC c s (Quantified (ks, x)) = Quantified (ks, I.substC (c + length ks) s x)
 
-instance Subst a => Subst (Quantified a) where
-  substC c s (Quantified (ks, x)) = Quantified (ks, substC (c + length ks) s x)
+instance (I.Subst a, I.Subst b) => I.Subst (Fun a b) where
+  substC c m (x :-> y) = I.substC c m x :-> I.substC c m y
 
-instance (Subst a, Subst b) => Subst (Fun a b) where
-  substC c m (x :-> y) = substC c m x :-> substC c m y
-
-instance Subst I.Type where
-  substC c m ty @ (I.TVar v)
-    | c <= coerce v = Map.findWithDefault (I.shift (- Map.size m) ty) (coerce $ coerce v - c) m
-    | otherwise     = ty
-  substC c m (I.TFun ty1 ty2) = I.TFun (substC c m ty1) (substC c m ty2)
-  substC c m (I.TRecord rt)   = I.TRecord $ substC c m <$> rt
-  substC c m (I.Forall k ty)  = I.Forall k $ substC (c + 1) m ty
-  substC c m (I.Some k ty)    = I.Some k $ substC (c + 1) m ty
-  substC c m (I.TAbs k ty)    = I.TAbs k $ substC (c + 1) m ty
-  substC c m (I.TApp ty1 ty2) = I.TApp (substC c m ty1) (substC c m ty2)
-  substC _ _ I.Int            = I.Int
-
-instance Subst SemanticSig where
-  substC c s (AtomicTerm ity)    = AtomicTerm $ substC c s ity
-  substC c s (AtomicType ity ik) = AtomicType (substC c s ity) ik
-  substC c s (AtomicSig asig)    = AtomicSig $ substC c s asig
-  substC c s (StructureSig m)    = StructureSig $ substC c s <$> m
-  substC c s (FunctorSig u)      = FunctorSig $ substC c s u
+instance I.Subst SemanticSig where
+  substC c s (AtomicTerm ity)    = AtomicTerm $ I.substC c s ity
+  substC c s (AtomicType ity ik) = AtomicType (I.substC c s ity) ik
+  substC c s (AtomicSig asig)    = AtomicSig $ I.substC c s asig
+  substC c s (StructureSig m)    = StructureSig $ I.substC c s <$> m
+  substC c s (FunctorSig u)      = FunctorSig $ I.substC c s u
 
 class Encode a where
   encode :: a -> I.Type

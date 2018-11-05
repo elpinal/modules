@@ -13,9 +13,13 @@ module Language.Modules.RRD2010.Internal
   , Term(..)
   , poly
   , inst
+  , pack
+  , unpack
 
   , Shift(..)
   , shift
+
+  , Subst(..)
 
   -- * Environment
   , Env
@@ -93,6 +97,12 @@ poly ks t = foldr Poly t ks
 inst :: Term -> [Type] -> Term
 inst t ts = foldr (flip Inst) t ts
 
+pack :: [Kind] -> Type -> [Type] -> Term -> Term
+pack ks ty ts t = foldr (\(typ1, typ2) tm -> Pack typ1 tm typ2) t $ zip ts $ scanl elimEx (some ks ty) ts
+
+unpack :: Type -> Int -> Term -> Term -> Term
+unpack ty n t1 t2 = foldr (\t0 f t -> Unpack t $ f t0) (App $ Abs ty t2) (replicate n $ Var $ Variable 0) t1
+
 data VarInfo a = VarInfo Name a
   deriving (Eq, Show, Functor)
 
@@ -153,3 +163,23 @@ instance Shift a => Shift (VarInfo a) where
 
 instance Shift a => Shift (Map.Map k a) where
   shiftAbove c0 d m = shiftAbove c0 d <$> m
+
+elimEx :: Type -> Type -> Type
+elimEx (Some _ t) x = substC 0 (Map.singleton (Variable 0) x) t
+elimEx _ _          = error "unexpected error"
+
+class Subst a where
+  -- Assumes @Map.keys m == coerce [0 .. Map.size m - 1]@ where @m@ ranges over the second argument of @substC@.
+  substC :: Int -> Map.Map Variable Type -> a -> a
+
+instance Subst Type where
+  substC c m ty @ (TVar v)
+    | c <= coerce v = Map.findWithDefault (shift (- Map.size m) ty) (sub v c) m
+    | otherwise     = ty
+  substC c m (TFun ty1 ty2) = TFun (substC c m ty1) (substC c m ty2)
+  substC c m (TRecord rt)   = TRecord $ substC c m <$> rt
+  substC c m (Forall k ty)  = Forall k $ substC (c + 1) m ty
+  substC c m (Some k ty)    = Some k $ substC (c + 1) m ty
+  substC c m (TAbs k ty)    = TAbs k $ substC (c + 1) m ty
+  substC c m (TApp ty1 ty2) = TApp (substC c m ty1) (substC c m ty2)
+  substC _ _ Int            = Int
