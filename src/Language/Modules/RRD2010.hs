@@ -11,10 +11,8 @@ module Language.Modules.RRD2010
   (
   ) where
 
-import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
-import Control.Monad.Freer.Fresh
 import Control.Monad.Freer.State
 import Data.Coerce
 import Data.Foldable
@@ -24,32 +22,15 @@ import qualified Data.Set as Set
 
 import qualified Language.Modules.RRD2010.Internal as I
 
-newtype Ident = Ident Int
+newtype Ident = Ident I.Name
   deriving (Eq, Ord, Show)
 
-class Embed a where
-  type Target a
-  embed :: a -> Target a
-  extract :: Target a -> Maybe a
-
-instance Embed Ident where
-  type Target Ident = I.Variable
-  embed = coerce
-  extract = Just . coerce
-
-instance Embed I.Variable where
-  type Target I.Variable = I.Label
-  embed = I.Label . coerce
-
-  extract (I.Label l) = Just $ coerce l
-  extract _ = Nothing
-
 embedIntoLabel :: Ident -> I.Label
-embedIntoLabel = embed . embed
+embedIntoLabel = I.Label . coerce
 
-extractLabel :: Member (Error TypeError) r => I.Label -> Eff r I.Variable
-extractLabel (extract -> Just x) = return x
-extractLabel l                   = throwProblem $ NoCorrespondVariable l
+extractLabel :: Member (Error TypeError) r => I.Label -> Eff r I.Name
+extractLabel (I.Label name) = return name
+extractLabel l              = throwProblem $ NoCorrespondName l
 
 data Kind = Mono
   deriving (Eq, Show)
@@ -103,16 +84,16 @@ data Decl
   | IncludeDecl Sig
   deriving (Eq, Show)
 
-newtype Quantified a = Quantified (Map.Map I.Variable I.Kind, a)
+newtype Quantified a = Quantified ([I.Kind], a)
   deriving (Eq, Show, Functor)
 
-newtype Existential a = Existential (Map.Map I.Variable I.Kind, a)
+newtype Existential a = Existential ([I.Kind], a)
   deriving (Eq, Show, Functor)
-  deriving Subst via (Quantified a)
+  deriving (Subst, I.Shift) via (Quantified a)
 
-newtype Universal a = Universal (Map.Map I.Variable I.Kind, a)
+newtype Universal a = Universal ([I.Kind], a)
   deriving (Eq, Show, Functor)
-  deriving Subst via (Quantified a)
+  deriving (Subst, I.Shift) via (Quantified a)
 
 type AbstractSig = Existential SemanticSig
 
@@ -127,7 +108,7 @@ data SemanticSig
   | FunctorSig (Universal (Fun SemanticSig AbstractSig))
   deriving (Eq, Show)
 
-mkExistential :: Map.Map I.Variable I.Kind -> a -> Existential a
+mkExistential :: [I.Kind] -> a -> Existential a
 mkExistential = curry Existential
 
 existential :: a -> Existential a
@@ -136,8 +117,23 @@ existential x = Existential (mempty, x)
 toUniversal :: Existential a -> Universal a
 toUniversal = coerce
 
-merge :: Functor f => (a -> a -> f a) -> Existential a -> Existential a -> f (Existential a)
-merge f (Existential (m1, x)) (Existential (m2, y)) = mkExistential (Map.union m1 m2) <$> f x y
+merge :: (Functor f, I.Shift a) => (a -> a -> f a) -> Existential a -> Existential a -> f (Existential a)
+merge f (Existential (xs, x)) (Existential (ys, y)) = mkExistential (ys <> xs) <$> f (I.shift (length ys) x) y
+
+instance I.Shift SemanticSig where
+  shiftAbove c0 d = walk c0
+    where
+      walk c (AtomicTerm t)   = AtomicTerm $ I.shiftAbove c d t
+      walk c (AtomicType t k) = AtomicType (I.shiftAbove c d t) k
+      walk c (AtomicSig a)    = AtomicSig $ I.shiftAbove c d a
+      walk c (StructureSig m) = StructureSig $ I.shiftAbove c d m
+      walk c (FunctorSig u)   = FunctorSig $ I.shiftAbove c d u
+
+instance I.Shift a => I.Shift (Quantified a) where
+  shiftAbove c d (Quantified (ks, a)) = Quantified (ks, I.shiftAbove (c + length ks) d a)
+
+instance (I.Shift a, I.Shift b) => I.Shift (Fun a b) where
+  shiftAbove c d (x :-> y) = I.shiftAbove c d x :-> I.shiftAbove c d y
 
 proj :: Member (Error TypeError) r => Foldable t => SemanticSig -> t Ident -> Eff r SemanticSig
 proj = foldlM proj'
@@ -149,56 +145,54 @@ proj' (StructureSig m) (embedIntoLabel -> l) =
     Just ssig -> return ssig
 proj' ssig _ = throwProblem $ NotStructureSig ssig
 
+subst :: Subst a => Map.Map I.Variable I.Type -> a -> a
+subst = substC 0
+
 class Subst a where
-  subst :: Map.Map I.Variable I.Type -> a -> a
+  -- Assumes @Map.keys m == coerce [0 .. Map.size m - 1]@ where @m@ ranges over the second argument of @substC@.
+  substC :: Int -> Map.Map I.Variable I.Type -> a -> a
 
 instance Subst a => Subst (Quantified a) where
-  subst s (Quantified (m, x)) = Quantified (m, subst (s Map.\\ m) x) -- TODO: It might cause variable capturing.
+  substC c s (Quantified (ks, x)) = Quantified (ks, substC (c + length ks) s x)
 
 instance (Subst a, Subst b) => Subst (Fun a b) where
-  subst m (x :-> y) = subst m x :-> subst m y
+  substC c m (x :-> y) = substC c m x :-> substC c m y
 
-sub :: Map.Map I.Variable I.Type -> I.Variable -> I.Type -> I.Type
-sub m v ty = subst (Map.delete v m) ty
-
--- TODO: It might cause variable capturing.
 instance Subst I.Type where
-  subst m ty @ (I.TVar v)   = Map.findWithDefault ty v m
-  subst m (I.TFun ty1 ty2)  = I.TFun (subst m ty1) (subst m ty2)
-  subst m (I.TRecord rt)    = I.TRecord $ subst m<$> rt
-  subst m (I.Forall v k ty) = I.Forall v k $ sub m v ty
-  subst m (I.Some v k ty)   = I.Some v k $ sub m v ty
-  subst m (I.TAbs v k ty)   = I.TAbs v k $ sub m v ty
-  subst m (I.TApp ty1 ty2)  = I.TApp (subst m ty1) (subst m ty2)
-  subst _ I.Int             = I.Int
+  substC c m ty @ (I.TVar v)
+    | c <= coerce v = Map.findWithDefault (I.shift (- Map.size m) ty) (coerce $ coerce v - c) m
+    | otherwise     = ty
+  substC c m (I.TFun ty1 ty2) = I.TFun (substC c m ty1) (substC c m ty2)
+  substC c m (I.TRecord rt)   = I.TRecord $ substC c m <$> rt
+  substC c m (I.Forall k ty)  = I.Forall k $ substC (c + 1) m ty
+  substC c m (I.Some k ty)    = I.Some k $ substC (c + 1) m ty
+  substC c m (I.TAbs k ty)    = I.TAbs k $ substC (c + 1) m ty
+  substC c m (I.TApp ty1 ty2) = I.TApp (substC c m ty1) (substC c m ty2)
+  substC _ _ I.Int            = I.Int
 
 instance Subst SemanticSig where
-  subst s (AtomicTerm ity)    = AtomicTerm $ subst s ity
-  subst s (AtomicType ity ik) = AtomicType (subst s ity) ik
-  subst s (AtomicSig asig)    = AtomicSig $ subst s asig
-  subst s (StructureSig m)    = StructureSig $ subst s <$> m
-  subst s (FunctorSig u)      = FunctorSig $ subst s u
-
--- FIXME: Don't use.
-tempVar :: I.Variable
-tempVar = I.Variable 0
+  substC c s (AtomicTerm ity)    = AtomicTerm $ substC c s ity
+  substC c s (AtomicType ity ik) = AtomicType (substC c s ity) ik
+  substC c s (AtomicSig asig)    = AtomicSig $ substC c s asig
+  substC c s (StructureSig m)    = StructureSig $ substC c s <$> m
+  substC c s (FunctorSig u)      = FunctorSig $ substC c s u
 
 class Encode a where
   encode :: a -> I.Type
 
 instance Encode a => Encode (Existential a) where
-  encode (Existential (m, x)) = I.some (Map.mapKeys coerce m) $ encode x
+  encode (Existential (ks, x)) = I.some ks $ encode x
 
 instance Encode a => Encode (Universal a) where
-  encode (Universal (m, x)) = I.forall (Map.mapKeys coerce m) $ encode x
+  encode (Universal (ks, x)) = I.forall ks $ encode x
 
 instance (Encode a, Encode b) => Encode (Fun a b) where
   encode (x :-> y) = encode x `I.TFun` encode y
 
 instance Encode SemanticSig where
   encode (AtomicTerm ity)    = I.TRecord $ coerce $ Map.singleton I.Val ity
-  encode (AtomicType ity ik) = I.TRecord $ coerce $ Map.singleton I.Typ $ I.Forall v (I.KFun ik I.Mono) $ I.TFun t t
-    where v = tempVar
+  encode (AtomicType ity ik) = I.TRecord $ coerce $ Map.singleton I.Typ $ I.Forall (I.KFun ik I.Mono) $ I.TFun t t
+    where v = I.Variable 0
           t = I.TApp (I.TVar v) ity
   encode (AtomicSig asig)    = I.TRecord $ coerce $ Map.singleton I.Sig $ encode asig `I.TFun` encode asig
   encode (StructureSig m)    = I.TRecord $ coerce $ encode <$> m
@@ -212,12 +206,9 @@ data SemanticTerm
 
 encodeAsTerm :: SemanticTerm -> I.Term
 encodeAsTerm (STerm t)           = I.TmRecord $ coerce $ Map.singleton I.Val $ t
-encodeAsTerm (SType ity ik)      = I.TmRecord $ coerce $ Map.singleton I.Typ $ I.Poly v (I.KFun ik I.Mono) $ I.Abs v1 t $ I.Var v1
-  where v = tempVar
-        v1 = I.Variable 1 -- FIXME
-        t = I.TApp (I.TVar v) ity
-encodeAsTerm (SAbstractSig asig) = I.TmRecord $ coerce $ Map.singleton I.Sig $ I.Abs v (encode asig) $ I.Var v
-  where v = tempVar
+encodeAsTerm (SType ity ik)      = I.TmRecord $ coerce $ Map.singleton I.Typ $ I.Poly (I.KFun ik I.Mono) $ I.Abs t $ I.Var $ I.Variable 0
+  where t = I.TApp (I.TVar $ I.Variable 0) ity
+encodeAsTerm (SAbstractSig asig) = I.TmRecord $ coerce $ Map.singleton I.Sig $ I.Abs (encode asig) $ I.Var $ I.Variable 0
 
 data TypeError = TypeError [Reason] Problem
   deriving (Eq, Show)
@@ -228,7 +219,7 @@ data Reason
 
 data Problem
   = NotMono I.Kind
-  | NoCorrespondVariable I.Label
+  | NoCorrespondName I.Label
   | IncludeNonStructureSig SemanticSig
   | DuplicateDecls (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
   | NotStructureSig SemanticSig
@@ -237,7 +228,7 @@ data Problem
   | NotAbstractType I.Variable
   | NotTypeVariable SemanticSig
   | NotEqual I.Type I.Type
-  | NoInstantiation I.Variable
+  | NoInstantiation
   | NotSubmap (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
   deriving (Eq, Show)
 
@@ -253,11 +244,11 @@ addReason r (TypeError rs p) = TypeError (r : rs) p
 annotate :: Member (Error TypeError) r => Eff r a -> Reason -> Eff r a
 annotate x r = x `catchError` (throwError . addReason r)
 
-type Env = '[State I.Env, Error TypeError]
+type Env = '[State (I.Env SemanticSig), Error TypeError]
 
 class Elaboration a where
   type Output a
-  elaborate :: Members (Fresh ': Env) r => a -> Eff r (Output a)
+  elaborate :: Members Env r => a -> Eff r (Output a)
 
 instance Elaboration Kind where
   type Output Kind = I.Kind
@@ -269,20 +260,29 @@ instance Elaboration Type where
 
   elaborate Int = return (I.Int, I.Mono)
 
-transaction :: Member (State I.Env) r => Eff r a -> Eff r a
+getEnv :: Member (State (I.Env SemanticSig)) r => Eff r (I.Env SemanticSig)
+getEnv = get
+
+transaction :: Member (State (I.Env SemanticSig)) r => Eff r a -> Eff r a
 transaction e = do
-  env <- get
+  env <- getEnv
   x <- e
-  put (env :: I.Env)
+  put env
   return x
 
-updateEnvWithVars :: Members Env r => Map.Map I.Variable I.Kind -> Eff r ()
-updateEnvWithVars = void . Map.traverseWithKey (\v -> modify . I.insertKind v)
+insertKind :: I.Kind -> I.Env SemanticSig -> I.Env SemanticSig
+insertKind = I.insertKind
+
+updateEnvWithVars :: Members Env r => [I.Kind] -> Eff r ()
+updateEnvWithVars = modify . foldr (\k f -> insertKind k . f) id
+
+insertSemSig :: I.Name -> SemanticSig -> I.Env SemanticSig -> I.Env SemanticSig
+insertSemSig = I.insertType
 
 updateEnv :: Members Env r => Existential (Map.Map I.Label SemanticSig) -> Eff r ()
-updateEnv (Existential (vs, m)) = do
-  updateEnvWithVars vs
-  _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \v -> modify $ I.insertType v $ encode s) m
+updateEnv (Existential (ks, m)) = do
+  updateEnvWithVars ks
+  _ <- Map.traverseWithKey (\l s -> extractLabel l >>= \name -> modify $ insertSemSig name s) m
   return ()
 
 instance Elaboration Sig where
@@ -290,7 +290,7 @@ instance Elaboration Sig where
 
   elaborate (Decls ds) = transaction $ mapM f ds >>= fmap (fmap StructureSig) . foldrM (merge g) (Existential mempty)
     where
-      f :: Members (Fresh ': Env) r => Decl -> Eff r (Existential (Map.Map I.Label SemanticSig))
+      f :: Members Env r => Decl -> Eff r (Existential (Map.Map I.Label SemanticSig))
       f d = do
         e <- elaborate d
         updateEnv e
@@ -308,15 +308,20 @@ instance Elaboration Sig where
     return $ existential $ FunctorSig $ (:-> asig2) <$> toUniversal asig1
 
   elaborate (Where sig p ty) = do
-    Existential (m, ssig) <- elaborate sig
+    Existential (ks, ssig) <- elaborate sig
     (ity, ik) <- elaborate ty
     ssig' <- proj ssig p
     case ssig' of
       AtomicType (I.TVar v) ik'
-        | ik' == ik, v `Map.member` m -> return $ Existential (v `Map.delete` m, subst (Map.singleton v ity) ssig)
-        | ik' == ik                   -> throwProblem $ KindMismatch ik ik'
-        | otherwise                   -> throwProblem $ NotAbstractType v
-      _                               -> throwProblem $ NotTypeVariable ssig'
+        | ik' == ik, coerce v < length ks -> return $ Existential (removeNth (coerce v) ks, subst (Map.singleton v ity) ssig)
+        | ik' == ik                       -> throwProblem $ KindMismatch ik ik' -- FIXME
+        | otherwise                       -> throwProblem $ NotAbstractType v -- FIXME
+      _                                   -> throwProblem $ NotTypeVariable ssig'
+
+removeNth :: Int -> [a] -> [a]
+removeNth n xs =
+  let (ys, zs) = splitAt n xs in
+    ys ++ tail zs
 
 atomic :: Ident -> a -> Existential (Map.Map I.Label a)
 atomic i = existential . Map.singleton (embedIntoLabel i)
@@ -335,9 +340,8 @@ instance Elaboration Decl where
     ]
 
   elaborate (AbsTypeDecl i k) =
-    [ Existential (Map.singleton (coerce n) ik, Map.singleton (embedIntoLabel i) $ AtomicType (I.TVar $ coerce n) ik)
-    | n <- fresh
-    , ik <- elaborate k
+    [ Existential ([ik], Map.singleton (embedIntoLabel i) $ AtomicType (I.TVar $ I.Variable 0) ik)
+    | ik <- elaborate k
     ]
 
   elaborate (ModuleDecl i s) =
@@ -380,51 +384,47 @@ class Subtype a where
 
 instance Subtype I.Type where
   t1 <: t2
-    | t1 .= t2  = return $ I.Abs tempVar t1 $ I.Var tempVar
+    | t1 .= t2  = return $ I.Abs t1 $ I.Var $ I.Variable 0
     | otherwise = throwProblem $ NotEqual t1 t2
 
 match :: Members Env r => SemanticSig -> AbstractSig -> Eff r (I.Term, Map.Map I.Variable I.Type)
-match ssig (Existential (m, s)) = do
-  m1 <- Map.traverseWithKey f $ Map.fromSet (coerce . lookupInst ssig s) $ Map.keysSet m
-  t <- ssig <: subst m1 s
-  return (t, m1)
+match ssig (Existential (ks, s)) = do
+  m <- sequence $ fmap f $ coerce $ Map.fromSet (lookupInst ssig s) $ Set.fromList $ coerce [0 .. length ks - 1]
+  t <- ssig <: subst m s
+  return (t, m)
   where
-    f :: Member (Error TypeError) r => I.Variable -> Maybe I.Type -> Eff r I.Type
-    f v Nothing   = throwProblem $ NoInstantiation v
-    f _ (Just ty) = return ty
+    f :: Member (Error TypeError) r => Maybe I.Type -> Eff r I.Type
+    f Nothing   = throwProblem NoInstantiation
+    f (Just ty) = return ty
 
 instance Subtype a => Subtype (Existential a) where
   (<:) = undefined
 
 instance Subtype SemanticSig where
   AtomicTerm t <: AtomicTerm u =
-    let v = tempVar in
-      [ I.Abs v t $ I.App c $ I.Proj (I.Var v) I.Val
-      | c <- t <: u
-      ]
+    [ I.Abs t $ I.App c $ I.Proj (I.Var $ I.Variable 0) I.Val
+    | c <- t <: u
+    ]
 
   s @ (AtomicType t k) <: AtomicType u l
     | k /= l    = throwProblem $ KindMismatch k l
-    | t .= u    = return $ I.Abs tempVar (encode s) $ I.Var tempVar
+    | t .= u    = return $ I.Abs (encode s) $ I.Var $ I.Variable 0
     | otherwise = throwProblem $ NotEqual t u
 
   AtomicSig a <: AtomicSig b = do
     _ <- a <: b
     _ <- b <: a
-    return $ I.Abs tempVar (encode a) $ encodeAsTerm $ SAbstractSig b
+    return $ I.Abs (encode a) $ encodeAsTerm $ SAbstractSig b
 
   s @ (StructureSig m) <: StructureSig n
     | Map.keysSet n `Set.isSubsetOf` Map.keysSet m =
-      let v = tempVar in
-        [ I.Abs v (encode s) $ I.TmRecord $ coerce $ Map.mapWithKey (\l c -> I.App c $ I.Var v `I.Proj` l) o
-        | o <- sequence $ Map.intersectionWith (<:) m n
-        ]
+      [ I.Abs (encode s) $ I.TmRecord $ coerce $ Map.mapWithKey (\l c -> I.App c $ I.Var (I.Variable 0) `I.Proj` l) o
+      | o <- sequence $ Map.intersectionWith (<:) m n
+      ]
     | otherwise                                    = throwProblem $ NotSubmap n m
 
-  ssig @ (FunctorSig (Universal (m, s :-> a))) <: FunctorSig (Universal (n, t :-> b)) = transaction $ do
-    updateEnvWithVars n
-    (c, o) <- t `match` Existential (m, s)
-    d <- subst o a <: b
-    return $ I.Abs v (encode ssig) $ I.poly n $ I.Abs v1 (encode t) $ I.App d $ I.inst (I.Var v) o `I.App` I.App c (I.Var v1)
-      where v = tempVar
-            v1 = I.Variable 1 -- FIXME
+  ssig @ (FunctorSig (Universal (ks1, s :-> a))) <: FunctorSig (Universal (ks2, t :-> b)) = transaction $ do
+    updateEnvWithVars ks2
+    (c, ts) <- t `match` Existential (ks1, s)
+    d <- subst ts a <: b
+    return $ I.Abs (encode ssig) $ I.poly ks2 $ I.Abs (encode t) $ I.App d $ I.inst (I.Var $ I.Variable 1) (Map.elems ts) `I.App` I.App c (I.Var $ I.Variable 0)
