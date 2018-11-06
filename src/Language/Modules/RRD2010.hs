@@ -227,6 +227,8 @@ data Problem
   | NotSubmap (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
   | StructuralMismatch SemanticSig SemanticSig
   | NotAtomic SemanticSig
+  | NoSuchIdent Ident (I.Env SemanticSig)
+  | NotFunctor SemanticSig
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -439,7 +441,45 @@ instance Elaboration Expr where
 instance Elaboration Module where
   type Output Module = (I.Term, AbstractSig)
 
-  elaborate = undefined
+  elaborate (ModuleIdent i) = do
+    env <- getEnv
+    (ssig, n) <- lookupTypeByIdent i env
+    return (I.Var $ I.Variable n, existential ssig)
+
+  elaborate (Projection m i) = do
+    (c, Existential (ks, ssig)) <- elaborate m
+    ssig' <- proj' ssig i
+    let ts = I.TVar <$> coerce [0 .. length ks - 1]
+    return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode ssig') ts $ I.Proj (I.Var $ I.Variable 0) $ embedIntoLabel i, Existential (ks, ssig'))
+
+  elaborate (Fun i sig m) = transaction $ do
+    Existential (ks, ssig) <- elaborate sig
+    updateEnvWithVars ks
+    modify $ insertSemSig (coerce i) ssig
+    (c, asig) <- elaborate m
+    return (I.poly ks $ I.Abs (encode ssig) c, existential $ FunctorSig $ Universal (ks, ssig :-> asig))
+
+  elaborate (ModuleApp i j) = do
+    env <- getEnv
+    (ssig0, m) <- lookupTypeByIdent i env
+    Universal (ks, ssig' :-> asig) <- fromFunctor ssig0
+    (ssig, n) <- lookupTypeByIdent j env
+    (c, ts) <- ssig `match` Existential (ks, ssig')
+    return (I.App (I.inst (I.Var $ I.Variable m) $ Map.elems ts) (I.App c $ I.Var $ I.Variable n), subst ts asig)
+
+  elaborate (i :> sig) = do
+    env <- getEnv
+    (ssig, n) <- lookupTypeByIdent i env
+    asig @ (Existential (ks, ssig')) <- elaborate sig
+    (c, ts) <- ssig `match` asig
+    return (I.pack ks (encode ssig') (Map.elems ts) $ I.App c $ I.Var $ I.Variable n, asig)
+
+lookupTypeByIdent :: Member (Error TypeError) r => Ident -> I.Env SemanticSig -> Eff r (SemanticSig, Int)
+lookupTypeByIdent i env = maybe (throwProblem $ NoSuchIdent i env) return $ I.lookupTypeByName (coerce i) env
+
+fromFunctor :: Member (Error TypeError) r => SemanticSig -> Eff r (Universal (Fun SemanticSig AbstractSig))
+fromFunctor (FunctorSig u) = return u
+fromFunctor ssig           = throwProblem $ NotFunctor ssig
 
 instance Elaboration Binding where
   type Output Binding = (I.Term, Existential (Map.Map I.Label SemanticSig))
