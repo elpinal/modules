@@ -420,3 +420,8 @@ instance Subtype SemanticSig where
     return $ I.Abs (encode ssig) $ I.poly ks2 $ I.Abs (encode t) $ I.App d $ I.inst (I.Var $ I.Variable 1) (Map.elems ts) `I.App` I.App c (I.Var $ I.Variable 0)
 
   x <: y = throwProblem $ StructuralMismatch x y
+
+instance Elaboration Expr where
+  type Output Expr = (I.Term, I.Type)
+
+  elaborate (IntLit n) = return (I.IntLit n, I.Int)

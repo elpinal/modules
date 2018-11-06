@@ -89,6 +89,7 @@ data Term
   | Inst Term Type
   | Pack Type Term Type
   | Unpack Term Term
+  | IntLit Int
   deriving (Eq, Show)
 
 poly :: [Kind] -> Term -> Term
