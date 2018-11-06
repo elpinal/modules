@@ -28,6 +28,7 @@ module Language.Modules.RRD2010.Internal
   , lookupName
   , lookupKind
   , lookupType
+  , lookupTypeByName
   , insertKind
   , insertType
   ) where
@@ -128,6 +129,17 @@ lookupType (Variable n) (tenv -> xs)
 
 lookupName :: Variable -> Env a -> Maybe Name
 lookupName v e = getName <$> lookupType v e
+
+lookupTypeByName :: Name -> Env a -> Maybe (a, Int)
+lookupTypeByName name (tenv -> xs) = g $ foldr f (Nothing, 0) xs
+  where
+    f _ p @ (Just _, _) = p
+    f (VarInfo name' x) (Nothing, n)
+      | name' == name = (Just x, n)
+      | otherwise     = (Nothing, n + 1)
+
+    g (Just x, n) = Just (x, n)
+    g _           = Nothing
 
 insertKind :: Shift a => Kind -> Env a -> Env a
 insertKind k e = shift 1 $ e { kenv = k : kenv e }
