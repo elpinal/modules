@@ -52,7 +52,7 @@ newtype Path = Path Module
   deriving (Eq, Show)
 
 data Module
-  = ModleIdent Ident
+  = ModuleIdent Ident
   | Bindings [Binding]
   | Projection Module Ident
   | Fun Ident Sig Module
