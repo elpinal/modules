@@ -13,6 +13,7 @@ module Language.Modules.RRD2010
   (
   ) where
 
+import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.State
@@ -110,8 +111,16 @@ data SemanticSig
   | FunctorSig (Universal (Fun SemanticSig AbstractSig))
   deriving (Eq, Show)
 
+isAtomic :: SemanticSig -> Bool
+isAtomic (StructureSig _) = False
+isAtomic (FunctorSig _)   = False
+isAtomic _                = True
+
 mkExistential :: [I.Kind] -> a -> Existential a
 mkExistential = curry Existential
+
+fromExistential :: Existential a -> a
+fromExistential (Existential (_, x)) = x
 
 existential :: a -> Existential a
 existential x = Existential (mempty, x)
@@ -217,6 +226,7 @@ data Problem
   | NoInstantiation
   | NotSubmap (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
   | StructuralMismatch SemanticSig SemanticSig
+  | NotAtomic SemanticSig
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -425,3 +435,45 @@ instance Elaboration Expr where
   type Output Expr = (I.Term, I.Type)
 
   elaborate (IntLit n) = return (I.IntLit n, I.Int)
+
+instance Elaboration Module where
+  type Output Module = (I.Term, AbstractSig)
+
+  elaborate = undefined
+
+instance Elaboration Binding where
+  type Output Binding = (I.Term, Existential (Map.Map I.Label SemanticSig))
+
+  elaborate (Val i e) =
+    [ (atomicTerm i $ STerm c, atomic i $ AtomicTerm ty)
+    | (c, ty) <- elaborate e
+    ]
+
+  elaborate (Type i ty) =
+    [ (atomicTerm i $ SType ity ik, atomic i $ AtomicType ity ik)
+    | (ity, ik) <- elaborate ty
+    ]
+
+  elaborate (Module i m) = do
+    (c, asig @ (Existential (ks, ssig))) <- elaborate m
+
+    when (isAtomic ssig) $
+      throwProblem $ NotAtomic ssig
+
+    let ty = Map.singleton (embedIntoLabel i) <$> asig
+    let ts = I.TVar <$> coerce [0 .. length ks - 1]
+    return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode $ StructureSig $ fromExistential ty) ts $ I.TmRecord $ coerce $ Map.singleton (embedIntoLabel i) $ I.Var $ I.Variable 0, ty)
+
+  elaborate (Signature i sig) =
+    [ (atomicTerm i $ SAbstractSig asig, atomic i $ AtomicSig asig)
+    | asig <- elaborate sig
+    ]
+
+  elaborate (Include m) = do
+    (c, asig) <- elaborate m
+    case fromExistential asig of
+      StructureSig s -> return (c, const s <$> asig)
+      ssig           -> throwProblem $ NotStructureSig ssig
+
+atomicTerm :: Ident -> SemanticTerm -> I.Term
+atomicTerm i = I.TmRecord . coerce . Map.singleton (embedIntoLabel i) . encodeAsTerm
