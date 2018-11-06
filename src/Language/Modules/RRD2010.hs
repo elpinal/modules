@@ -2,9 +2,11 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Modules.RRD2010
@@ -381,8 +383,11 @@ match ssig (Existential (ks, s)) = do
     f Nothing   = throwProblem NoInstantiation
     f (Just ty) = return ty
 
-instance Subtype a => Subtype (Existential a) where
-  (<:) = undefined
+instance Subtype AbstractSig where
+  a @ (Existential (ks1, ssig1)) <: b @ (Existential (ks2, ssig2)) = transaction $ do
+    updateEnvWithVars ks1
+    (c, ts) <- ssig1 `match` b
+    return $ I.Abs (encode a) $ I.unpack (encode ssig1) (Map.size ts) (I.Var $ I.Variable 0) $ I.pack ks2 (encode ssig2) (Map.elems ts) $ I.App c $ I.Var $ I.Variable 0
 
 instance Subtype SemanticSig where
   AtomicTerm t <: AtomicTerm u =
