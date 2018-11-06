@@ -199,11 +199,14 @@ data SemanticTerm
   | SAbstractSig AbstractSig
   deriving (Eq, Show)
 
+var :: Int -> I.Term
+var = I.Var . coerce
+
 encodeAsTerm :: SemanticTerm -> I.Term
 encodeAsTerm (STerm t)           = I.TmRecord $ coerce $ Map.singleton I.Val $ t
-encodeAsTerm (SType ity ik)      = I.TmRecord $ coerce $ Map.singleton I.Typ $ I.Poly (I.KFun ik I.Mono) $ I.Abs t $ I.Var $ I.Variable 0
+encodeAsTerm (SType ity ik)      = I.TmRecord $ coerce $ Map.singleton I.Typ $ I.Poly (I.KFun ik I.Mono) $ I.Abs t $ var 0
   where t = I.TApp (I.TVar $ I.Variable 0) ity
-encodeAsTerm (SAbstractSig asig) = I.TmRecord $ coerce $ Map.singleton I.Sig $ I.Abs (encode asig) $ I.Var $ I.Variable 0
+encodeAsTerm (SAbstractSig asig) = I.TmRecord $ coerce $ Map.singleton I.Sig $ I.Abs (encode asig) $ var 0
 
 data TypeError = TypeError [Reason] Problem
   deriving (Eq, Show)
@@ -383,7 +386,7 @@ class Subtype a where
 
 instance Subtype I.Type where
   t1 <: t2
-    | t1 .= t2  = return $ I.Abs t1 $ I.Var $ I.Variable 0
+    | t1 .= t2  = return $ I.Abs t1 $ var 0
     | otherwise = throwProblem $ NotEqual t1 t2
 
 match :: Members Env r => SemanticSig -> AbstractSig -> Eff r (I.Term, Map.Map I.Variable I.Type)
@@ -400,17 +403,17 @@ instance Subtype AbstractSig where
   a @ (Existential (ks1, ssig1)) <: b @ (Existential (ks2, ssig2)) = transaction $ do
     updateEnvWithVars ks1
     (c, ts) <- ssig1 `match` b
-    return $ I.Abs (encode a) $ I.unpack (encode ssig1) (Map.size ts) (I.Var $ I.Variable 0) $ I.pack ks2 (encode ssig2) (Map.elems ts) $ I.App c $ I.Var $ I.Variable 0
+    return $ I.Abs (encode a) $ I.unpack (encode ssig1) (Map.size ts) (var 0) $ I.pack ks2 (encode ssig2) (Map.elems ts) $ I.App c $ var 0
 
 instance Subtype SemanticSig where
   AtomicTerm t <: AtomicTerm u =
-    [ I.Abs t $ I.App c $ I.Proj (I.Var $ I.Variable 0) I.Val
+    [ I.Abs t $ I.App c $ I.Proj (var 0) I.Val
     | c <- t <: u
     ]
 
   s @ (AtomicType t k) <: AtomicType u l
     | k /= l    = throwProblem $ KindMismatch k l
-    | t .= u    = return $ I.Abs (encode s) $ I.Var $ I.Variable 0
+    | t .= u    = return $ I.Abs (encode s) $ var 0
     | otherwise = throwProblem $ NotEqual t u
 
   AtomicSig a <: AtomicSig b = do
@@ -429,7 +432,7 @@ instance Subtype SemanticSig where
     updateEnvWithVars ks2
     (c, ts) <- t `match` Existential (ks1, s)
     d <- subst ts a <: b
-    return $ I.Abs (encode ssig) $ I.poly ks2 $ I.Abs (encode t) $ I.App d $ I.inst (I.Var $ I.Variable 1) (Map.elems ts) `I.App` I.App c (I.Var $ I.Variable 0)
+    return $ I.Abs (encode ssig) $ I.poly ks2 $ I.Abs (encode t) $ I.App d $ I.inst (var 1) (Map.elems ts) `I.App` I.App c (var 0)
 
   x <: y = throwProblem $ StructuralMismatch x y
 
@@ -444,13 +447,13 @@ instance Elaboration Module where
   elaborate (ModuleIdent i) = do
     env <- getEnv
     (ssig, n) <- lookupTypeByIdent i env
-    return (I.Var $ I.Variable n, existential ssig)
+    return (var n, existential ssig)
 
   elaborate (Projection m i) = do
     (c, Existential (ks, ssig)) <- elaborate m
     ssig' <- proj' ssig i
     let ts = I.TVar <$> coerce [0 .. length ks - 1]
-    return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode ssig') ts $ I.Proj (I.Var $ I.Variable 0) $ embedIntoLabel i, Existential (ks, ssig'))
+    return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode ssig') ts $ I.Proj (var 0) $ embedIntoLabel i, Existential (ks, ssig'))
 
   elaborate (Fun i sig m) = transaction $ do
     Existential (ks, ssig) <- elaborate sig
@@ -465,14 +468,14 @@ instance Elaboration Module where
     Universal (ks, ssig' :-> asig) <- fromFunctor ssig0
     (ssig, n) <- lookupTypeByIdent j env
     (c, ts) <- ssig `match` Existential (ks, ssig')
-    return (I.App (I.inst (I.Var $ I.Variable m) $ Map.elems ts) (I.App c $ I.Var $ I.Variable n), subst ts asig)
+    return (I.App (I.inst (var m) $ Map.elems ts) (I.App c $ var n), subst ts asig)
 
   elaborate (i :> sig) = do
     env <- getEnv
     (ssig, n) <- lookupTypeByIdent i env
     asig @ (Existential (ks, ssig')) <- elaborate sig
     (c, ts) <- ssig `match` asig
-    return (I.pack ks (encode ssig') (Map.elems ts) $ I.App c $ I.Var $ I.Variable n, asig)
+    return (I.pack ks (encode ssig') (Map.elems ts) $ I.App c $ var n, asig)
 
 lookupTypeByIdent :: Member (Error TypeError) r => Ident -> I.Env SemanticSig -> Eff r (SemanticSig, Int)
 lookupTypeByIdent i env = maybe (throwProblem $ NoSuchIdent i env) return $ I.lookupTypeByName (coerce i) env
@@ -502,7 +505,7 @@ instance Elaboration Binding where
 
     let ty = Map.singleton (embedIntoLabel i) <$> asig
     let ts = I.TVar <$> coerce [0 .. length ks - 1]
-    return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode $ StructureSig $ fromExistential ty) ts $ I.TmRecord $ coerce $ Map.singleton (embedIntoLabel i) $ I.Var $ I.Variable 0, ty)
+    return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode $ StructureSig $ fromExistential ty) ts $ I.TmRecord $ coerce $ Map.singleton (embedIntoLabel i) $ var 0, ty)
 
   elaborate (Signature i sig) =
     [ (atomicTerm i $ SAbstractSig asig, atomic i $ AtomicSig asig)
