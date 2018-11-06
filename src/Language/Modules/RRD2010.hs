@@ -216,6 +216,7 @@ data Problem
   | NotEqual I.Type I.Type
   | NoInstantiation
   | NotSubmap (Map.Map I.Label SemanticSig) (Map.Map I.Label SemanticSig)
+  | StructuralMismatch SemanticSig SemanticSig
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -417,3 +418,5 @@ instance Subtype SemanticSig where
     (c, ts) <- t `match` Existential (ks1, s)
     d <- subst ts a <: b
     return $ I.Abs (encode ssig) $ I.poly ks2 $ I.Abs (encode t) $ I.App d $ I.inst (I.Var $ I.Variable 1) (Map.elems ts) `I.App` I.App c (I.Var $ I.Variable 0)
+
+  x <: y = throwProblem $ StructuralMismatch x y
