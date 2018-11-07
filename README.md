@@ -65,3 +65,4 @@ Type-theoretic analysis of ML-style modules.
 <div><h4>1ML — Core and modules united (F-ing first-class modules)</h4><p>Andreas Rossberg</p><p>ICFP, 2015; 2016 (JFP); 2018 (updated draft)</p></div>
 <div><h4>1ML with Special Effects (F-ing Generativity Polymorphism)</h4><p>Andreas Rossberg</p><p>In WadlerFest, 2016</p></div>
 <div><h4>Modules, Abstraction, and Parametric Polymorphism</h4><p>Karl Crary</p><p>POPL, 2017</p></div>
+<div><h4>Fully Abstract Module Compilation</h4><p>Karl Crary</p><p>POPL, 2019, to appear</p></div>

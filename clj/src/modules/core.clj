@@ -12,6 +12,7 @@
 
 (def ancona "Davide Ancona")
 (def cardelli "Luca Cardelli")
+(def crary "Karl Crary")
 (def harper "Robert Harper")
 (def leroy "Xavier Leroy")
 (def macqueen "David B. MacQueen")
@@ -336,7 +337,7 @@
 (def chp1999
   {:key      "CHP1999"
    :title    "What is a recursive module?"
-   :author   (authors "Karl Crary" harper "Sidd Puri")
+   :author   (authors crary harper "Sidd Puri")
    :date     "1999"
    :location (proceedings-location pldi :pages '(50 63))})
 
@@ -413,7 +414,7 @@
 (def dch2003
   {:key      "DCH2003"
    :title    "A type system for higher-order modules"
-   :author   (authors "Derek Dreyer" "Karl Crary" "Robert Harper")
+   :author   (authors "Derek Dreyer" crary harper)
    :date     "2003"
    :location (proceedings-location popl)})
 
@@ -490,8 +491,15 @@
 (def cra2017
   {:key      "Cra2017"
    :title    "Modules, Abstraction, and Parametric Polymorphism"
-   :author   "Karl Crary"
+   :author   crary
    :date     "2017"
+   :location (proceedings-location popl)})
+
+(def cra2019
+  {:key      "Cra2019"
+   :title    "Fully Abstract Module Compilation"
+   :author   crary
+   :date     "2019, to appear"
    :location (proceedings-location popl)})
 
 (def entries
@@ -555,7 +563,8 @@
    rrd2010
    ros2015
    ros2016
-   cra2017])
+   cra2017
+   cra2019])
 
 (defn -main
   []
