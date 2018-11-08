@@ -260,6 +260,14 @@
     :date     "1996"
     :location (proceedings-location icfp :pages '(262 273))}
 
+   :jon1996
+   {:key      "Jon1996"
+    :title    "Using parameterized signatures to express modular structure"
+    :author   "Mark P. Jones"
+    :date     1996
+    :location (proceedings-location popl :pages '(66 78))
+    :url      "https://web.cecs.pdx.edu/~mpj/pubs/paramsig.pdf"}
+
    :ler1996
    {:key      "Ler1996"
     :title    "A syntactic theory of type generativity and sharing"

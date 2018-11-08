@@ -30,6 +30,7 @@ Type-theoretic analysis of ML-style modules.
 <div><h4>Higher-order functors with transparent signatures</h4><p>S. K. Biswas</p><p>POPL, pp. 154–163, 1995</p></div>
 <div><h4>Applicative functors and fully transparent higher-order modules</h4><p>Xavier Leroy</p><p>POPL, pp. 142–153, 1995</p></div>
 <div><h4>Mixin modules</h4><p>Dominic Duggan and Constantinos Sourelis</p><p>ICFP, pp. 262–273, 1996</p></div>
+<div><h4>Using parameterized signatures to express modular structure</h4><p>Mark P. Jones</p><p>POPL, pp. 66–78, 1996</p><p>Available at <a href="https://web.cecs.pdx.edu/~mpj/pubs/paramsig.pdf">https://web.cecs.pdx.edu/~mpj/pubs/paramsig.pdf</a></p></div>
 <div><h4>A syntactic theory of type generativity and sharing</h4><p>Xavier Leroy</p><p><i>Journal of Functional Programming</i>, 6(5), pp. 667–698, 1996</p></div>
 <div><h4>An exploration of modular programs</h4><p>Jan Nicklish and Simon Peyton Jones</p><p>In The Glasgow Workshop on Functional Programming, 1996</p></div>
 <div><h4>Type Systems for Modular Programs and Specifications</h4><p>David R. Aspinall</p><p>PhD dissertation, Edinburgh University, Edinburgh, Scotland, 1997</p></div>
