@@ -462,7 +462,7 @@
 
 (def dr2008
   {:key      "DR2008"
-   :title    "Mixin' up the ML module system"
+   :title    "Mixin’ up the ML module system"
    :author   (authors "Derek Dreyer" rossberg)
    :date     "2008"
    :location (proceedings-location icfp :pages '(307 320))})

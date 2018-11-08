@@ -60,7 +60,7 @@ Type-theoretic analysis of ML-style modules.
 <div><h4>Practical type theory for recursive modules</h4><p>Derek Dreyer</p><p>University of Chicago, Department of Computer Science, TR-2006-07, 2006</p></div>
 <div><h4>A Type System for Recursive Modules</h4><p>Derek Dreyer</p><p>ICFP, 2007</p></div>
 <div><h4>Recursive Type Generativity</h4><p>Derek Dreyer</p><p><i>Journal of Functional Programming</i>, 17(4&5), pp. 433–471, 2007</p></div>
-<div><h4>Mixin' up the ML module system</h4><p>Derek Dreyer and Andreas Rossberg</p><p>ICFP, pp. 307–320, 2008</p></div>
+<div><h4>Mixin’ up the ML module system</h4><p>Derek Dreyer and Andreas Rossberg</p><p>ICFP, pp. 307–320, 2008</p></div>
 <div><h4>F-ing Modules</h4><p>Andreas Rossberg, Claudio V. Russo and Derek Dreyer</p><p>Types in Language Design and Implementation, 2010; 2014 (JFP)</p></div>
 <div><h4>1ML — Core and modules united (F-ing first-class modules)</h4><p>Andreas Rossberg</p><p>ICFP, 2015; 2016 (JFP); 2018 (updated draft)</p></div>
 <div><h4>1ML with Special Effects (F-ing Generativity Polymorphism)</h4><p>Andreas Rossberg</p><p>In WadlerFest, 2016</p></div>
