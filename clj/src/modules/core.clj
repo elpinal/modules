@@ -36,7 +36,8 @@
    [:p author]
    [:p (str (if (sequential? location)
               (apply str (interpose ", " (map #(hiccup/html %) location)))
-              location) ", " date)]])
+              location)
+            (if location ", ") date)]])
 
 (defn html-entries
   [xs]
