@@ -13,6 +13,7 @@
 (def ancona "Davide Ancona")
 (def cardelli "Luca Cardelli")
 (def crary "Karl Crary")
+(def dreyer "Derek Dreyer")
 (def harper "Robert Harper")
 (def leroy "Xavier Leroy")
 (def macqueen "David B. MacQueen")
@@ -416,14 +417,14 @@
    :dch2003
    {:key      "DCH2003"
     :title    "A type system for higher-order modules"
-    :author   (authors "Derek Dreyer" crary harper)
+    :author   (authors dreyer crary harper)
     :date     "2003"
     :location (proceedings-location popl)}
 
    :dre2005
    {:key      "Dre2005"
     :title    "Understanding and Evolving the ML Module System"
-    :author   "Derek Dreyer"
+    :author   dreyer
     :date     "2005"
     :location (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")}
 
@@ -444,35 +445,35 @@
    :dre2006
    {:key      "Dre2006"
     :title    "Practical type theory for recursive modules"
-    :author   "Derek Dreyer"
+    :author   dreyer
     :date     "2006"
     :location (techrpt-location :institution "University of Chicago, Department of Computer Science" :number "TR-2006-07")}
 
    :dre2007a
    {:key      "Dre2007a"
     :title    "A Type System for Recursive Modules"
-    :author   "Derek Dreyer"
+    :author   dreyer
     :date     "2007"
     :location (proceedings-location icfp)}
 
    :dre2007b
    {:key      "Dre2007b"
     :title    "Recursive Type Generativity"
-    :author   "Derek Dreyer"
+    :author   dreyer
     :date     "2007"
     :location (journal-location jfp :volume 17 :number "4&5" :pages '(433 471))}
 
    :dr2008
    {:key      "DR2008"
     :title    "Mixin’ up the ML module system"
-    :author   (authors "Derek Dreyer" rossberg)
+    :author   (authors dreyer rossberg)
     :date     "2008"
     :location (proceedings-location icfp :pages '(307 320))}
 
    :rrd2010
    {:key      "RRD2010"
     :title    "F-ing Modules"
-    :author   (authors rossberg russo "Derek Dreyer")
+    :author   (authors rossberg russo dreyer)
     :date     "2010; 2014 (JFP)"
     :location (proceedings-location tldi)}
 
