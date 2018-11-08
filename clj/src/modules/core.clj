@@ -30,14 +30,20 @@
     (.write w x)))
 
 (defn render
-  [{:keys [key title author date location]}]
+  [{:keys [key title author date location url slides]}]
   [:div
    [:h4 title]
    [:p author]
    [:p (str (if (sequential? location)
               (apply str (interpose ", " (map #(hiccup/html %) location)))
               location)
-            (if location ", ") date)]])
+            (if location ", ") date)]
+   (if url
+     [:p "Available at "
+      [:a {:href url} url]])
+   (if slides
+     [:p "Slides: "
+      [:a {:href slides} slides]])])
 
 (defn html-entries
   [xs]
