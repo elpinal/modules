@@ -471,6 +471,29 @@
     :date     "2008"
     :location (proceedings-location icfp :pages '(307 320))}
 
+   :mr2008a
+   {:key      "MR2008a"
+    :title    "Towards a Simpler Account of Modules and Generativity: Abstract Types have Open Existential Types"
+    :author   (authors "Benoît Montagu" "Didier Rémy")
+    :date     "January 2008"
+    :url      "http://gallium.inria.fr/~remy/modules/fzip.pdf"}
+
+   :mr2008b
+   {:key      "MR2008b"
+    :title    "A Logical Account of Type Generativity: Abstract types have open existential types"
+    :author   (authors "Benoît Montagu" "Didier Rémy")
+    :date     "April 14, 2008"
+    :url      "http://gallium.inria.fr/~remy/modules/oat.pdf"
+    :slides   "http://gallium.inria.fr/~remy/modules/fzip@msr2008.pdf"}
+
+   :mr2009
+   {:key      "MR2009"
+    :title    "Modeling Abstract Types in Modules with Open Existential Types"
+    :author   (authors "Benoît Montagu" "Didier Rémy")
+    :date     2009
+    :location (proceedings-location popl :pages '(354 365))
+    :url      "http://gallium.inria.fr/~remy/modules/Montagu-Remy@popl09:fzip.pdf"}
+
    :rrd2010
    {:key      "RRD2010"
     :title    "F-ing Modules"
