@@ -34,7 +34,7 @@
    [:h4 title]
    [:p author]
    [:p (str (if (sequential? location)
-              (apply str (interpose ", " (map #(hiccup/html %) location) ))
+              (apply str (interpose ", " (map #(hiccup/html %) location)))
               location) ", " date)]])
 
 (defn html-entries
