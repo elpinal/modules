@@ -430,10 +430,11 @@
 
    :ler2003
    {:key      "Ler2003"
-    :title    "proposal for recursive modules in Objective Caml"
+    :title    "A proposal for recursive modules in Objective Caml"
     :author   leroy
     :date     "2003"
-    :location "Available at http://caml.inria.fr/about/papers.en.html"}
+    :location "Unpublished"
+    :url      "http://caml.inria.fr/pub/papers/xleroy-recursive_modules-03.pdf"}
 
    :dch2003
    {:key      "DCH2003"

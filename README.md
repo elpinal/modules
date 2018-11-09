@@ -53,7 +53,7 @@ Type-theoretic analysis of ML-style modules.
 <div><h4>Mixin modules in a call-by-value setting</h4><p>T. Hirschowitz and Xavier Leroy</p><p>Programming Languages and Systems, pp. 6–20, 2002</p></div>
 <div><h4>A calculus of module systems</h4><p>Davide Ancona and Elena Zucca</p><p><i>Journal of Functional Programming</i>, 12(2), pp. 91–132, 2002</p></div>
 <div><h4>Mixin modules and computational effects</h4><p>Davide Ancona, Sonia Fagorzi, Eugenio Moggi and Elena Zucca</p><p>ICALP, pp. 224–238, 2003</p></div>
-<div><h4>proposal for recursive modules in Objective Caml</h4><p>Xavier Leroy</p><p>Available at http://caml.inria.fr/about/papers.en.html, 2003</p></div>
+<div><h4>A proposal for recursive modules in Objective Caml</h4><p>Xavier Leroy</p><p>Unpublished, 2003</p><p>Available at <a href="http://caml.inria.fr/pub/papers/xleroy-recursive_modules-03.pdf">http://caml.inria.fr/pub/papers/xleroy-recursive_modules-03.pdf</a></p></div>
 <div><h4>A type system for higher-order modules</h4><p>Derek Dreyer, Karl Crary and Robert Harper</p><p>POPL, 2003</p></div>
 <div><h4>Understanding and Evolving the ML Module System</h4><p>Derek Dreyer</p><p>PhD dissertation, Carnegie Mellon University, Pittsburgh, Pennsylvania, 2005</p></div>
 <div><h4>Recursive modules for programming</h4><p>Keiko Nakata and Jacques Garrigue</p><p>ICFP, pp. 74–86, 2006</p></div>
