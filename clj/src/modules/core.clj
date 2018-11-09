@@ -485,10 +485,10 @@
     :date     "2007"
     :location (journal-location jfp :volume 17 :number "4&5" :pages '(433 471))}
 
-   :dre2007c
-   {:key      "Dre2007c"
+   :db2007
+   {:key      "DB2007"
     :title    "Principal type schemes for modular programs"
-    :author   dreyer
+    :author   (authors dreyer "Matthias Blume")
     :date     2007
     :location (proceedings-location esop)
     :url      "https://people.mpi-sws.org/~dreyer/papers/infmod/main-short.pdf"
