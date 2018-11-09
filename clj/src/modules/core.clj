@@ -1,6 +1,7 @@
 (ns modules.core
   (:require [hiccup.core :as hiccup]))
 
+(def esop "European Symposium on Programming")
 (def icalp "ICALP")
 (def icfp "ICFP")
 (def jfp "Journal of Functional Programming")
@@ -30,7 +31,7 @@
     (.write w x)))
 
 (defn render
-  [{:keys [key title author date location url slides]}]
+  [{:keys [key title author date location url tr-url slides]}]
   [:div
    [:h4 title]
    [:p author]
@@ -39,8 +40,13 @@
               location)
             (if location ", ") date)]
    (if url
-     [:p "Available at "
-      [:a {:href url} url]])
+     (into [] (concat
+               [:p "Available at "
+                [:a {:href url} url]]
+               (if tr-url ; Technical Report URL
+                 [[:br]
+                  "Technical Report: "
+                  [:a {:href tr-url} tr-url]]))))
    (if slides
      [:p "Slides: "
       [:a {:href slides} slides]])])
@@ -477,6 +483,15 @@
     :author   dreyer
     :date     "2007"
     :location (journal-location jfp :volume 17 :number "4&5" :pages '(433 471))}
+
+   :dre2007c
+   {:key      "Dre2007c"
+    :title    "Principal type schemes for modular programs"
+    :author   dreyer
+    :date     2007
+    :location (proceedings-location esop)
+    :url      "https://people.mpi-sws.org/~dreyer/papers/infmod/main-short.pdf"
+    :tr-url   "https://people.mpi-sws.org/~dreyer/papers/infmod/main-long.pdf"}
 
    :dr2008
    {:key      "DR2008"
