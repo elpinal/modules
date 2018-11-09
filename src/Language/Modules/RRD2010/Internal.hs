@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Modules.RRD2010.Internal
@@ -32,6 +33,7 @@ module Language.Modules.RRD2010.Internal
   , lookupTypeByName
   , insertKind
   , insertType
+  , insertNothing
   ) where
 
 import Data.Coerce
@@ -57,7 +59,7 @@ sub :: Variable -> Int -> Variable
 sub (Variable m) n = Variable $ m - n
 
 newtype Record a = Record (Map.Map Label a)
-  deriving (Eq, Show, Functor, Foldable, Traversable)
+  deriving (Eq, Show, Functor, Foldable, Traversable, Semigroup, Monoid)
 
 data Kind
   = Mono
@@ -150,6 +152,9 @@ insertKind k e = shift 1 $ e { kenv = k : kenv e }
 
 insertType :: Name -> a -> Env a -> Env a
 insertType name x e = e { tenv = return (VarInfo name x) : tenv e }
+
+insertNothing :: Env a -> Env a
+insertNothing e = e { tenv = Nothing : tenv e }
 
 shift :: Shift a => Int -> a -> a
 shift = shiftAbove 0

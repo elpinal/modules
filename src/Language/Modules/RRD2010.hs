@@ -17,8 +17,10 @@ import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.State
+import Data.Bifunctor
 import Data.Coerce
 import Data.Foldable
+import Data.Functor.Identity
 import qualified Data.Map.Lazy as Map
 import Data.Monoid
 import qualified Data.Set as Set
@@ -448,6 +450,37 @@ instance Elaboration Module where
     env <- getEnv
     (ssig, n) <- lookupTypeByIdent i env
     return (var n, existential ssig)
+
+  elaborate (Bindings bs) = transaction $ do
+    ps <- traverse f bs
+    let asig @ (Existential (ks, ssig)) = fmap StructureSig $ runIdentity $ foldrM (merge g) (existential mempty) $ snd <$> ps
+    let r = fst $ foldr f1 (mempty, 0) $ fromExistential . snd <$> ps
+    let t = foldr ($) (I.pack ks (encode ssig) (I.TVar <$> coerce [0 .. length ks - 1]) $ I.TmRecord r) $ map h ps
+    return (t, asig)
+      where
+        f :: Members Env r => Binding -> Eff r (I.Term, Existential (Map.Map I.Label SemanticSig))
+        f b = do
+          (t, m) <- elaborate b
+          getEnv >>= put . I.insertNothing
+          updateEnv m
+          return (t, m)
+
+        g :: Applicative f => Map.Map I.Label SemanticSig -> Map.Map I.Label SemanticSig -> f (Map.Map I.Label SemanticSig)
+        g m1 m2 = pure $ Map.union m2 m1
+
+        h :: (I.Term, Existential (Map.Map I.Label SemanticSig)) -> I.Term -> I.Term
+        h (t, Existential (ks, m)) t0 =
+          I.unpack (encode $ StructureSig m) (length ks) t $
+          I.let_ (bimap (I.Proj $ var 0) encode <$> Map.toList m) t0
+
+        f1 :: Map.Map I.Label SemanticSig -> (I.Record I.Term, Int) -> (I.Record I.Term, Int)
+        f1 m (r0, n) =
+          let n' = n + Map.size m in
+          let w = (`foldMap` Map.keysSet m) $ \l ->
+                Endo $ case coerce r0 Map.!? l :: Maybe I.Term of
+                  Just _  -> id
+                  Nothing -> coerce $ Map.insert l (var n' `I.Proj` l) in
+          (appEndo w r0, n' + 1)
 
   elaborate (Projection m i) = do
     (c, Existential (ks, ssig)) <- elaborate m
