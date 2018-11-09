@@ -142,7 +142,7 @@
 
    :cm1988
    {:key      "CM1988"
-    :title    "Persistence and Type Abstraction"
+    :title    "Persistence and type abstraction"
     :author   (authors cardelli macqueen)
     :date     "1988. First appeared in 1985"
     :location "Data types and persistence, Springer-Verlag"}
@@ -198,7 +198,7 @@
 
    :bra1992
    {:key      "Bra1992"
-    :title    "The Programming Language JIGSAW: Mixins, Modularity and Multiple Inheritance"
+    :title    "The programming language JIGSAW: Mixins, modularity and multiple inheritance"
     :author   "G. Bracha"
     :date     "1992"
     :location (dissertation-location :institution "Department of Comp. Sci., Univ. of Utah" :degree "PhD")}
@@ -219,7 +219,7 @@
 
    :mg1993
    {:key      "MG1993"
-    :title    "Studying the ML Module System in HOL"
+    :title    "Studying the ML module system in HOL"
     :author   (authors "Savi Maharaj" "Elsa Gunter")
     :date     "1993"
     :location (journal-location "The Computer Journal" :volume 36 :number 5)}
@@ -290,7 +290,7 @@
 
    :asp1997
    {:key      "Asp1997"
-    :title    "Type Systems for Modular Programs and Specifications"
+    :title    "Type systems for modular programs and specifications"
     :author   "David R. Aspinall"
     :date     "1997"
     :location (dissertation-location :institution "Edinburgh University, Edinburgh, Scotland" :degree "PhD")}
@@ -339,7 +339,7 @@
 
    :az1998a
    {:key      "AZ1998a"
-    :title    "A Theory of Mixin Modules: Basic and Derived Operators"
+    :title    "A theory of mixin modules: Basic and derived operators"
     :author   (authors ancona zucca)
     :date     "1998"
     :location (journal-location "Mathematical Structures in Computer Science" :volume 8 :number 4 :pages '(401 446))}
@@ -367,7 +367,7 @@
 
    :rus1999
    {:key      "Rus1999"
-    :title    "Non-dependent Types for Standard ML Modules"
+    :title    "Non-dependent types for Standard ML modules"
     :author   russo
     :date     "1999"
     :location (proceedings-location ppdp :pages '(80 97))}
@@ -445,7 +445,7 @@
 
    :dre2005
    {:key      "Dre2005"
-    :title    "Understanding and Evolving the ML Module System"
+    :title    "Understanding and evolving the ML module system"
     :author   dreyer
     :date     "2005"
     :location (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")}
@@ -473,14 +473,14 @@
 
    :dre2007a
    {:key      "Dre2007a"
-    :title    "A Type System for Recursive Modules"
+    :title    "A type system for recursive modules"
     :author   dreyer
     :date     "2007"
     :location (proceedings-location icfp)}
 
    :dre2007b
    {:key      "Dre2007b"
-    :title    "Recursive Type Generativity"
+    :title    "Recursive type generativity"
     :author   dreyer
     :date     "2007"
     :location (journal-location jfp :volume 17 :number "4&5" :pages '(433 471))}
@@ -503,14 +503,14 @@
 
    :mr2008a
    {:key      "MR2008a"
-    :title    "Towards a Simpler Account of Modules and Generativity: Abstract Types have Open Existential Types"
+    :title    "Towards a simpler account of modules and generativity: Abstract types have open existential types"
     :author   (authors "Benoît Montagu" "Didier Rémy")
     :date     "January 2008"
     :url      "http://gallium.inria.fr/~remy/modules/fzip.pdf"}
 
    :mr2008b
    {:key      "MR2008b"
-    :title    "A Logical Account of Type Generativity: Abstract types have open existential types"
+    :title    "A logical account of type generativity: Abstract types have open existential types"
     :author   (authors "Benoît Montagu" "Didier Rémy")
     :date     "April 14, 2008"
     :url      "http://gallium.inria.fr/~remy/modules/oat.pdf"
@@ -518,7 +518,7 @@
 
    :mr2009
    {:key      "MR2009"
-    :title    "Modeling Abstract Types in Modules with Open Existential Types"
+    :title    "Modeling abstract types in modules with open existential types"
     :author   (authors "Benoît Montagu" "Didier Rémy")
     :date     2009
     :location (proceedings-location popl :pages '(354 365))
@@ -526,7 +526,7 @@
 
    :rrd2010
    {:key      "RRD2010"
-    :title    "F-ing Modules"
+    :title    "F-ing modules"
     :author   (authors rossberg russo dreyer)
     :date     "2010; 2014 (JFP)"
     :location (proceedings-location tldi)}
@@ -540,21 +540,21 @@
 
    :ros2016
    {:key      "Ros2016"
-    :title    "1ML with Special Effects (F-ing Generativity Polymorphism)"
+    :title    "1ML with special effects (F-ing generativity polymorphism)"
     :author   rossberg
     :date     "2016"
     :location "In WadlerFest"}
 
    :cra2017
    {:key      "Cra2017"
-    :title    "Modules, Abstraction, and Parametric Polymorphism"
+    :title    "Modules, abstraction, and parametric polymorphism"
     :author   crary
     :date     "2017"
     :location (proceedings-location popl)}
 
    :cra2019
    {:key      "Cra2019"
-    :title    "Fully Abstract Module Compilation"
+    :title    "Fully abstract module compilation"
     :author   crary
     :date     "2019, to appear"
     :location (proceedings-location popl)}
