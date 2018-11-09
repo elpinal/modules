@@ -79,9 +79,16 @@
   [& {:keys [institution degree]}]
   (str degree " dissertation, " institution))
 
+(defn wrap-with-paren
+  [x]
+  (if x
+    (str "(" x ")")))
+
 (defn journal-location
   [title & {:keys [pages volume number]}]
-  [[:i title] (str volume "(" number ")" (if pages (str ", pp. " (str-pages pages))))])
+  (if volume
+    [[:i title] (str volume (wrap-with-paren number) (if pages (str ", pp. " (str-pages pages))))]
+    [[:i title]]))
 
 (def entries
   (array-map
