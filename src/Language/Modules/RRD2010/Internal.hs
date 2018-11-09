@@ -117,7 +117,7 @@ getName :: VarInfo a -> Name
 getName (VarInfo name _) = name
 
 data Env a = Env
-  { tenv :: [VarInfo a]
+  { tenv :: [Maybe (VarInfo a)] -- @Nothing@ is used to skip some indices (for translations).
   , kenv :: [Kind]
   }
   deriving (Eq, Show)
@@ -129,7 +129,7 @@ lookupKind (Variable n) (kenv -> xs)
 
 lookupType :: Variable -> Env a -> Maybe (VarInfo a)
 lookupType (Variable n) (tenv -> xs)
-  | 0 <= n && n < length xs = return $ xs !! n
+  | 0 <= n && n < length xs = xs !! n
   | otherwise               = Nothing
 
 lookupName :: Variable -> Env a -> Maybe Name
@@ -138,10 +138,9 @@ lookupName v e = getName <$> lookupType v e
 lookupTypeByName :: Name -> Env a -> Maybe (a, Int)
 lookupTypeByName name (tenv -> xs) = g $ foldr f (Nothing, 0) xs
   where
-    f _ p @ (Just _, _) = p
-    f (VarInfo name' x) (Nothing, n)
-      | name' == name = (Just x, n)
-      | otherwise     = (Nothing, n + 1)
+    f _ p @ (Just _, _)                                     = p
+    f (Just (VarInfo name' x)) (Nothing, n) | name' == name = (Just x, n)
+    f _ (_, n)                                              = (Nothing, n + 1)
 
     g (Just x, n) = Just (x, n)
     g _           = Nothing
@@ -150,7 +149,7 @@ insertKind :: Shift a => Kind -> Env a -> Env a
 insertKind k e = shift 1 $ e { kenv = k : kenv e }
 
 insertType :: Name -> a -> Env a -> Env a
-insertType name x e = e { tenv = VarInfo name x : tenv e }
+insertType name x e = e { tenv = return (VarInfo name x) : tenv e }
 
 shift :: Shift a => Int -> a -> a
 shift = shiftAbove 0
@@ -172,6 +171,9 @@ instance Shift Type where
       walk c (TAbs k t)   = TAbs k $ walk (c + 1) t
       walk c (TApp t1 t2) = TApp (walk c t1) (walk c t2)
       walk _ Int          = Int
+
+instance Shift a => Shift (Maybe a) where
+  shiftAbove c d = fmap $ shiftAbove c d
 
 instance Shift a => Shift (Env a) where
   shiftAbove c0 d e = e { tenv = shiftAbove c0 d <$> tenv e }
