@@ -15,6 +15,7 @@ module Language.Modules.RRD2010.Internal
   , inst
   , pack
   , unpack
+  , let_
 
   , Shift(..)
   , shift
@@ -104,6 +105,10 @@ pack ks ty ts t = foldr (\(typ1, typ2) tm -> Pack typ1 tm typ2) t $ zip ts $ sca
 
 unpack :: Type -> Int -> Term -> Term -> Term
 unpack ty n t1 t2 = foldr (\t0 f t -> Unpack t $ f t0) (App $ Abs ty t2) (replicate n $ Var $ Variable 0) t1
+
+let_ :: [(Term, Type)] -> Term -> Term
+let_ [] t0             = t0
+let_ ((t, ty) : ps) t0 = App (Abs ty $ let_ ps t0) t
 
 data VarInfo a = VarInfo Name a
   deriving (Eq, Show, Functor)
