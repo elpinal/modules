@@ -386,6 +386,9 @@ class Subtype a where
 (.=) :: I.Type -> I.Type -> Bool
 (.=) = (==)
 
+variables :: [a] -> [I.Variable]
+variables xs = coerce [0 .. length xs - 1]
+
 instance Subtype I.Type where
   t1 <: t2
     | t1 .= t2  = return $ I.Abs t1 $ var 0
@@ -393,7 +396,7 @@ instance Subtype I.Type where
 
 match :: Members Env r => SemanticSig -> AbstractSig -> Eff r (I.Term, Map.Map I.Variable I.Type)
 match ssig (Existential (ks, s)) = do
-  m <- sequence $ fmap f $ coerce $ Map.fromSet (lookupInst ssig s) $ Set.fromList $ coerce [0 .. length ks - 1]
+  m <- sequence $ fmap f $ coerce $ Map.fromSet (lookupInst ssig s) $ Set.fromList $ variables ks
   t <- ssig <: subst m s
   return (t, m)
   where
@@ -455,7 +458,7 @@ instance Elaboration Module where
     ps <- traverse f bs
     let asig @ (Existential (ks, ssig)) = fmap StructureSig $ runIdentity $ foldrM (merge g) (existential mempty) $ snd <$> ps
     let r = fst $ foldr f1 (mempty, 0) $ fromExistential . snd <$> ps
-    let t = foldr ($) (I.pack ks (encode ssig) (I.TVar <$> coerce [0 .. length ks - 1]) $ I.TmRecord r) $ map h ps
+    let t = foldr ($) (I.pack ks (encode ssig) (I.TVar <$> variables ks) $ I.TmRecord r) $ map h ps
     return (t, asig)
       where
         f :: Members Env r => Binding -> Eff r (I.Term, Existential (Map.Map I.Label SemanticSig))
@@ -485,7 +488,7 @@ instance Elaboration Module where
   elaborate (Projection m i) = do
     (c, Existential (ks, ssig)) <- elaborate m
     ssig' <- proj' ssig i
-    let ts = I.TVar <$> coerce [0 .. length ks - 1]
+    let ts = I.TVar <$> variables ks
     return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode ssig') ts $ I.Proj (var 0) $ embedIntoLabel i, Existential (ks, ssig'))
 
   elaborate (Fun i sig m) = transaction $ do
@@ -537,7 +540,7 @@ instance Elaboration Binding where
       throwProblem $ NotAtomic ssig
 
     let ty = Map.singleton (embedIntoLabel i) <$> asig
-    let ts = I.TVar <$> coerce [0 .. length ks - 1]
+    let ts = I.TVar <$> variables ks
     return (I.unpack (encode ssig) (length ks) c $ I.pack ks (encode $ StructureSig $ fromExistential ty) ts $ I.TmRecord $ coerce $ Map.singleton (embedIntoLabel i) $ var 0, ty)
 
   elaborate (Signature i sig) =
