@@ -404,11 +404,14 @@ match ssig (Existential (ks, s)) = do
     f Nothing   = throwProblem NoInstantiation
     f (Just ty) = return ty
 
+pack :: AbstractSig -> [I.Type] -> I.Term -> I.Term
+pack (Existential (ks, ssig)) = I.pack ks $ encode ssig
+
 instance Subtype AbstractSig where
-  a @ (Existential (ks1, ssig1)) <: b @ (Existential (ks2, ssig2)) = transaction $ do
+  a @ (Existential (ks1, ssig1)) <: b = transaction $ do
     updateEnvWithVars ks1
     (c, ts) <- ssig1 `match` b
-    return $ I.Abs (encode a) $ I.unpack (encode ssig1) (Map.size ts) (var 0) $ I.pack ks2 (encode ssig2) (Map.elems ts) $ I.App c $ var 0
+    return $ I.Abs (encode a) $ I.unpack (encode ssig1) (Map.size ts) (var 0) $ pack b (Map.elems ts) $ I.App c $ var 0
 
 instance Subtype SemanticSig where
   AtomicTerm t <: AtomicTerm u =
@@ -456,9 +459,9 @@ instance Elaboration Module where
 
   elaborate (Bindings bs) = transaction $ do
     ps <- traverse f bs
-    let asig @ (Existential (ks, ssig)) = fmap StructureSig $ runIdentity $ foldrM (merge g) (existential mempty) $ snd <$> ps
+    let asig @ (Existential (ks, _)) = fmap StructureSig $ runIdentity $ foldrM (merge g) (existential mempty) $ snd <$> ps
     let r = fst $ foldr f1 (mempty, 0) $ fromExistential . snd <$> ps
-    let t = foldr ($) (I.pack ks (encode ssig) (I.TVar <$> variables ks) $ I.TmRecord r) $ map h ps
+    let t = foldr ($) (pack asig (I.TVar <$> variables ks) $ I.TmRecord r) $ map h ps
     return (t, asig)
       where
         f :: Members Env r => Binding -> Eff r (I.Term, Existential (Map.Map I.Label SemanticSig))
@@ -509,9 +512,9 @@ instance Elaboration Module where
   elaborate (i :> sig) = do
     env <- getEnv
     (ssig, n) <- lookupTypeByIdent i env
-    asig @ (Existential (ks, ssig')) <- elaborate sig
+    asig <- elaborate sig
     (c, ts) <- ssig `match` asig
-    return (I.pack ks (encode ssig') (Map.elems ts) $ I.App c $ var n, asig)
+    return (pack asig (Map.elems ts) $ I.App c $ var n, asig)
 
 lookupTypeByIdent :: Member (Error TypeError) r => Ident -> I.Env SemanticSig -> Eff r (SemanticSig, Int)
 lookupTypeByIdent i env = maybe (throwProblem $ NoSuchIdent i env) return $ I.lookupTypeByName (coerce i) env
