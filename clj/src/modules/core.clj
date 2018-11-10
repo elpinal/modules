@@ -4,8 +4,11 @@
 (def esop "European Symposium on Programming")
 (def icalp "ICALP")
 (def icfp "ICFP")
+(def ifl "Implementation and Application of Functional Languages")
 (def jfp "Journal of Functional Programming")
+(def oopsla "Object-oriented Programming, Systems, Languages, and Applications")
 (def pldi "PLDI")
+(def plilp "Programming Languages Implementation and Logic Programming")
 (def popl "POPL")
 (def ppdp "Principles and Practice of Declarative Programming")
 (def tapsoft "TAPSOFT")
@@ -16,11 +19,13 @@
 (def cardelli "Luca Cardelli")
 (def crary "Karl Crary")
 (def dreyer "Derek Dreyer")
+(def garrigue "Jacques Garrigue")
 (def harper "Robert Harper")
 (def leroy "Xavier Leroy")
 (def macqueen "David B. MacQueen")
 (def mitchell "John C. Mitchell")
 (def moggi "Eugenio Moggi")
+(def nakata "Keiko Nakata")
 (def rossberg "Andreas Rossberg")
 (def russo "Claudio V. Russo")
 (def tofte "Mads Tofte")
@@ -219,6 +224,14 @@
     :location (proceedings-location popl :pages '(270 278))
     :url      "https://www.researchgate.net/publication/2815527_An_extension_of_Standard_ML_modules_with_subtyping_and_inheritance"}
 
+   :bl1991
+   {:key      "BL1991"
+    :title    "Modularity meets inheritance"
+    :author   (authors "Gilad Bracha" "Gary Lindstrom")
+    :date     1991
+    :location (techrpt-location :institution "University of Utah" :number "UUCS-91-017")
+    :url      "http://www.bracha.org/modularity-meets-inheritance.ps"}
+
    :bra1992
    {:key      "Bra1992"
     :title    "The programming language JIGSAW: Mixins, modularity and multiple inheritance"
@@ -320,6 +333,14 @@
     :date     "1996"
     :location "In The Glasgow Workshop on Functional Programming"
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1996/01/Nicklisch-modules.pdf"}
+
+   :ad1996
+   {:key      "AD1996"
+    :title    "Type isomorphisms for module signatures"
+    :author   (authors "María-Virginia Aponte" "Roberto Di Cosmo")
+    :date     1996
+    :location (proceedings-location plilp :pages '(334 346))
+    :url      "http://www.dicosmo.org/Articles/1996-AponteDiCosmo-PLILP.pdf"}
 
    :asp1997
    {:key      "Asp1997"
@@ -454,6 +475,14 @@
     :location (proceedings-location icfp :pages '(50 61))
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2001/09/Recursive-Structures-for-Standard-ML.pdf"}
 
+   :dhc2001
+   {:key      "DHC2001"
+    :title    "Towards a practical type theory for recursive modules"
+    :author   (authors dreyer harper crary)
+    :date     2001
+    :location (techrpt-location :institution "Carnegie Mellon University School of Computer Science" :number "CMU-CS-01-112")
+    :url      "https://www.cs.cmu.edu/~rwh/papers/ttrm/rmtr.pdf"}
+
    :hl2002
    {:key      "HL2002"
     :title    "Mixin modules in a call-by-value setting"
@@ -502,6 +531,14 @@
     :location (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")
     :url      "https://people.mpi-sws.org/~dreyer/thesis/main.pdf"}
 
+   :nig2005
+   {:key      "NIG2005"
+    :title    "Recursive object-oriented modules"
+    :author   (authors nakata "Akira Ito" garrigue)
+    :date     2005
+    :location (proceedings-location "Foundations of Object-Oriented Languages")
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"}
+
    :ng2006
    {:key      "NG2006"
     :title    "Recursive modules for programming"
@@ -525,6 +562,14 @@
     :date     "2006"
     :location (techrpt-location :institution "University of Chicago, Department of Computer Science" :number "TR-2006-07")
     :url      "https://people.mpi-sws.org/~dreyer/papers/bimod/main.pdf"}
+
+   :sha2006
+   {:key      "Sha2006"
+    :title    "Higher-order modules in System Fω and Haskell"
+    :author   "Chung-chieh Shan"
+    :date     "May 15, 2006"
+    :location "Manuscript"
+    :url      "http://homes.soic.indiana.edu/ccshan/xlate/xlate.pdf"}
 
    :dre2007a
    {:key      "Dre2007a"
@@ -551,6 +596,14 @@
     :location (proceedings-location esop)
     :url      "https://people.mpi-sws.org/~dreyer/papers/infmod/main-short.pdf"
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/infmod/main-long.pdf"}
+
+   :ng2007
+   {:key      "NG2007"
+    :title    "Path resolution for recursive nested modules is undecidable"
+    :author   (authors nakata garrigue)
+    :date     2007
+    :location (proceedings-location "9th International Workshop on Termination")
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/wst2007.pdf"}
 
    :dr2008
    {:key      "DR2008"
@@ -584,6 +637,22 @@
     :location (proceedings-location popl :pages '(354 365))
     :url      "http://gallium.inria.fr/~remy/modules/Montagu-Remy@popl09:fzip.pdf"}
 
+   :km2009
+   {:key      "KM2009"
+    :title    "Engineering higher-order modules in SML/NJ"
+    :author   (authors "George Kuan" macqueen)
+    :date     2009
+    :location (proceedings-location ifl :pages '(218 235))
+    :url      "https://www.researchgate.net/profile/David_Macqueen/publication/226219412_Engineering_Higher-Order_Modules_in_SMLNJ/links/0912f50a29752482c0000000.pdf"}
+
+   :kua2010
+   {:key      "Kua2010"
+    :title    "A true higher-order module system"
+    :author   "George Kuan"
+    :date     2010
+    :location (dissertation-location :institution "University of Chicago" :degree "PhD")
+    :url      "http://smlnj-gforge.cs.uchicago.edu/scm/viewvc.php/*checkout*/papers/hofsem/dissertation/kuan-dissertation.pdf?root=smlnj"}
+
    :rrd2010
    {:key      "RRD2010"
     :title    "F-ing modules"
@@ -591,6 +660,22 @@
     :date     2010
     :location (proceedings-location tldi)
     :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf"}
+
+   :ingp2011
+   {:key      "INGP2011"
+    :title    "A syntactic type system for recursive modules"
+    :author   (authors "Hyonseung Im" nakata garrigue "Sungwoo Park")
+    :date     2011
+    :location (proceedings-location oopsla)
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/oopsla2011.pdf"}
+
+   :gn2012
+   {:key      "GN2012"
+    :title    "Path resolution for recursive nested modules"
+    :author   (authors garrigue nakata)
+    :date     2012
+    :location (journal-location "Higher-Order and Symbolic Computation" :volume 24 :number 3 :pages '(207 237))
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/path-resolution-1205.pdf"}
 
    :rd2013
    {:key      "DR2013"
