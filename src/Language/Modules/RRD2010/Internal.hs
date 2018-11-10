@@ -1,5 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Modules.RRD2010.Internal
@@ -17,6 +20,10 @@ module Language.Modules.RRD2010.Internal
   , pack
   , unpack
   , let_
+
+  , kindOf
+
+  , InternalTypeError(..)
 
   , Shift(..)
   , shift
@@ -37,7 +44,12 @@ module Language.Modules.RRD2010.Internal
   , insertNothing
   ) where
 
+import Control.Monad
+import Control.Monad.Freer
+import Control.Monad.Freer.Error
+import Control.Monad.Freer.Reader
 import Data.Coerce
+import Data.Functor
 import qualified Data.Map.Lazy as Map
 
 newtype Name = Name String
@@ -215,3 +227,35 @@ instance Subst Type where
   substC c m (TAbs k ty)    = TAbs k $ substC (c + 1) m ty
   substC c m (TApp ty1 ty2) = TApp (substC c m ty1) (substC c m ty2)
   substC _ _ Int            = Int
+
+data InternalTypeError
+  = NoSuchTypeVariable Variable
+  | NotMono Kind
+  | KindMismatch Kind Kind
+  | ApplicationOfMonotype Type
+  deriving (Eq, Show)
+
+expectMono :: Member (Error InternalTypeError) r => Kind -> Eff r ()
+expectMono Mono = return ()
+expectMono k    = throwError $ NotMono k
+
+-- Assumes that each variable in the environment is assigned a monotype.
+kindOf :: forall a. Shift a => Type -> Eff '[Reader (Env a), Error InternalTypeError] Kind
+kindOf (TVar v)     = asks (\(e :: Env a) -> lookupKind v e) >>= getKind v
+kindOf (TFun t1 t2) = kindOf t1 >>= expectMono >> (kindOf t2 >>= expectMono) $> Mono
+kindOf (TRecord r)  = mapM_ (expectMono <=< kindOf) r $> Mono
+kindOf (Forall k t) = local (\(e :: Env a) -> insertKind k e) $ (kindOf t >>= expectMono) $> Mono
+kindOf (Some k t)   = local (\(e :: Env a) -> insertKind k e) $ (kindOf t >>= expectMono) $> Mono
+kindOf (TAbs k t)   = local (\(e :: Env a) -> insertKind k e) $ KFun k <$> kindOf t
+kindOf (TApp t1 t2) = do
+  k1 <- kindOf t1
+  k2 <- kindOf t2
+  case k1 of
+    Mono -> throwError $ ApplicationOfMonotype t1
+    KFun k11 k12
+      | k11 == k2 -> return k12
+      | otherwise -> throwError $ KindMismatch k11 k2
+kindOf Int = return Mono
+
+getKind :: Member (Error InternalTypeError) r => Variable -> Maybe Kind -> Eff r Kind
+getKind v = maybe (throwError $ NoSuchTypeVariable v) return
