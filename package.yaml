@@ -47,3 +47,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - modules
+    - hspec >= 2.5.5

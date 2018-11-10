@@ -10,7 +10,18 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Modules.RRD2010
-  (
+  ( Module(..)
+  , Binding(..)
+  , Expr(..)
+  , Ident(..)
+  , AbstractSig
+  , SemanticSig(..)
+  , Existential
+  , existential
+  , Elaboration(..)
+  , TypeError
+  , runEnv
+  , var
   ) where
 
 import Control.Monad
@@ -255,6 +266,9 @@ annotate :: Member (Error TypeError) r => Eff r a -> Reason -> Eff r a
 annotate x r = x `catchError` (throwError . addReason r)
 
 type Env = '[State (I.Env SemanticSig), Error TypeError]
+
+runEnv :: I.Env b -> Eff '[State (I.Env b), Error TypeError] a -> Either TypeError a
+runEnv e x = run $ runError $ evalState e x
 
 class Elaboration a where
   type Output a
