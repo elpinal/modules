@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -49,8 +50,10 @@ import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.Reader
 import Data.Coerce
+import Data.Foldable
 import Data.Functor
 import qualified Data.Map.Lazy as Map
+import Data.Monoid
 
 newtype Name = Name String
   deriving (Eq, Ord, Show)
@@ -259,3 +262,34 @@ kindOf Int = return Mono
 
 getKind :: Member (Error InternalTypeError) r => Variable -> Maybe Kind -> Eff r Kind
 getKind v = maybe (throwError $ NoSuchTypeVariable v) return
+
+reduce :: Type -> Type
+reduce t @ (TVar _) = t
+reduce (TFun t1 t2) = TFun (reduce t1) $ reduce t2
+reduce (TRecord r)  = TRecord $ reduce <$> r
+reduce (Forall k t) = Forall k $ reduce t
+reduce (Some k t)   = Some k $ reduce t
+reduce (TAbs k t)   =
+  case reduce t of
+    TApp t2 (TVar (Variable 0))
+      | getAll $ run $ runReader 0 $ eta t2 -> shift (-1) t2
+    t1 -> TAbs k t1
+reduce (TApp t1 t2) =
+  let t21 = reduce t2 in
+  case reduce t1 of
+    (TAbs _ t0) -> substC 0 (Map.singleton (Variable 0) t21) $ t0
+    t11         -> TApp t11 t21
+reduce Int          = Int
+
+eta :: Type -> Eff '[Reader Int] All
+eta (TVar v)     = [All $ v /= Variable n | n <- ask]
+eta (TFun t1 t2) = (<>) <$> eta t1 <*> eta t2
+eta (TRecord r)  = fold <$> mapM eta r
+eta (Forall _ t) = local inc $ eta t
+eta (Some _ t)   = local inc $ eta t
+eta (TAbs _ t)   = local inc $ eta t
+eta (TApp t1 t2) = (<>) <$> eta t1 <*> eta t2
+eta Int          = return $ All True
+
+inc :: Int -> Int
+inc = (+ 1)
