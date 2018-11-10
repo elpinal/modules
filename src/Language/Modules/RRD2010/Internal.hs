@@ -25,6 +25,7 @@ module Language.Modules.RRD2010.Internal
 
   -- * Environment
   , Env
+  , env
   , VarInfo(..)
   , getName
   , lookupName
@@ -123,6 +124,12 @@ data Env a = Env
   , kenv :: [Kind]
   }
   deriving (Eq, Show)
+
+env :: Env a
+env = Env
+  { tenv = []
+  , kenv = []
+  }
 
 lookupKind :: Variable -> Env a -> Maybe Kind
 lookupKind (Variable n) (kenv -> xs)
