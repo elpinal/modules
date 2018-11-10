@@ -308,7 +308,8 @@
     :title    "Mixin modules"
     :author   (authors "Dominic Duggan" "Constantinos Sourelis")
     :date     "1996"
-    :location (proceedings-location icfp :pages '(262 273))}
+    :location (proceedings-location icfp :pages '(262 273))
+    :url      "https://www.cs.tufts.edu/~nr/cs257/archive/dominic-duggan/Mixin%20Modules.pdf"}
 
    :jon1996
    {:key      "Jon1996"
