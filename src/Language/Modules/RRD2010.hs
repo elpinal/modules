@@ -237,6 +237,9 @@ data Problem
   | NotFunctor SemanticSig
   | NoSuchTypeVariable I.Variable
   | ApplicationOfMonotype I.Type
+  | NotType Path
+  | NotTerm Path
+  | NotSig Path
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -265,7 +268,12 @@ instance Elaboration Kind where
 instance Elaboration Type where
   type Output Type = (I.Type, I.Kind)
 
-  elaborate Int = return (I.Int, I.Mono)
+  elaborate Int          = return (I.Int, I.Mono)
+  elaborate (PathType p) = do
+    ssig <- snd <$> elaborate p
+    case ssig of
+      AtomicType t k -> return (t, k)
+      _              -> throwProblem $ NotType p
 
 getEnv :: Member (State (I.Env SemanticSig)) r => Eff r (I.Env SemanticSig)
 getEnv = get
@@ -294,6 +302,12 @@ updateEnv (Existential (ks, m)) = do
 
 instance Elaboration Sig where
   type Output Sig = AbstractSig
+
+  elaborate (SigPath p) = do
+    ssig <- snd <$> elaborate p
+    case ssig of
+      AtomicSig asig -> return asig
+      _              -> throwProblem $ NotSig p
 
   elaborate (Decls ds) = transaction $ mapM f ds >>= fmap (fmap StructureSig) . foldrM (merge g) (Existential mempty)
     where
@@ -453,7 +467,12 @@ instance Subtype SemanticSig where
 instance Elaboration Expr where
   type Output Expr = (I.Term, I.Type)
 
-  elaborate (IntLit n) = return (I.IntLit n, I.Int)
+  elaborate (IntLit n)   = return (I.IntLit n, I.Int)
+  elaborate (PathExpr p) = elaborate p >>= sequence . bimap (`I.Proj` I.Val) f
+    where
+      f :: Member (Error TypeError) r => SemanticSig -> Eff r I.Type
+      f (AtomicTerm t) = return t
+      f _              = throwProblem $ NotTerm p
 
 instance Elaboration Module where
   type Output Module = (I.Term, AbstractSig)
@@ -586,3 +605,11 @@ kindOf I.Int = return I.Mono
 
 getKind :: Member (Error TypeError) r => I.Variable -> Maybe I.Kind -> Eff r I.Kind
 getKind v = maybe (throwProblem $ NoSuchTypeVariable v) return
+
+instance Elaboration Path where
+  type Output Path = (I.Term, SemanticSig)
+
+  elaborate (Path m) = do
+    (t, e) <- elaborate m
+    kindOf (encode $ fromExistential e) >>= expectMono
+    return (unpack e t $ var 0, fromExistential e)
