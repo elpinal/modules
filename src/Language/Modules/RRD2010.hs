@@ -20,6 +20,7 @@ import Control.Monad.Freer.State
 import Data.Bifunctor
 import Data.Coerce
 import Data.Foldable
+import Data.Functor
 import Data.Functor.Identity
 import qualified Data.Map.Lazy as Map
 import Data.Monoid
@@ -234,6 +235,8 @@ data Problem
   | NotAtomic SemanticSig
   | NoSuchIdent Ident (I.Env SemanticSig)
   | NotFunctor SemanticSig
+  | NoSuchTypeVariable I.Variable
+  | ApplicationOfMonotype I.Type
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -562,3 +565,24 @@ instance Elaboration Binding where
 
 atomicTerm :: Ident -> SemanticTerm -> I.Term
 atomicTerm i = I.TmRecord . coerce . Map.singleton (embedIntoLabel i) . encodeAsTerm
+
+-- Assumes that each variable is assigned a monotype.
+kindOf :: Members Env r => I.Type -> Eff r I.Kind
+kindOf (I.TVar v)     = getEnv >>= getKind v . I.lookupKind v
+kindOf (I.TFun t1 t2) = kindOf t1 >>= expectMono >> (kindOf t2 >>= expectMono) $> I.Mono
+kindOf (I.TRecord r)  = mapM_ (expectMono <=< kindOf) r $> I.Mono
+kindOf (I.Forall k t) = transaction $ updateEnvWithVars [k] >> (kindOf t >>= expectMono) $> I.Mono
+kindOf (I.Some k t)   = transaction $ updateEnvWithVars [k] >> (kindOf t >>= expectMono) $> I.Mono
+kindOf (I.TAbs k t)   = transaction $ updateEnvWithVars [k] >> I.KFun k <$> kindOf t
+kindOf (I.TApp t1 t2) = do
+  k1 <- kindOf t1
+  k2 <- kindOf t2
+  case k1 of
+    I.Mono -> throwProblem $ ApplicationOfMonotype t1
+    I.KFun k11 k12
+      | k11 == k2 -> return k12
+      | otherwise -> throwProblem $ KindMismatch k11 k2
+kindOf I.Int = return I.Mono
+
+getKind :: Member (Error TypeError) r => I.Variable -> Maybe I.Kind -> Eff r I.Kind
+getKind v = maybe (throwProblem $ NoSuchTypeVariable v) return
