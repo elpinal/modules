@@ -407,14 +407,14 @@ match ssig (Existential (ks, s)) = do
 pack :: AbstractSig -> [I.Type] -> I.Term -> I.Term
 pack (Existential (ks, ssig)) = I.pack ks $ encode ssig
 
-unpack :: SemanticSig -> Int -> I.Term -> I.Term -> I.Term
-unpack = I.unpack . encode
+unpack :: AbstractSig -> I.Term -> I.Term -> I.Term
+unpack (Existential (ks, ssig)) = I.unpack (encode ssig) $ length ks
 
 instance Subtype AbstractSig where
   a @ (Existential (ks1, ssig1)) <: b = transaction $ do
     updateEnvWithVars ks1
     (c, ts) <- ssig1 `match` b
-    return $ I.Abs (encode a) $ unpack ssig1 (Map.size ts) (var 0) $ pack b (Map.elems ts) $ I.App c $ var 0
+    return $ I.Abs (encode a) $ unpack a (var 0) $ pack b (Map.elems ts) $ I.App c $ var 0
 
 instance Subtype SemanticSig where
   AtomicTerm t <: AtomicTerm u =
@@ -478,9 +478,9 @@ instance Elaboration Module where
         g m1 m2 = pure $ Map.union m2 m1
 
         h :: (I.Term, Existential (Map.Map I.Label SemanticSig)) -> I.Term -> I.Term
-        h (t, Existential (ks, m)) t0 =
-          unpack (StructureSig m) (length ks) t $
-          I.let_ (bimap (I.Proj $ var 0) encode <$> Map.toList m) t0
+        h (t, e) t0 =
+          unpack (StructureSig <$> e) t $
+          I.let_ (bimap (I.Proj $ var 0) encode <$> Map.toList (fromExistential e)) t0
 
         f1 :: Map.Map I.Label SemanticSig -> (I.Record I.Term, Int) -> (I.Record I.Term, Int)
         f1 m (r0, n) =
@@ -492,10 +492,10 @@ instance Elaboration Module where
           (appEndo w r0, n' + 1)
 
   elaborate (Projection m i) = do
-    (c, Existential (ks, ssig)) <- elaborate m
+    (c, asig @ (Existential (ks, ssig))) <- elaborate m
     ssig' <- proj' ssig i
     let ts = I.TVar <$> variables ks
-    return (unpack ssig (length ks) c $ I.pack ks (encode ssig') ts $ I.Proj (var 0) $ embedIntoLabel i, Existential (ks, ssig'))
+    return (unpack asig c $ I.pack ks (encode ssig') ts $ I.Proj (var 0) $ embedIntoLabel i, Existential (ks, ssig'))
 
   elaborate (Fun i sig m) = transaction $ do
     Existential (ks, ssig) <- elaborate sig
@@ -547,7 +547,7 @@ instance Elaboration Binding where
 
     let ty = Map.singleton (embedIntoLabel i) <$> asig
     let ts = I.TVar <$> variables ks
-    return (unpack ssig (length ks) c $ I.pack ks (encode $ StructureSig $ fromExistential ty) ts $ I.TmRecord $ coerce $ Map.singleton (embedIntoLabel i) $ var 0, ty)
+    return (unpack asig c $ I.pack ks (encode $ StructureSig $ fromExistential ty) ts $ I.TmRecord $ coerce $ Map.singleton (embedIntoLabel i) $ var 0, ty)
 
   elaborate (Signature i sig) =
     [ (atomicTerm i $ SAbstractSig asig, atomic i $ AtomicSig asig)
