@@ -448,7 +448,7 @@ instance Subtype AbstractSig where
 
 instance Subtype SemanticSig where
   AtomicTerm t <: AtomicTerm u =
-    [ I.Abs t $ I.App c $ I.Proj (var 0) I.Val
+    [ I.Abs (encode $ AtomicTerm t) $ I.App c $ I.Proj (var 0) I.Val
     | c <- t <: u
     ]
 
