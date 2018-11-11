@@ -24,6 +24,8 @@ module Language.Modules.RRD2010.Internal
   , let_
 
   , kindOf
+  , typeOf
+  , runTypeOf
 
   , InternalTypeError(..)
 
@@ -276,6 +278,9 @@ kindOf Int = return Mono
 
 getKind :: Member (Error InternalTypeError) r => Variable -> Maybe Kind -> Eff r Kind
 getKind v = maybe (throwError $ NoSuchTypeVariable v) return
+
+runTypeOf :: Env Type -> Term -> Either InternalTypeError Type
+runTypeOf e t = run $ runError $ runReader e $ typeOf t
 
 typeOf :: Members '[Reader (Env Type), Error InternalTypeError] r => Term -> Eff r Type
 typeOf (Var v)     = ask >>= getType v . fmap fromVarInfo . lookupType v
