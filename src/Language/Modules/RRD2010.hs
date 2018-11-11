@@ -208,7 +208,7 @@ instance Encode SemanticSig where
   encode (AtomicTerm ity)    = I.TRecord $ coerce $ Map.singleton I.Val ity
   encode (AtomicType ity ik) = I.TRecord $ coerce $ Map.singleton I.Typ $ I.Forall (I.KFun ik I.Mono) $ I.TFun t t
     where v = I.Variable 0
-          t = I.TApp (I.TVar v) ity
+          t = I.TApp (I.TVar v) $ I.shift 1 ity
   encode (AtomicSig asig)    = I.TRecord $ coerce $ Map.singleton I.Sig $ encode asig `I.TFun` encode asig
   encode (StructureSig m)    = I.TRecord $ coerce $ encode <$> m
   encode (FunctorSig u)      = encode u
