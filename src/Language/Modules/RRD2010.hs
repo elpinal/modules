@@ -12,14 +12,20 @@
 module Language.Modules.RRD2010
   ( Module(..)
   , Binding(..)
+  , Sig(..)
+  , Decl(..)
   , Expr(..)
+  , Type(..)
   , Ident(..)
   , AbstractSig
   , SemanticSig(..)
   , Existential
   , existential
+  , Encode(..)
   , Elaboration(..)
   , TypeError
+  , fromProblem
+  , Problem(..)
   , runEnv
   , var
   ) where
