@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Modules.RRD2010.Internal
@@ -134,6 +135,9 @@ data VarInfo a = VarInfo Name a
 getName :: VarInfo a -> Name
 getName (VarInfo name _) = name
 
+fromVarInfo :: VarInfo a -> a
+fromVarInfo (VarInfo _ x) = x
+
 data Env a = Env
   { tenv :: [Maybe (VarInfo a)] -- @Nothing@ is used to skip some indices (for translations).
   , kenv :: [Kind]
@@ -174,6 +178,9 @@ insertKind k e = shift 1 $ e { kenv = k : kenv e }
 
 insertType :: Name -> a -> Env a -> Env a
 insertType name x e = e { tenv = return (VarInfo name x) : tenv e }
+
+insertTypeWithoutName :: a -> Env a -> Env a
+insertTypeWithoutName = insertType $ Name ""
 
 insertNothing :: Env a -> Env a
 insertNothing e = e { tenv = Nothing : tenv e }
@@ -233,9 +240,16 @@ instance Subst Type where
 
 data InternalTypeError
   = NoSuchTypeVariable Variable
+  | NoSuchVariable Variable
+  | NoSuchLabel Label
   | NotMono Kind
   | KindMismatch Kind Kind
+  | TypeMismatch Type Type
   | ApplicationOfMonotype Type
+  | NotFunction Type
+  | NotRecord Type
+  | NotForall Type
+  | NotSome Type
   deriving (Eq, Show)
 
 expectMono :: Member (Error InternalTypeError) r => Kind -> Eff r ()
@@ -262,6 +276,69 @@ kindOf Int = return Mono
 
 getKind :: Member (Error InternalTypeError) r => Variable -> Maybe Kind -> Eff r Kind
 getKind v = maybe (throwError $ NoSuchTypeVariable v) return
+
+typeOf :: Members '[Reader (Env Type), Error InternalTypeError] r => Term -> Eff r Type
+typeOf (Var v)     = ask >>= getType v . fmap fromVarInfo . lookupType v
+typeOf (Abs ty t)  = local (insertTypeWithoutName ty) $ TFun ty <$> typeOf t
+typeOf (App t1 t2) = do
+  ty1 <- reduce <$> typeOf t1
+  ty2 <- reduce <$> typeOf t2
+  withTFun ty1 $ \ty11 ty12 ->
+    if ty11 == ty2
+      then return ty12
+      else throwError $ TypeMismatch ty11 ty2
+typeOf (TmRecord r) = TRecord <$> mapM typeOf r
+typeOf (Proj t l)   = do
+  ty <- reduce <$> typeOf t
+  withTRecord ty $ \r ->
+    case coerce r Map.!? l of
+      Just ty1 -> return ty1
+      Nothing  -> throwError $ NoSuchLabel l
+typeOf (Poly k t)       = local (\(e :: Env Type) -> insertKind k e) $ Forall k <$> typeOf t
+typeOf (Inst t ty)      = reduce <$> typeOf t >>= \ty1 -> withForall ty1 $ \k ty2 -> expect ty k $> substC 0 (Map.singleton (Variable 0) ty) ty2
+typeOf (Pack ty1 t ty2) = (expect ty2 Mono >>) $ withSome ty2 $ \k ty3 -> expect ty1 k >> expect t (substC 0 (Map.singleton (Variable 0) ty1) ty3) $> Some k ty3
+typeOf (Unpack t1 t2)   = typeOf t1 >>= \ty1 -> [ty2 | ty2 <- withSome ty1 $ \k ty -> local (insertTypeWithoutName ty . insertKind k) $ typeOf t2, _ <- expect ty2 Mono]
+typeOf (IntLit _)       = return Int
+
+kindOf' :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> Eff r Kind
+kindOf' ty = ask >>= \(e :: Env Type) -> either throwError return $ run $ runError $ runReader e $ kindOf ty
+
+getType :: Member (Error InternalTypeError) r => Variable -> Maybe Type -> Eff r Type
+getType v = maybe (throwError $ NoSuchVariable v) return
+
+withTFun :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Type -> Type -> Eff r Type) -> Eff r Type
+withTFun (TFun ty1 ty2) f = f ty1 ty2
+withTFun ty _             = throwError $ NotFunction ty
+
+withTRecord :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Record Type -> Eff r Type) -> Eff r Type
+withTRecord (TRecord r) f = f r
+withTRecord ty _          = throwError $ NotRecord ty
+
+withForall :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Kind -> Type -> Eff r Type) -> Eff r Type
+withForall (Forall k ty) f = f k ty
+withForall ty _          = throwError $ NotForall ty
+
+withSome :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Kind -> Type -> Eff r Type) -> Eff r Type
+withSome (Some k ty) f = f k ty
+withSome ty _          = throwError $ NotSome ty
+
+class Expect a where
+  type Expected a
+  expect :: Members '[Reader (Env Type), Error InternalTypeError] r => a -> Expected a -> Eff r ()
+
+instance Expect Type where
+  type Expected Type = Kind
+  expect ty k0 = do
+    k <- kindOf' ty
+    when (k /= k0) $
+      throwError $ KindMismatch k k0
+
+instance Expect Term where
+  type Expected Term = Type
+  expect t ty0 = do
+    ty <- typeOf t
+    when (ty /= ty0) $
+      throwError $ TypeMismatch ty ty0
 
 reduce :: Type -> Type
 reduce t @ (TVar _) = t
