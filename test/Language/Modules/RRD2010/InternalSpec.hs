@@ -35,6 +35,6 @@ spec = do
       runTypeOf env (Abs ty $ Unpack (var 0) $ (var 0 `Proj` label "y") `App` (var 0 `Proj` label "x")) `shouldBe` return (TFun ty Int)
 
     it "returns an error if given an ill-typed term" $ do
-      runTypeOf env (Abs Int $ App (var 0) $ var 0)                        `shouldBe` Left (NotFunction Int)
-      runTypeOf env (Pack Int (IntLit 3) $ Some (KFun Mono Mono) $ tvar 0) `shouldBe` Left (NotMono $ KFun Mono Mono)
-      runTypeOf env (Abs (Some Mono $ tvar 0) $ Unpack (var 0) $ var 0)    `shouldBe` Left (NoSuchTypeVariable $ Variable 0)
+      runTypeOf env (Abs Int $ App (var 0) $ var 0)                        `shouldBe` Left (fromProblem $ NotFunction Int)
+      runTypeOf env (Pack Int (IntLit 3) $ Some (KFun Mono Mono) $ tvar 0) `shouldBe` Left (fromProblem $ NotMono $ KFun Mono Mono)
+      runTypeOf env (Abs (Some Mono $ tvar 0) $ Unpack (var 0) $ var 0)    `shouldBe` Left (fromProblem $ NoSuchTypeVariable $ Variable 0)

@@ -28,6 +28,8 @@ module Language.Modules.RRD2010.Internal
   , runTypeOf
 
   , InternalTypeError(..)
+  , Problem(..)
+  , fromProblem
 
   , Shift(..)
   , shift
@@ -240,7 +242,10 @@ instance Subst Type where
   substC c m (TApp ty1 ty2) = TApp (substC c m ty1) (substC c m ty2)
   substC _ _ Int            = Int
 
-data InternalTypeError
+data InternalTypeError = InternalTypeError [Reason] Problem
+  deriving (Eq, Show)
+
+data Problem
   = NoSuchTypeVariable Variable
   | NoSuchVariable Variable
   | NoSuchLabel Label
@@ -254,9 +259,25 @@ data InternalTypeError
   | NotSome Type
   deriving (Eq, Show)
 
+data Reason
+  = TermApp Term Term
+  deriving (Eq, Show)
+
+fromProblem :: Problem -> InternalTypeError
+fromProblem = InternalTypeError []
+
+throwProblem :: Member (Error InternalTypeError) r => Problem -> Eff r a
+throwProblem = throwError . fromProblem
+
+addReason :: Reason -> InternalTypeError -> InternalTypeError
+addReason r (InternalTypeError rs p) = InternalTypeError (r : rs) p
+
+annotate :: Member (Error InternalTypeError) r => Eff r a -> Reason -> Eff r a
+annotate x r = x `catchError` (throwError . addReason r)
+
 expectMono :: Member (Error InternalTypeError) r => Kind -> Eff r ()
 expectMono Mono = return ()
-expectMono k    = throwError $ NotMono k
+expectMono k    = throwProblem $ NotMono k
 
 -- Assumes that each variable in the environment is assigned a monotype.
 kindOf :: forall a. Shift a => Type -> Eff '[Reader (Env a), Error InternalTypeError] Kind
@@ -270,14 +291,14 @@ kindOf (TApp t1 t2) = do
   k1 <- kindOf t1
   k2 <- kindOf t2
   case k1 of
-    Mono -> throwError $ ApplicationOfMonotype t1
+    Mono -> throwProblem $ ApplicationOfMonotype t1
     KFun k11 k12
       | k11 == k2 -> return k12
-      | otherwise -> throwError $ KindMismatch k11 k2
+      | otherwise -> throwProblem $ KindMismatch k11 k2
 kindOf Int = return Mono
 
 getKind :: Member (Error InternalTypeError) r => Variable -> Maybe Kind -> Eff r Kind
-getKind v = maybe (throwError $ NoSuchTypeVariable v) return
+getKind v = maybe (throwProblem $ NoSuchTypeVariable v) return
 
 runTypeOf :: Env Type -> Term -> Either InternalTypeError Type
 runTypeOf e t = run $ runError $ runReader e $ typeOf t
@@ -291,14 +312,14 @@ typeOf (App t1 t2) = do
   withTFun ty1 $ \ty11 ty12 ->
     if ty11 == ty2
       then return ty12
-      else throwError $ TypeMismatch ty11 ty2
+      else throwError $ InternalTypeError [TermApp t1 t2] $ TypeMismatch ty11 ty2
 typeOf (TmRecord r) = TRecord <$> mapM typeOf r
 typeOf (Proj t l)   = do
   ty <- reduce <$> typeOf t
   withTRecord ty $ \r ->
     case coerce r Map.!? l of
       Just ty1 -> return ty1
-      Nothing  -> throwError $ NoSuchLabel l
+      Nothing  -> throwProblem $ NoSuchLabel l
 typeOf (Poly k t)       = local (\(e :: Env Type) -> insertKind k e) $ Forall k <$> typeOf t
 typeOf (Inst t ty)      = reduce <$> typeOf t >>= \ty1 -> withForall ty1 $ \k ty2 -> expect ty k $> substC 0 (Map.singleton (Variable 0) ty) ty2
 typeOf (Pack ty1 t ty2) = (expect ty2 Mono >>) $ withSome ty2 $ \k ty3 -> expect ty1 k >> expect t (substC 0 (Map.singleton (Variable 0) ty1) ty3) $> Some k ty3
@@ -309,23 +330,23 @@ kindOf' :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> Ef
 kindOf' ty = ask >>= \(e :: Env Type) -> either throwError return $ run $ runError $ runReader e $ kindOf ty
 
 getType :: Member (Error InternalTypeError) r => Variable -> Maybe Type -> Eff r Type
-getType v = maybe (throwError $ NoSuchVariable v) return
+getType v = maybe (throwProblem $ NoSuchVariable v) return
 
 withTFun :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Type -> Type -> Eff r Type) -> Eff r Type
 withTFun (TFun ty1 ty2) f = f ty1 ty2
-withTFun ty _             = throwError $ NotFunction ty
+withTFun ty _             = throwProblem $ NotFunction ty
 
 withTRecord :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Record Type -> Eff r Type) -> Eff r Type
 withTRecord (TRecord r) f = f r
-withTRecord ty _          = throwError $ NotRecord ty
+withTRecord ty _          = throwProblem $ NotRecord ty
 
 withForall :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Kind -> Type -> Eff r Type) -> Eff r Type
 withForall (Forall k ty) f = f k ty
-withForall ty _          = throwError $ NotForall ty
+withForall ty _          = throwProblem $ NotForall ty
 
 withSome :: Members '[Reader (Env Type), Error InternalTypeError] r => Type -> (Kind -> Type -> Eff r Type) -> Eff r Type
 withSome (Some k ty) f = f k ty
-withSome ty _          = throwError $ NotSome ty
+withSome ty _          = throwProblem $ NotSome ty
 
 class Expect a where
   type Expected a
@@ -336,14 +357,14 @@ instance Expect Type where
   expect ty k0 = do
     k <- kindOf' ty
     when (k /= k0) $
-      throwError $ KindMismatch k k0
+      throwProblem $ KindMismatch k k0
 
 instance Expect Term where
   type Expected Term = Type
   expect t ty0 = do
     ty <- typeOf t
     when (ty /= ty0) $
-      throwError $ TypeMismatch ty ty0
+      throwProblem $ TypeMismatch ty ty0
 
 reduce :: Type -> Type
 reduce t @ (TVar _) = t
