@@ -358,6 +358,14 @@
     :date     "1997"
     :location (proceedings-location tapsoft)}
 
+   :lil1997
+   {:key      "Lil1997"
+    :title    "Translucent sums: A foundation for higher-order module systems"
+    :author   "Mark Lillibridge"
+    :date     1997
+    :location (dissertation-location :institution "Carnegie Mellon University" :degree "PhD")
+    :url      "https://www.cs.cmu.edu/Groups/fox/papers/mdl-thesis.ps"}
+
    :rus1998
    {:key      "Rus1998"
     :title    "Types for modules"
