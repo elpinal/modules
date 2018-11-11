@@ -166,11 +166,11 @@ lookupName :: Variable -> Env a -> Maybe Name
 lookupName v e = getName <$> lookupType v e
 
 lookupTypeByName :: Name -> Env a -> Maybe (a, Int)
-lookupTypeByName name (tenv -> xs) = g $ foldr f (Nothing, 0) xs
+lookupTypeByName name (tenv -> xs) = g $ foldl f (Nothing, 0) xs
   where
-    f _ p @ (Just _, _)                                     = p
-    f (Just (VarInfo name' x)) (Nothing, n) | name' == name = (Just x, n)
-    f _ (_, n)                                              = (Nothing, n + 1)
+    f p @ (Just _, _) _                                     = p
+    f (Nothing, n) (Just (VarInfo name' x)) | name' == name = (Just x, n)
+    f (_, n) _                                              = (Nothing, n + 1)
 
     g (Just x, n) = Just (x, n)
     g _           = Nothing
