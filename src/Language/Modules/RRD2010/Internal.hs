@@ -232,7 +232,7 @@ class Subst a where
 
 instance Subst Type where
   substC c m ty @ (TVar v)
-    | c <= coerce v = Map.findWithDefault (shift (- Map.size m) ty) (sub v c) m
+    | c <= coerce v = maybe (shift (- Map.size m) ty) (shift c) $ Map.lookup (sub v c) m
     | otherwise     = ty
   substC c m (TFun ty1 ty2) = TFun (substC c m ty1) (substC c m ty2)
   substC c m (TRecord rt)   = TRecord $ substC c m <$> rt
