@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 module Language.Modules.RRD2010Spec where
 
 import Test.Hspec
