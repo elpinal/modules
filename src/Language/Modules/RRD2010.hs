@@ -227,6 +227,7 @@ data TypeError = TypeError [Reason] Problem
 
 data Reason
   = ExpectMono I.Type
+  | WhilePathElaboration Path
   deriving (Eq, Show)
 
 data Problem
@@ -610,5 +611,5 @@ instance Elaboration Path where
 
   elaborate (Path m) = do
     (t, e) <- elaborate m
-    kindOf (encode $ fromExistential e) >>= expectMono
+    kindOf (encode $ fromExistential e) `annotate` WhilePathElaboration (Path m) >>= expectMono
     return (unpack e t $ var 0, fromExistential e)
