@@ -532,6 +532,14 @@
     :url      "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms.pdf"
     :tr-url   "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms-tr.pdf"}
 
+   :rus2003
+   {:key      "Rus2003"
+    :title    "Types for modules"
+    :author   russo
+    :date     2003
+    :location (journal-location "Electronic Notes in Theoretical Computer Science" :volume 60)
+    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1998/03/Types-for-Modules.pdf"}
+
    :dre2005
    {:key      "Dre2005"
     :title    "Understanding and evolving the ML module system"
