@@ -551,6 +551,14 @@
     :location (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")
     :url      "https://people.mpi-sws.org/~dreyer/thesis/main.pdf"}
 
+   :rfg2005
+   {:key      "RFG2005"
+    :title    "An expressive language of signatures"
+    :author   (authors "Norman Ramsey" "Kathleen Fisher" "Paul Govereau")
+    :date     2005
+    :location (proceedings-location icfp :pages '(27 40))
+    :url      "https://www.cs.tufts.edu/~nr/pubs/els.pdf"}
+
    :nig2005
    {:key      "NIG2005"
     :title    "Recursive object-oriented modules"
