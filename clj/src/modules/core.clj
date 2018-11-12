@@ -702,6 +702,16 @@
     :location (journal-location jfp :volume 24 :number 5)
     :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing-jfp.pdf"}
 
+   :kdpm2014
+   {:key      "KDPM2014"
+    :title    "Backpack: Retrofitting Haskell with interfaces"
+    :author   (authors "Scott Kilpatrick" dreyer "Simon Peyton Jones" "Simon Marlow")
+    :date     2014
+    :location (proceedings-location popl :pages '(19 31))
+    :url      "https://people.mpi-sws.org/~dreyer/papers/backpack/paper.pdf"
+    :appendix "https://people.mpi-sws.org/~dreyer/papers/backpack/appendix.pdf"
+    :slides   "https://plv.mpi-sws.org/backpack/backpack-popl.pdf"}
+
    :ros2015
    {:key      "Ros2015"
     :title    "1ML — Core and modules united (F-ing first-class modules)"
@@ -718,6 +728,22 @@
     :date     2016
     :location "In WadlerFest"
     :url      "https://people.mpi-sws.org/~rossberg/1ml/1ml-effects.pdf"}
+
+   :pykd2016
+   {:key      "PYKD2016"
+    :title    "Backpack to work: Towards practical mixin linking for Haskell"
+    :author   (authors "Simon Peyton Jones" "Edward Yang" "Scott Kilpatrick" dreyer)
+    :date     "March 2016"
+    :location "In submission"
+    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/backpack-2016.pdf"}
+
+   :yan2017
+   {:key      "Yan2017"
+    :title    "Backpack: Towards practical mix-in linking in Haskell"
+    :author   "Edward Z. Yang"
+    :date     "June 2017"
+    :location (dissertation-location :institution "Stanford University" :degree "PhD")
+    :url      "https://github.com/ezyang/thesis/releases"}
 
    :cra2017
    {:key      "Cra2017"
