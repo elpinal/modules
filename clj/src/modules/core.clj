@@ -37,7 +37,7 @@
     (.write w x)))
 
 (defn render
-  [{:keys [key title author date location url tr-url slides]}]
+  [{:keys [key title author date location url tr-url slides appendix]}]
   [:div
    [:h4 title]
    [:p author]
@@ -55,7 +55,10 @@
                   [:a {:href tr-url} tr-url]]))))
    (if slides
      [:p "Slides: "
-      [:a {:href slides} slides]])])
+      [:a {:href slides} slides]])
+   (if appendix
+     [:p "Appendix: "
+      [:a {:href appendix} appendix]])])
 
 (defn html-entries
   [xs]
