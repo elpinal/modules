@@ -1,10 +1,10 @@
-module Language.Modules.RRD2010.InternalSpec where
+module Language.Modules.RRD2014.InternalSpec where
 
 import Test.Hspec
 
 import qualified Data.Map.Lazy as Map
 
-import Language.Modules.RRD2010.Internal
+import Language.Modules.RRD2014.Internal
 
 var :: Int -> Term
 var = Var . Variable

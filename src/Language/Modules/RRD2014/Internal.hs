@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Language.Modules.RRD2010.Internal
+module Language.Modules.RRD2014.Internal
   ( Name(..)
   , Label(..)
   , Variable(..)

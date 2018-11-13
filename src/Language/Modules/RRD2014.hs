@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Language.Modules.RRD2010
+module Language.Modules.RRD2014
   ( Module(..)
   , Binding(..)
   , Sig(..)
@@ -45,7 +45,7 @@ import qualified Data.Map.Lazy as Map
 import Data.Monoid
 import qualified Data.Set as Set
 
-import qualified Language.Modules.RRD2010.Internal as I
+import qualified Language.Modules.RRD2014.Internal as I
 
 newtype Ident = Ident I.Name
   deriving (Eq, Ord, Show)

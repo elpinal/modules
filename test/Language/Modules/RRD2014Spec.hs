@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Language.Modules.RRD2010Spec where
+module Language.Modules.RRD2014Spec where
 
 import Test.Hspec
 
@@ -9,8 +9,8 @@ import Data.Coerce
 import Data.Either
 import qualified Data.Map.Lazy as Map
 
-import Language.Modules.RRD2010
-import qualified Language.Modules.RRD2010.Internal as I
+import Language.Modules.RRD2014
+import qualified Language.Modules.RRD2014.Internal as I
 
 runElaborate :: Elaboration a => a -> Either TypeError (Output a)
 runElaborate = runEnv (I.env :: I.Env SemanticSig) . elaborate
