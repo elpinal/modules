@@ -248,7 +248,7 @@ data InternalTypeError = InternalTypeError [Reason] Problem
 data Problem
   = NoSuchTypeVariable Variable
   | NoSuchVariable Variable
-  | NoSuchLabel Label
+  | NoSuchLabel Label (Record Type)
   | NotMono Kind
   | KindMismatch Kind Kind
   | TypeMismatch Type Type
@@ -261,6 +261,9 @@ data Problem
 
 data Reason
   = TermApp Term Term
+  | TypeApp Type Type
+  | TypeOf Term (Env Type)
+  | ProjectFrom Term (Env Type)
   deriving (Eq, Show)
 
 fromProblem :: Problem -> InternalTypeError
@@ -294,7 +297,7 @@ kindOf (TApp t1 t2) = do
     Mono -> throwProblem $ ApplicationOfMonotype t1
     KFun k11 k12
       | k11 == k2 -> return k12
-      | otherwise -> throwProblem $ KindMismatch k11 k2
+      | otherwise -> throwError $ InternalTypeError [TypeApp t1 t2] $ KindMismatch k11 k2
 kindOf Int = return Mono
 
 getKind :: Member (Error InternalTypeError) r => Variable -> Maybe Kind -> Eff r Kind
@@ -319,7 +322,7 @@ typeOf (Proj t l)   = do
   withTRecord ty $ \r ->
     case coerce r Map.!? l of
       Just ty1 -> return ty1
-      Nothing  -> throwProblem $ NoSuchLabel l
+      Nothing  -> ask >>= \e -> throwError $ InternalTypeError [ProjectFrom t e] $ NoSuchLabel l r
 typeOf (Poly k t)       = local (\(e :: Env Type) -> insertKind k e) $ Forall k <$> typeOf t
 typeOf (Inst t ty)      = reduce <$> typeOf t >>= \ty1 -> withForall ty1 $ \k ty2 -> expect ty k $> substC 0 (Map.singleton (Variable 0) ty) ty2
 typeOf (Pack ty1 t ty2) = (expect ty2 Mono >>) $ withSome ty2 $ \k ty3 -> expect ty1 k >> expect t (substC 0 (Map.singleton (Variable 0) ty1) ty3) $> Some k ty3
@@ -363,8 +366,9 @@ instance Expect Term where
   type Expected Term = Type
   expect t ty0 = do
     ty <- reduce <$> typeOf t
-    when (ty /= ty0) $
-      throwProblem $ TypeMismatch ty ty0
+    when (ty /= ty0) $ do
+      e <- ask
+      throwError $ InternalTypeError [TypeOf t e] $ TypeMismatch ty ty0
 
 reduce :: Type -> Type
 reduce t @ (TVar _) = t
