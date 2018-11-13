@@ -2,6 +2,7 @@
   (:require [hiccup.core :as hiccup]))
 
 (def esop "European Symposium on Programming")
+(def fool "Foundations of Object-Oriented Languages")
 (def icalp "ICALP")
 (def icfp "ICFP")
 (def ifl "Implementation and Application of Functional Languages")
@@ -96,6 +97,12 @@
   [title & {:keys [pages volume number]}]
   (if volume
     [[:i title] (str volume (wrap-with-paren number) (if pages (str ", pp. " (str-pages pages))))]
+    [[:i title]]))
+
+(defn book-location
+  [title & {:keys [publisher]}]
+  (if publisher
+    [[:i title] publisher]
     [[:i title]]))
 
 (def entries
@@ -258,6 +265,14 @@
     :location (proceedings-location popl :pages '(465 478))
     :url      "https://www.researchgate.net/publication/2416181_Extending_Record_typing_to_type_parametric_modules_with_sharing"}
 
+   :hm1993
+   {:key      "HM1993"
+    :title    "On the type structure of standard ML"
+    :author   (authors harper mitchell)
+    :date     1993
+    :location (proceedings-location toplas :pages '(211 252))
+    :url      "https://crypto.stanford.edu/~jcm/papers/harper-mitch-TOPLAS-93.pdf"}
+
    :mg1993
    {:key      "MG1993"
     :title    "Studying the ML module system in HOL"
@@ -353,6 +368,15 @@
     :date     "1997"
     :location (dissertation-location :institution "Edinburgh University, Edinburgh, Scotland" :degree "PhD")
     :url      "https://www.era.lib.ed.ac.uk/handle/1842/11587"}
+
+   :car1997
+   {:key      "Car1997"
+    :title    "Program fragments, linking, and modularization"
+    :author   "Luca Cardelli"
+    :date     1997
+    :month    "January"
+    :location (proceedings-location popl :pages '(266 277))
+    :url      "http://lucacardelli.name/Papers/Linking.A4.pdf"}
 
    :cou1997
    {:key      "Cou1997"
@@ -455,6 +479,24 @@
     :url      "http://flint.cs.yale.edu/flint/publications/fullsig.pdf"
     :tr-url   "http://flint.cs.yale.edu/flint/publications/fullsig-tr.pdf"}
 
+   :els1999a
+   {:key      "Els1999a"
+    :title    "Program modules, separate compilation, and intermodule optimisation"
+    :author   "Martin Elsman"
+    :date     1999
+    :month    "January"
+    :location (dissertation-location :institution "Department of Computer Science, University of Copenhagen" :degree "PhD")
+    :url      "http://www.elsman.com/pdf/phd.pdf"}
+
+   :els1999b
+   {:key      "Els1999b"
+    :title    "Static interpretation of modules"
+    :author   "Martin Elsman"
+    :date     1999
+    :month    "September"
+    :location (proceedings-location icfp)
+    :url      "http://www.elsman.com/pdf/icfp99.pdf"}
+
    :wv2000
    {:key      "WV2000"
     :title    "Equational reasoning for linking with first-class primitive modules"
@@ -462,6 +504,14 @@
     :date     "2000"
     :location (proceedings-location "Programming Languages and Systems" :pages '(412 428))
     :url      "http://www.macs.hw.ac.uk/~jbw/papers/Wells+Vestergaard:Equational-Reasoning-for-Linking-with-First-Class-Primitive-Modules:ESOP-2000.ps.gz"}
+
+   :hs2000
+   {:key      "HS2000"
+    :title    "A type-theoretic interpretation of Standard ML"
+    :author   (authors harper "Chris Stone")
+    :date     2000
+    :location (book-location "Proof, language, and interaction: Essays in honor of robin milner" :publisher "MIT Press")
+    :url      "https://www.cs.cmu.edu/~rwh/papers/ttisml/ttisml.pdf"}
 
    :ler2000
    {:key      "Ler2000"
@@ -509,6 +559,14 @@
     :author   (authors ancona zucca)
     :date     "2002"
     :location (journal-location jfp :volume 12 :number 2 :pages '(91 132))}
+
+   :sp2002
+   {:key      "SP2002"
+    :title    "First-class modules for Haskell"
+    :author   (authors "Mark Shields" "Simon Peyton Jones")
+    :date     2002
+    :location (proceedings-location fool)
+    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/first_class_modules.pdf"}
 
    :afmz2003
    {:key      "AFMZ2003"
@@ -564,7 +622,7 @@
     :title    "Recursive object-oriented modules"
     :author   (authors nakata "Akira Ito" garrigue)
     :date     2005
-    :location (proceedings-location "Foundations of Object-Oriented Languages")
+    :location (proceedings-location fool)
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"}
 
    :ng2006
@@ -771,6 +829,14 @@
     :date     "2017"
     :location (proceedings-location popl)
     :url      "http://www.cs.cmu.edu/~crary/papers/2017/mapp.pdf"}
+
+   :ehao2018
+   {:key      "EHAO2019"
+    :title    "Static interpretation of higher-order modules in Futhark: Functional GPU programming in the large"
+    :author   (authors "Martin Elsman" "Troels Henriksen" "Danil Annenkov" "Cosmin E. Oancea")
+    :date     2018
+    :location (proceedings-location icfp :pages '(1 30))
+    :url      "https://futhark-lang.org/publications/icfp18.pdf"}
 
    :ros2019
    {:key      "Ros2019"
