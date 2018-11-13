@@ -14,8 +14,10 @@ module Language.Modules.RRD2010
   , Binding(..)
   , Sig(..)
   , Decl(..)
+  , Path(..)
   , Expr(..)
   , Type(..)
+  , Kind(..)
   , Ident(..)
   , AbstractSig
   , SemanticSig(..)

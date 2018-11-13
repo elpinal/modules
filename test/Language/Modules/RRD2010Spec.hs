@@ -6,6 +6,7 @@ import Test.Hspec
 
 import Data.Bifunctor
 import Data.Coerce
+import Data.Either
 import qualified Data.Map.Lazy as Map
 
 import Language.Modules.RRD2010
@@ -57,4 +58,35 @@ spec = do
       sound (Bindings [Val (ident "x") $ IntLit 1, Type (ident "x") Int]) `shouldBe` return True
 
       let sig = Decls [ValDecl (ident "x1") Int]
-      sound (Bindings [Module (ident "x") $ Bindings [Val (ident "x1") $ IntLit 2], Module (ident "y") $ ident "x" :> sig]) `shouldBe` return True
+      let m = Bindings [Module (ident "x") $ Bindings [Val (ident "x1") $ IntLit 2], Module (ident "y") $ ident "x" :> sig]
+      sound m                          `shouldBe` return True
+      sound (Projection m $ ident "x") `shouldBe` return True
+      sound (Projection m $ ident "y") `shouldBe` return True
+      sound (Projection m $ ident "z") `shouldSatisfy` isLeft
+
+      let pr = Projection (Projection m $ ident "x") $ ident "x1"
+      sound pr                                                `shouldBe` return True
+      sound (Bindings [Val (ident "a") $ PathExpr $ Path pr]) `shouldBe` return True
+
+      let sig = Decls [AbsTypeDecl (ident "t") Mono, ValDecl (ident "x") $ PathType $ Path $ ModuleIdent $ ident "t"]
+      let m = Bindings [Module (ident "m1") $ Bindings [Type (ident "t") Int, Val (ident "x") $ IntLit 4], Module (ident "m2") $ ident "m1" :> sig]
+      sound m `shouldBe` return True
+
+      let m = Bindings [Val (ident "x") $ IntLit 1, Val (ident "y") $ IntLit 2, Val (ident "z") $ IntLit 3]
+      sound m `shouldBe` return True
+
+      let sig = Decls [ValDecl (ident "x") Int]
+      let m = Fun (ident "f") sig $ Bindings [Val (ident "y") $ IntLit 9]
+      sound m `shouldBe` return True
+
+      let m = Fun (ident "m") sig $ Bindings [Val (ident "y") $ PathExpr $ Path $ Projection (ModuleIdent $ ident "m") $ ident "x"]
+      sound m `shouldBe` return True
+
+      let m1 = Bindings [Val (ident "x") $ IntLit 33]
+      let m2 = Fun (ident "m0") sig $ Bindings [Val (ident "y") $ IntLit 66, Val (ident "z") $ PathExpr $ Path $ Projection (ModuleIdent $ ident "m0") $ ident "x"]
+      let m = Bindings [Module (ident "m1") m1, Module (ident "m2") m2, Module (ident "app") $ ModuleApp (ident "m2") (ident "m1")]
+      sound m `shouldBe` return True
+
+    it "supports shadowing of declarations" $ do
+      let m = Bindings [Val (ident "x") $ IntLit 1, Val (ident "x") $ IntLit 2, Val (ident "z") $ PathExpr $ Path $ ModuleIdent $ ident "x"]
+      sound m `shouldBe` return True
