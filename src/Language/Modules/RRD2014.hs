@@ -316,6 +316,9 @@ transaction e = do
   put env
   return x
 
+insertNothing :: Existential a -> I.Env SemanticSig -> I.Env SemanticSig
+insertNothing (Existential (ks, _)) = appEndo $ mconcat $ replicate (length ks + 1) $ Endo I.insertNothing
+
 insertKind :: I.Kind -> I.Env SemanticSig -> I.Env SemanticSig
 insertKind = I.insertKind
 
@@ -522,10 +525,10 @@ instance Elaboration Module where
       where
         f :: Members Env r => Binding -> Eff r (I.Term, Existential (Map.Map I.Label SemanticSig))
         f b = do
-          (t, m) <- elaborate b
-          getEnv >>= put . I.insertNothing
-          updateEnv m
-          return (t, m)
+          (t, e) <- elaborate b
+          getEnv >>= put . insertNothing e
+          updateEnv e
+          return (t, e)
 
         g :: Applicative f => Map.Map I.Label SemanticSig -> Map.Map I.Label SemanticSig -> f (Map.Map I.Label SemanticSig)
         g m1 m2 = pure $ Map.union m2 m1
