@@ -505,7 +505,7 @@ instance Elaboration Module where
   elaborate (Bindings bs) = transaction $ do
     ps <- traverse f bs
     let asig @ (Existential (ks, _)) = fmap StructureSig $ runIdentity $ foldrM (merge g) (existential mempty) $ snd <$> ps
-    let r = fst $ foldr f1 (mempty, 0) $ fromExistential . snd <$> ps
+    let r = fst $ foldr f1 (mempty, 0) $ snd <$> ps
     let t = foldr ($) (pack asig (I.TVar <$> variables ks) $ I.TmRecord r) $ map h ps
     return (t, asig)
       where
@@ -531,14 +531,14 @@ instance Elaboration Module where
           , _ <- put (n + 1 :: Int)
           ]
 
-        f1 :: Map.Map I.Label SemanticSig -> (I.Record I.Term, Int) -> (I.Record I.Term, Int)
-        f1 m (r0, n) =
+        f1 :: Existential (Map.Map I.Label SemanticSig) -> (I.Record I.Term, Int) -> (I.Record I.Term, Int)
+        f1 (Existential (ks, m)) (r0, n) =
           let n' = n + Map.size m in
           let w = (`foldMap` Map.keysSet m) $ \l ->
                 Endo $ case coerce r0 Map.!? l :: Maybe I.Term of
                   Just _  -> id
                   Nothing -> coerce $ Map.insert l (var n' `I.Proj` l) in
-          (appEndo w r0, n' + 1)
+          (appEndo w r0, n' + length ks + 1) -- Note: I.unpack introduces @length ks + 1@ bound variables (@+ 1@ for "let"; see Figure 7).
 
   elaborate (Projection m i) = do
     (c, asig @ (Existential (ks, ssig))) <- elaborate m
