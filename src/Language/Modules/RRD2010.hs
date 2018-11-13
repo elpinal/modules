@@ -522,7 +522,14 @@ instance Elaboration Module where
         h :: (I.Term, Existential (Map.Map I.Label SemanticSig)) -> I.Term -> I.Term
         h (t, e) t0 =
           unpack (StructureSig <$> e) t $
-          I.let_ (bimap (I.Proj $ var 0) encode <$> Map.toList (fromExistential e)) t0
+          I.let_ (run $ evalState 0 $ traverse h1 $ Map.toList (fromExistential e)) t0
+
+        h1 :: (I.Label, SemanticSig) -> Eff '[State Int] (I.Term, I.Type)
+        h1 (x, y) =
+          [ (I.Proj (var n) x, encode y)
+          | n <- get
+          , _ <- put (n + 1 :: Int)
+          ]
 
         f1 :: Map.Map I.Label SemanticSig -> (I.Record I.Term, Int) -> (I.Record I.Term, Int)
         f1 m (r0, n) =
