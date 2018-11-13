@@ -362,7 +362,7 @@ instance Expect Type where
 instance Expect Term where
   type Expected Term = Type
   expect t ty0 = do
-    ty <- typeOf t
+    ty <- reduce <$> typeOf t
     when (ty /= ty0) $
       throwProblem $ TypeMismatch ty ty0
 
