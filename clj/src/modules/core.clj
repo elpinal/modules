@@ -859,5 +859,17 @@
   []
   (write "../README.md" (str "# Modules\n\n"
                              "Type-theoretic analysis of ML-style modules.\n\n"
+                             "This repository contains "
+                             (hiccup/html [:ul
+                                           [:li
+                                            "An implementation ("
+                                            [:a {:href "https://github.com/elpinal/modules/blob/master/src/Language/Modules/RRD2014.hs"}
+                                             "RRD2014.hs"]
+                                            ") of F-ing modules ("
+                                            [:a {:href "https://github.com/elpinal/modules#f-ing-modules-1"}
+                                             "Rossberg et al. 2014"]
+                                            "), and"]
+                                           [:li "A bibliography of modules and type abstraction, which is given below."]])
+                             "\n\n"
                              "## Incomplete Bibliography of Modules and Type Abstraction\n\n"
                              (html-entries (vals entries)))))
