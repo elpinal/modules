@@ -9,6 +9,15 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
+{-|
+Module  : Language.Modules.RRD2014
+License : MIT
+
+Andreas Rossberg, Claudio V. Russo and Derek Dreyer.
+F-ing modules.
+Journal of Functional Programming, 24(5), 2014.
+-}
+
 module Language.Modules.RRD2014
   ( Module(..)
   , Binding(..)
