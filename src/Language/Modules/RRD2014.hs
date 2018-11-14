@@ -195,17 +195,17 @@ subst :: I.Subst a => Map.Map I.Variable I.Type -> a -> a
 subst = I.substC 0
 
 instance I.Subst a => I.Subst (Quantified a) where
-  substC c s (Quantified (ks, x)) = Quantified (ks, I.substC (c + length ks) s x)
+  substCS su c s (Quantified (ks, x)) = Quantified (ks, I.substCS su (c + length ks) s x)
 
 instance (I.Subst a, I.Subst b) => I.Subst (Fun a b) where
-  substC c m (x :-> y) = I.substC c m x :-> I.substC c m y
+  substCS su c m (x :-> y) = I.substCS su c m x :-> I.substCS su c m y
 
 instance I.Subst SemanticSig where
-  substC c s (AtomicTerm ity)    = AtomicTerm $ I.substC c s ity
-  substC c s (AtomicType ity ik) = AtomicType (I.substC c s ity) ik
-  substC c s (AtomicSig asig)    = AtomicSig $ I.substC c s asig
-  substC c s (StructureSig m)    = StructureSig $ I.substC c s <$> m
-  substC c s (FunctorSig u)      = FunctorSig $ I.substC c s u
+  substCS su c s (AtomicTerm ity)    = AtomicTerm $ I.substCS su c s ity
+  substCS su c s (AtomicType ity ik) = AtomicType (I.substCS su c s ity) ik
+  substCS su c s (AtomicSig asig)    = AtomicSig $ I.substCS su c s asig
+  substCS su c s (StructureSig m)    = StructureSig $ I.substCS su c s <$> m
+  substCS su c s (FunctorSig u)      = FunctorSig $ I.substCS su c s u
 
 class Encode a where
   encode :: a -> I.Type

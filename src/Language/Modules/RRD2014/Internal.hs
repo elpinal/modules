@@ -35,6 +35,7 @@ module Language.Modules.RRD2014.Internal
   , shift
 
   , Subst(..)
+  , Substitute(..)
 
   -- * Environment
   , Env
@@ -230,21 +231,31 @@ elimEx :: Type -> Type -> Type
 elimEx (Some _ t) x = substC 0 (Map.singleton (Variable 0) x) t
 elimEx _ _          = error "unexpected error"
 
+data Substitute
+  = Lower
+  | Keep
+
 class Subst a where
   -- Assumes @Map.keys m == coerce [0 .. Map.size m - 1]@ where @m@ ranges over the second argument of @substC@.
   substC :: Int -> Map.Map Variable Type -> a -> a
+  substCS :: Substitute -> Int -> Map.Map Variable Type -> a -> a
+
+  substC = substCS Lower
 
 instance Subst Type where
-  substC c m ty @ (TVar v)
-    | c <= coerce v = maybe (shift (- Map.size m) ty) (shift c) $ Map.lookup (sub v c) m
+  substCS s c m ty @ (TVar v)
+    | c <= coerce v = maybe (f s ty) (shift c) $ Map.lookup (sub v c) m
     | otherwise     = ty
-  substC c m (TFun ty1 ty2) = TFun (substC c m ty1) (substC c m ty2)
-  substC c m (TRecord rt)   = TRecord $ substC c m <$> rt
-  substC c m (Forall k ty)  = Forall k $ substC (c + 1) m ty
-  substC c m (Some k ty)    = Some k $ substC (c + 1) m ty
-  substC c m (TAbs k ty)    = TAbs k $ substC (c + 1) m ty
-  substC c m (TApp ty1 ty2) = TApp (substC c m ty1) (substC c m ty2)
-  substC _ _ Int            = Int
+      where
+        f Lower = shift (- Map.size m)
+        f Keep  = id
+  substCS s c m (TFun ty1 ty2) = TFun (substCS s c m ty1) (substCS s c m ty2)
+  substCS s c m (TRecord rt)   = TRecord $ substCS s c m <$> rt
+  substCS s c m (Forall k ty)  = Forall k $ substCS s (c + 1) m ty
+  substCS s c m (Some k ty)    = Some k $ substCS s (c + 1) m ty
+  substCS s c m (TAbs k ty)    = TAbs k $ substCS s (c + 1) m ty
+  substCS s c m (TApp ty1 ty2) = TApp (substCS s c m ty1) (substCS s c m ty2)
+  substCS _ _ _ Int            = Int
 
 data InternalTypeError = InternalTypeError [Reason] Problem
   deriving (Eq, Show)
