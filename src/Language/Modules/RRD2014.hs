@@ -73,11 +73,13 @@ data Kind = Mono
 data Type
   = Int
   | PathType Path
+  | Package Sig
   deriving (Eq, Show)
 
 data Expr
   = IntLit Int
   | PathExpr Path
+  | Pack Module Sig
   deriving (Eq, Show)
 
 newtype Path = Path Module
@@ -90,6 +92,7 @@ data Module
   | Fun Ident Sig Module
   | ModuleApp Ident Ident
   | Ident :> Sig
+  | Unpack Expr Sig
   deriving (Eq, Show)
 
 data Binding
@@ -269,6 +272,7 @@ data Problem
   | NotTerm Path
   | NotSig Path
   | Internal I.InternalTypeError
+  | SignatureMismatch AbstractSig I.Type
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -306,6 +310,8 @@ instance Elaboration Type where
     case ssig of
       AtomicType t k -> return (t, k)
       _              -> throwProblem $ NotType p
+
+  elaborate (Package sig) = [ (encode {- norm -} asig, I.Mono) | asig <- elaborate sig ]
 
 getEnv :: Member (State (I.Env SemanticSig)) r => Eff r (I.Env SemanticSig)
 getEnv = get
@@ -508,6 +514,7 @@ instance Elaboration Expr where
       f :: Member (Error TypeError) r => SemanticSig -> Eff r I.Type
       f (AtomicTerm t) = return t
       f _              = throwProblem $ NotTerm p
+  elaborate (Pack m sig) = [ (I.App c t, encode asig) | (t, asig') <- elaborate m, asig <- {- norm -} elaborate sig, c <- asig' <: asig ]
 
 instance Elaboration Module where
   type Output Module = (I.Term, AbstractSig)
@@ -582,6 +589,13 @@ instance Elaboration Module where
     asig <- elaborate sig
     (c, ts) <- ssig `match` asig
     return (pack asig (Map.elems ts) $ I.App c $ var n, asig)
+
+  elaborate (Unpack e sig) = do
+    asig <- {- norm -} elaborate sig
+    (t, ty) <- elaborate e
+    if encode asig == ty
+      then return (t, asig)
+      else throwProblem $ SignatureMismatch asig ty
 
 lookupTypeByIdent :: Member (Error TypeError) r => Ident -> I.Env SemanticSig -> Eff r (SemanticSig, Int)
 lookupTypeByIdent i env = maybe (throwProblem $ NoSuchIdent i env) return $ I.lookupTypeByName (coerce i) env
