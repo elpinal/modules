@@ -109,3 +109,18 @@ spec = do
     it "supports shadowing of declarations" $ do
       let m = Bindings [Val (ident "x") $ IntLit 1, Val (ident "x") $ IntLit 2, Val (ident "z") $ PathExpr $ Path $ ModuleIdent $ ident "x"]
       sound m `shouldBe` return True
+
+    it "supports first-class (packaged) modules" $ do
+      let m1 = Bindings [Val (ident "x") $ IntLit 80]
+      let sig = Decls [ValDecl (ident "x") Int]
+      let m = Bindings [Val (ident "x") $ Pack m1 sig]
+      sound m `shouldBe` return True
+
+      let sig = Decls [ValDecl (ident "y") Int]
+      let m = Bindings [Val (ident "x") $ Pack m1 sig]
+      sound m `shouldSatisfy` isLeft
+
+      let m1 = Bindings [Type (ident "t") Int]
+      let sig = Decls [ManTypeDecl (ident "t") Int]
+      let m = Bindings [Val (ident "x") $ Pack m1 sig]
+      sound m `shouldBe` return True

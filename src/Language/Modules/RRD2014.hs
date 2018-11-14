@@ -51,6 +51,7 @@ import Data.Bifunctor
 import Data.Coerce
 import Data.Foldable
 import Data.Functor.Identity
+import Data.List
 import qualified Data.Map.Lazy as Map
 import Data.Monoid
 import qualified Data.Set as Set
@@ -311,7 +312,7 @@ instance Elaboration Type where
       AtomicType t k -> return (t, k)
       _              -> throwProblem $ NotType p
 
-  elaborate (Package sig) = [ (encode {- norm -} asig, I.Mono) | asig <- elaborate sig ]
+  elaborate (Package sig) = [ (encode $ norm asig, I.Mono) | asig <- elaborate sig ]
 
 getEnv :: Member (State (I.Env SemanticSig)) r => Eff r (I.Env SemanticSig)
 getEnv = get
@@ -514,7 +515,7 @@ instance Elaboration Expr where
       f :: Member (Error TypeError) r => SemanticSig -> Eff r I.Type
       f (AtomicTerm t) = return t
       f _              = throwProblem $ NotTerm p
-  elaborate (Pack m sig) = [ (I.App c t, encode asig) | (t, asig') <- elaborate m, asig <- {- norm -} elaborate sig, c <- asig' <: asig ]
+  elaborate (Pack m sig) = [ (I.App c t, encode asig) | (t, asig') <- elaborate m, asig <- norm <$> elaborate sig, c <- asig' <: asig ]
 
 instance Elaboration Module where
   type Output Module = (I.Term, AbstractSig)
@@ -591,11 +592,46 @@ instance Elaboration Module where
     return (pack asig (Map.elems ts) $ I.App c $ var n, asig)
 
   elaborate (Unpack e sig) = do
-    asig <- {- norm -} elaborate sig
+    asig <- norm <$> elaborate sig
     (t, ty) <- elaborate e
     if encode asig == ty
       then return (t, asig)
       else throwProblem $ SignatureMismatch asig ty
+
+class Normalize a where
+  norm :: a -> a
+
+instance Normalize AbstractSig where
+  norm (Existential (ks, ssig)) =
+    let ssig' = norm ssig in
+    let (ks', s) = sortVars ssig' ks in
+      Existential (ks', I.substCS I.Keep 0 s ssig')
+
+instance Normalize SemanticSig where
+  norm (AtomicTerm ty)                              = AtomicTerm $ norm ty
+  norm s @ (AtomicType _ _)                         = s
+  norm (AtomicSig asig)                             = AtomicSig $ norm asig
+  norm (StructureSig m)                             = StructureSig $ norm <$> m
+  norm (FunctorSig (Universal (ks, ssig :-> asig))) =
+    let ssig' = norm ssig in
+    let (ks', s) = sortVars ssig' ks in
+      FunctorSig $ Universal (ks', I.substCS I.Keep 0 s $ ssig' :-> norm asig)
+
+instance Normalize I.Type where
+  norm = id
+
+sortVars :: SemanticSig -> [I.Kind] -> ([I.Kind], Map.Map I.Variable I.Type)
+sortVars ssig ks =
+  let xs = sortOn (firstAppear ssig . snd) $ zip ks $ coerce [(0 :: Int) ..] in
+  let ys = [(k, (I.Variable n, I.TVar v)) | (n, (k, v)) <- zip [0..] xs] in
+    (fst <$> ys, Map.fromList $ snd <$> ys)
+
+firstAppear :: SemanticSig -> I.Variable -> First [I.Label]
+firstAppear (StructureSig m) v = Map.foldlWithKey (\f l ls -> f <> ((l :) <$> ls)) (First Nothing) $ (`firstAppear` v) <$> m
+firstAppear (AtomicType (I.TVar v) _) v0
+  | v == v0   = return []
+  | otherwise = First Nothing
+firstAppear _ _ = First Nothing
 
 lookupTypeByIdent :: Member (Error TypeError) r => Ident -> I.Env SemanticSig -> Eff r (SemanticSig, Int)
 lookupTypeByIdent i env = maybe (throwProblem $ NoSuchIdent i env) return $ I.lookupTypeByName (coerce i) env
