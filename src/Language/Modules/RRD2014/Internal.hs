@@ -57,6 +57,7 @@ import Control.Monad.Freer.Reader
 import Data.Coerce
 import Data.Foldable
 import Data.Functor
+import Data.List
 import qualified Data.Map.Lazy as Map
 import Data.Monoid
 
@@ -124,7 +125,10 @@ inst :: Term -> [Type] -> Term
 inst t ts = foldr (flip Inst) t ts
 
 pack :: [Kind] -> Type -> [Type] -> Term -> Term
-pack ks ty ts t = foldr (\(typ1, typ2) tm -> Pack typ1 tm typ2) t $ zip ts $ scanl elimEx (some ks ty) ts
+pack ks ty ts t = foldr (\(typ1, typ2) tm -> Pack typ1 tm typ2) t $ zip (reverse ts) $ pack_ ks ty ts
+
+pack_ :: [Kind] -> Type -> [Type] -> [Type]
+pack_ ks ty ts = reverse $ foldr (\ks_ xs -> (substC 0 (Map.fromList $ coerce $ zip [(0 :: Int) ..] $ drop (length ks_) ts) $ some ks_ ty) : xs) [] $ drop 1 $ inits ks
 
 unpack :: Type -> Int -> Term -> Term -> Term
 unpack ty n t1 t2 = foldr (\t0 f t -> Unpack t $ f t0) (App $ Abs ty t2) (replicate n $ Var $ Variable 0) t1

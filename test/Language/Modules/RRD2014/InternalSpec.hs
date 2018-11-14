@@ -38,3 +38,10 @@ spec = do
       runTypeOf env (Abs Int $ App (var 0) $ var 0)                        `shouldBe` Left (fromProblem $ NotFunction Int)
       runTypeOf env (Pack Int (IntLit 3) $ Some (KFun Mono Mono) $ tvar 0) `shouldBe` Left (fromProblem $ NotMono $ KFun Mono Mono)
       runTypeOf env (Abs (Some Mono $ tvar 0) $ Unpack (var 0) $ var 0)    `shouldBe` Left (fromProblem $ NoSuchTypeVariable $ Variable 0)
+
+  describe "pack" $ do
+    it "introduces existentials" $ do
+      pack [] Int [] (var 0) `shouldBe` var 0
+      pack [Mono] Int [Int] (var 0) `shouldBe` Pack Int (var 0) (Some Mono Int)
+      pack [Mono] (tvar 0) [Int] (var 0) `shouldBe` Pack Int (var 0) (Some Mono $ tvar 0)
+      pack [Mono, Mono] (tvar 0) [Int, Int] (var 0) `shouldBe` Pack Int (Pack Int (var 0) (Some Mono $ tvar 0)) (Some Mono $ Some Mono $ tvar 0)
