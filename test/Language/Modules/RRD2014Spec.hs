@@ -100,6 +100,12 @@ spec = do
       let m = Bindings [Module (ident "m1") m1, Module (ident "m2") $ ident "m1" :> sig]
       sound m `shouldBe` return True
 
+      let sig1 = Decls [AbsTypeDecl (ident "t") Mono]
+      let sig = Where sig1 (Proj (ident "t") []) Int
+      let m1 = Bindings [Type (ident "t") Int]
+      let m = Bindings [Module (ident "m1") m1, Module (ident "m2") $ ident "m1" :> sig, Type (ident "t") $ PathType $ Path $ Projection (ModuleIdent $ ident "m2") $ ident "t"]
+      sound m `shouldBe` return True
+
     it "supports shadowing of declarations" $ do
       let m = Bindings [Val (ident "x") $ IntLit 1, Val (ident "x") $ IntLit 2, Val (ident "z") $ PathExpr $ Path $ ModuleIdent $ ident "x"]
       sound m `shouldBe` return True

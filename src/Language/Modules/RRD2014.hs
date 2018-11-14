@@ -22,6 +22,7 @@ module Language.Modules.RRD2014
   ( Module(..)
   , Binding(..)
   , Sig(..)
+  , Proj(..)
   , Decl(..)
   , Path(..)
   , Expr(..)
