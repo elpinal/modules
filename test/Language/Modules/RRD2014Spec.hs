@@ -87,6 +87,19 @@ spec = do
       let m = Bindings [Module (ident "m1") m1, Module (ident "m2") m2, Module (ident "app") $ ModuleApp (ident "m2") (ident "m1")]
       sound m `shouldBe` return True
 
+      let sig = Decls [AbsTypeDecl (ident "t1") Mono, AbsTypeDecl (ident "t2") Mono]
+      let m1 = Bindings [Type (ident "t1") Int, Type (ident "t2") Int]
+      let m = Bindings [Module (ident "m1") m1, Module (ident "m2") $ ident "m1" :> sig]
+      sound m `shouldBe` return True
+
+      let wrongSig = Decls [AbsTypeDecl (ident "t1") Mono, ManTypeDecl (ident "t2") Int]
+      let m = Bindings [Module (ident "m1") m1, Module (ident "m2") $ ident "m1" :> sig, Module (ident "m3") $ ident "m2" :> wrongSig]
+      sound m `shouldBe` Left (fromProblem $ NotEqual (I.TVar $ I.Variable 0) I.Int)
+
+      let sig = Decls [AbsTypeDecl (ident "t1") Mono]
+      let m = Bindings [Module (ident "m1") m1, Module (ident "m2") $ ident "m1" :> sig]
+      sound m `shouldBe` return True
+
     it "supports shadowing of declarations" $ do
       let m = Bindings [Val (ident "x") $ IntLit 1, Val (ident "x") $ IntLit 2, Val (ident "z") $ PathExpr $ Path $ ModuleIdent $ ident "x"]
       sound m `shouldBe` return True
