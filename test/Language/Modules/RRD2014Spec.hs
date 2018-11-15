@@ -106,6 +106,26 @@ spec = do
       let m = Bindings [Module (ident "m1") m1, Module (ident "m2") $ ident "m1" :> sig, Type (ident "t") $ PathType $ Path $ Projection (ModuleIdent $ ident "m2") $ ident "t"]
       sound m `shouldBe` return True
 
+      let m = Bindings [Val (ident "x") $ Abs (ident "y") Int $ IntLit 0]
+      sound m `shouldBe` return True
+
+      let m = Bindings [Val (ident "x") $ Abs (ident "y") Int $ Var $ ident "y"]
+      sound m `shouldBe` return True
+
+      let m1 = Bindings [Val (ident "x") $ Abs (ident "y") Int $ Var $ ident "y"]
+      let sig = Decls [ValDecl (ident "x") $ TFun Int Int]
+      let m = Bindings [Module (ident "m1") m1, Module (ident "m2") $ ident "m1" :> sig]
+      sound m `shouldBe` return True
+
+      let m1 = Bindings [Val (ident "x") $ Abs (ident "y") Int $ Var $ ident "y"]
+      let e = PathExpr $ Path $ Projection (ModuleIdent $ ident "m1") $ ident "x"
+      let m = Bindings [Module (ident "m1") m1, Val (ident "z") e]
+      sound m `shouldBe` return True
+
+      let m1 = Bindings [Val (ident "x") $ Abs (ident "y") Int $ Var $ ident "y"]
+      let m = Bindings [Module (ident "m1") m1, Val (ident "z") $ App e $ IntLit 2]
+      sound m `shouldBe` return True
+
     it "supports shadowing of declarations" $ do
       let m = Bindings [Val (ident "x") $ IntLit 1, Val (ident "x") $ IntLit 2, Val (ident "z") $ PathExpr $ Path $ ModuleIdent $ ident "x"]
       sound m `shouldBe` return True
@@ -124,3 +144,14 @@ spec = do
       let sig = Decls [ManTypeDecl (ident "t") Int]
       let m = Bindings [Val (ident "x") $ Pack m1 sig]
       sound m `shouldBe` return True
+
+      let sig1 = Decls [AbsTypeDecl (ident "t") Mono, AbsTypeDecl (ident "u") Mono]
+      let sig2 = Decls [AbsTypeDecl (ident "u") Mono, AbsTypeDecl (ident "t") Mono]
+      let e1 = Abs (ident "p") (Package $ SigPath $ Path $ ModuleIdent $ ident "a") $ Var $ ident "p"
+      let e2 = Abs (ident "p") (Package $ SigPath $ Path $ ModuleIdent $ ident "b") $ App (PathExpr $ Path $ ModuleIdent $ ident "f") $ Var $ ident "p"
+      let m = Bindings [Signature (ident "a") $ sig1, Signature (ident "b") $ sig2, Val (ident "f") e1, Val (ident "g") e2]
+      sound m `shouldBe` return True
+
+      let sig2 = Decls [AbsTypeDecl (ident "u") Mono]
+      let m = Bindings [Signature (ident "a") $ sig1, Signature (ident "b") $ sig2, Val (ident "f") e1, Val (ident "g") e2]
+      sound m `shouldSatisfy` isLeft

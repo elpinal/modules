@@ -73,12 +73,16 @@ data Kind = Mono
 
 data Type
   = Int
+  | TFun Type Type
   | PathType Path
   | Package Sig
   deriving (Eq, Show)
 
 data Expr
   = IntLit Int
+  | Var Ident
+  | Abs Ident Type Expr
+  | App Expr Expr
   | PathExpr Path
   | Pack Module Sig
   deriving (Eq, Show)
@@ -274,6 +278,8 @@ data Problem
   | NotSig Path
   | Internal I.InternalTypeError
   | SignatureMismatch AbstractSig I.Type
+  | TypeMismatch I.Type I.Type
+  | NotFunction I.Type
   deriving (Eq, Show)
 
 fromProblem :: Problem -> TypeError
@@ -306,6 +312,7 @@ instance Elaboration Type where
   type Output Type = (I.Type, I.Kind)
 
   elaborate Int          = return (I.Int, I.Mono)
+  elaborate (TFun t1 t2) = [ (I.TFun t1' t2', I.Mono) | t1' <- elaborate t1 >>= extractMonoType, t2' <- elaborate t2 >>= extractMonoType ]
   elaborate (PathType p) = do
     ssig <- snd <$> elaborate p
     case ssig of
@@ -506,10 +513,29 @@ instance Subtype SemanticSig where
 
   x <: y = throwProblem $ StructuralMismatch x y
 
+lookupCoreType :: Member (Error TypeError) r => Ident -> I.Env SemanticSig -> Eff r (I.Type, Int)
+lookupCoreType i e = maybe (throwProblem $ NoSuchIdent i e) return $ I.lookupCoreType (coerce i) e
+
+insertCoreType :: Ident -> I.Type -> I.Env SemanticSig -> I.Env SemanticSig
+insertCoreType = I.insertCoreType . coerce
+
 instance Elaboration Expr where
   type Output Expr = (I.Term, I.Type)
 
   elaborate (IntLit n)   = return (I.IntLit n, I.Int)
+  elaborate (Var i)      = get >>= lookupCoreType i >>= \(t, n) -> return (var n, t)
+  elaborate (Abs i ty e) = do
+    ty1 <- elaborate ty >>= extractMonoType
+    (t, ty2) <- transaction $ modify (insertCoreType i ty1) >> elaborate e
+    return (I.Abs ty1 t, I.TFun ty1 ty2)
+  elaborate (App e1 e2) = do
+    (t1, ty1) <- elaborate e1
+    (t2, ty2) <- elaborate e2
+    case ty1 of
+      I.TFun ty11 ty12
+        | ty11 .= ty2 -> return (I.App t1 t2, ty12)
+        | otherwise   -> throwProblem $ TypeMismatch ty11 ty2
+      _ -> throwProblem $ NotFunction ty1
   elaborate (PathExpr p) = elaborate p >>= sequence . bimap (`I.Proj` I.Val) f
     where
       f :: Member (Error TypeError) r => SemanticSig -> Eff r I.Type
