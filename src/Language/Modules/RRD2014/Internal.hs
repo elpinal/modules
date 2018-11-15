@@ -254,10 +254,6 @@ instance Shift a => Shift (VarInfo a) where
 instance Shift a => Shift (Map.Map k a) where
   shiftAbove c0 d m = shiftAbove c0 d <$> m
 
-elimEx :: Type -> Type -> Type
-elimEx (Some _ t) x = substC 0 (Map.singleton (Variable 0) x) t
-elimEx _ _          = error "unexpected error"
-
 data Substitute
   = Lower
   | Keep

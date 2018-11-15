@@ -500,7 +500,7 @@ instance Subtype SemanticSig where
 
   s @ (StructureSig m) <: StructureSig n
     | Map.keysSet n `Set.isSubsetOf` Map.keysSet m =
-      [ I.Abs (encode s) $ I.TmRecord $ coerce $ Map.mapWithKey (\l c -> I.App c $ I.Var (I.Variable 0) `I.Proj` l) o
+      [ I.Abs (encode s) $ I.TmRecord $ coerce $ Map.mapWithKey (\l c -> I.App c $ var 0 `I.Proj` l) o
       | o <- sequence $ Map.intersectionWith (<:) m n
       ]
     | otherwise                                    = throwProblem $ NotSubmap n m
