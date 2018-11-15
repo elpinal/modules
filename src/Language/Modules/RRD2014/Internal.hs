@@ -46,8 +46,10 @@ module Language.Modules.RRD2014.Internal
   , lookupKind
   , lookupType
   , lookupTypeByName
+  , lookupCoreType
   , insertKind
   , insertType
+  , insertCoreType
   , insertNothing
   ) where
 
@@ -148,10 +150,19 @@ fromVarInfo :: VarInfo a -> a
 fromVarInfo (VarInfo _ x) = x
 
 data Env a = Env
-  { tenv :: [Maybe (VarInfo a)] -- @Nothing@ is used to skip some indices (for translations).
+  { tenv :: [Maybe (Binding (VarInfo a))] -- @Nothing@ is used to skip some indices (for translations).
   , kenv :: [Kind]
   }
   deriving (Eq, Show)
+
+data Binding a
+  = VarBind a
+  | TypeBind (VarInfo Type) -- For the core language.
+  deriving (Eq, Show, Functor)
+
+fromVarBind :: Binding a -> Maybe a
+fromVarBind (VarBind x)  = return x
+fromVarBind (TypeBind _) = Nothing
 
 env :: Env a
 env = Env
@@ -166,18 +177,28 @@ lookupKind (Variable n) (kenv -> xs)
 
 lookupType :: Variable -> Env a -> Maybe (VarInfo a)
 lookupType (Variable n) (tenv -> xs)
-  | 0 <= n && n < length xs = xs !! n
+  | 0 <= n && n < length xs = xs !! n >>= fromVarBind
   | otherwise               = Nothing
 
 lookupName :: Variable -> Env a -> Maybe Name
 lookupName v e = getName <$> lookupType v e
 
+lookupCoreType :: Name -> Env a -> Maybe (Type, Int)
+lookupCoreType name (tenv -> xs) = g $ foldl f (Nothing, 0) xs
+  where
+    f p @ (Just _, _) _ = p
+    f (Nothing, n) (Just (TypeBind (VarInfo name' x))) | name' == name = (Just x, n)
+    f (_, n) _ = (Nothing, n + 1)
+
+    g (Just x, n) = Just (x, n)
+    g _           = Nothing
+
 lookupTypeByName :: Name -> Env a -> Maybe (a, Int)
 lookupTypeByName name (tenv -> xs) = g $ foldl f (Nothing, 0) xs
   where
-    f p @ (Just _, _) _                                     = p
-    f (Nothing, n) (Just (VarInfo name' x)) | name' == name = (Just x, n)
-    f (_, n) _                                              = (Nothing, n + 1)
+    f p @ (Just _, _) _ = p
+    f (Nothing, n) (Just (VarBind (VarInfo name' x))) | name' == name = (Just x, n)
+    f (_, n) _ = (Nothing, n + 1)
 
     g (Just x, n) = Just (x, n)
     g _           = Nothing
@@ -186,10 +207,13 @@ insertKind :: Shift a => Kind -> Env a -> Env a
 insertKind k e = shift 1 $ e { kenv = k : kenv e }
 
 insertType :: Name -> a -> Env a -> Env a
-insertType name x e = e { tenv = return (VarInfo name x) : tenv e }
+insertType name x e = e { tenv = return (VarBind (VarInfo name x)) : tenv e }
 
 insertTypeWithoutName :: a -> Env a -> Env a
 insertTypeWithoutName = insertType $ Name ""
+
+insertCoreType :: Name -> Type -> Env a -> Env a
+insertCoreType name t e = e { tenv = return (TypeBind (VarInfo name t)) : tenv e }
 
 insertNothing :: Env a -> Env a
 insertNothing e = e { tenv = Nothing : tenv e }
@@ -216,6 +240,9 @@ instance Shift Type where
       walk _ Int          = Int
 
 instance Shift a => Shift (Maybe a) where
+  shiftAbove c d = fmap $ shiftAbove c d
+
+instance Shift a => Shift (Binding a) where
   shiftAbove c d = fmap $ shiftAbove c d
 
 instance Shift a => Shift (Env a) where
