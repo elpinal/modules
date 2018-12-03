@@ -123,6 +123,13 @@
     :location (proceedings-location "Semantics of Data Types" :pages '(1 50))
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf"}
 
+   :mp1985
+   {:key      "MP1985"
+    :title    "Abstract types have existential types"
+    :author   (authors mitchell "G. D. Plotkin")
+    :date     1985
+    :location (proceedings-location popl :pages '(37 51))}
+
    :cw1985
    {:key      "CW1985"
     :title    "On understanding types, data abstraction, and polymorphism"
