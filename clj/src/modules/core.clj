@@ -32,6 +32,8 @@
 (def tofte "Mads Tofte")
 (def zucca "Elena Zucca")
 
+(def harvard-cs-group "Harvard Computer Science Group")
+
 (defn write
   [fname x]
   (with-open [w (clojure.java.io/writer fname)]
@@ -615,6 +617,14 @@
     :date     "2005"
     :location (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")
     :url      "https://people.mpi-sws.org/~dreyer/thesis/main.pdf"}
+
+   :gov2005
+   {:key      "Gov2005"
+    :title    "Type generativity in higher-order module systems"
+    :author   "Paul Govereau"
+    :date     2005
+    :location (techrpt-location :institution harvard-cs-group :number "TR-05-05")
+    :url      "https://dash.harvard.edu/bitstream/handle/1/23853816/tr-05-05.pdf"}
 
    :rfg2005
    {:key      "RFG2005"
