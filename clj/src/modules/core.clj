@@ -27,6 +27,7 @@
 (def macqueen "David B. MacQueen")
 (def mitchell "John C. Mitchell")
 (def moggi "Eugenio Moggi")
+(def montagu "Benoît Montagu")
 (def nakata "Keiko Nakata")
 (def rossberg "Andreas Rossberg")
 (def russo "Claudio V. Russo")
@@ -757,6 +758,14 @@
     :location (dissertation-location :institution "University of Chicago" :degree "PhD")
     :url      "http://smlnj-gforge.cs.uchicago.edu/scm/viewvc.php/*checkout*/papers/hofsem/dissertation/kuan-dissertation.pdf?root=smlnj"}
 
+   :mon2010
+   {:key      "Mon2010"
+    :title    "Programming with first-class modules in a core language with subtyping, singleton kinds and open existential types"
+    :author   montagu
+    :date     2010
+    :location (dissertation-location :institution "Ecole Polytechnique X" :degree "PhD")
+    :url      "https://pastel.archives-ouvertes.fr/tel-00550331/document"}
+
    :rrd2010
    {:key      "RRD2010"
     :title    "F-ing modules"
@@ -788,6 +797,14 @@
     :date     2013
     :location (proceedings-location toplas)
     :url      "https://people.mpi-sws.org/~rossberg/mixml/mixml-toplas.pdf"}
+
+   :inp2013
+   {:key      "INP2013"
+    :title    "Contractive signatures with recursive types, type parameters, and abstract types"
+    :author   (authors "Hyeonseung Im" nakata "Sungwoo Park")
+    :date     2013
+    :location (proceedings-location icalp)
+    :url      "http://pl.postech.ac.kr/~gla/paper/icalp2013.pdf"}
 
    :rrd2014
    {:key      "RRD2014"
