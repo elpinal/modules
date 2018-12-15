@@ -17,6 +17,7 @@
 (def toplas "ACM Transactions on Programming Languages and Systems")
 
 (def ancona "Davide Ancona")
+(def bracha "Gilad Bracha")
 (def cardelli "Luca Cardelli")
 (def crary "Karl Crary")
 (def dreyer "Derek Dreyer")
@@ -222,7 +223,7 @@
    :bc1990
    {:key      "BC1990"
     :title    "Mixin-based inheritance"
-    :author   (authors "G. Bracha" "W. Cook")
+    :author   (authors bracha "William Cook")
     :date     "1990"
     :location (proceedings-location "OOPSLA/ECOOP")
     :url      "http://www.bracha.org/oopsla90.ps"}
@@ -246,7 +247,7 @@
    :bl1991
    {:key      "BL1991"
     :title    "Modularity meets inheritance"
-    :author   (authors "Gilad Bracha" "Gary Lindstrom")
+    :author   (authors bracha "Gary Lindstrom")
     :date     1991
     :location (techrpt-location :institution "University of Utah" :number "UUCS-91-017")
     :url      "http://www.bracha.org/modularity-meets-inheritance.ps"}
@@ -254,9 +255,9 @@
    :bra1992
    {:key      "Bra1992"
     :title    "The programming language JIGSAW: Mixins, modularity and multiple inheritance"
-    :author   "G. Bracha"
+    :author   bracha
     :date     "1992"
-    :location (dissertation-location :institution "Department of Comp. Sci., Univ. of Utah" :degree "PhD")
+    :location (dissertation-location :institution "University of Utah" :degree "PhD")
     :url      "http://www.bracha.org/jigsaw.pdf"}
 
    :tof1992
