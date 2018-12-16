@@ -766,6 +766,14 @@
     :location (dissertation-location :institution "Ecole Polytechnique X" :degree "PhD")
     :url      "https://pastel.archives-ouvertes.fr/tel-00550331/document"}
 
+   :bo2010
+   {:key      "BO2010"
+    :title    "A flattening strategy for SML module compilation and its implementation"
+    :author   (authors "Liu Bochao" "Atsushi Ohori")
+    :date     2010
+    :location (journal-location "Information and Media Technologies" :volume 5 :number 1 :pages '(58 76))
+    :url      "https://www.jstage.jst.go.jp/article/imt/5/1/5_1_58/_pdf/-char/en"}
+
    :rrd2010
    {:key      "RRD2010"
     :title    "F-ing modules"
