@@ -497,7 +497,7 @@
     :date     1999
     :month    "January"
     :location (dissertation-location :institution "Department of Computer Science, University of Copenhagen" :degree "PhD")
-    :url      "http://www.elsman.com/pdf/phd.pdf"}
+    :url      "https://elsman.com/pdf/phd.pdf"}
 
    :els1999b
    {:key      "Els1999b"
@@ -506,7 +506,7 @@
     :date     1999
     :month    "September"
     :location (proceedings-location icfp)
-    :url      "http://www.elsman.com/pdf/icfp99.pdf"}
+    :url      "https://elsman.com/pdf/icfp99.pdf"}
 
    :wv2000
    {:key      "WV2000"
