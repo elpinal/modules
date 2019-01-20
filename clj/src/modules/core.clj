@@ -25,6 +25,7 @@
 (def harper "Robert Harper")
 (def leroy "Xavier Leroy")
 (def macqueen "David B. MacQueen")
+(def makholm "Henning Makholm")
 (def mitchell "John C. Mitchell")
 (def moggi "Eugenio Moggi")
 (def montagu "Benoît Montagu")
@@ -32,6 +33,7 @@
 (def rossberg "Andreas Rossberg")
 (def russo "Claudio V. Russo")
 (def tofte "Mads Tofte")
+(def wells "J. B. Wells")
 (def zucca "Elena Zucca")
 
 (def harvard-cs-group "Harvard Computer Science Group")
@@ -643,6 +645,14 @@
     :date     2005
     :location (proceedings-location fool)
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"}
+
+   :mw2005
+   {:key      "MW2005"
+    :title    "Type inference, principal typings, and let-polymorphism for first-class mixin modules"
+    :author   (authors makholm wells)
+    :date     2005
+    :location (proceedings-location icfp)
+    :url      "http://henning.makholm.net/papers/icfp2005.pdf"}
 
    :ng2006
    {:key      "NG2006"
