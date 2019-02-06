@@ -130,6 +130,15 @@
     :location (proceedings-location "Semantics of Data Types" :pages '(1 50))
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf"}
 
+   :mac1984
+   {:key      "Mac1984"
+    :title    "Modules for Standard ML"
+    :author   macqueen
+    :date     1984
+    :month    "August"
+    :location (proceedings-location "ACM Conference on LISP and Functional Programming" :pages '(198 207))
+    :url      "https://www.researchgate.net/profile/David_Macqueen/publication/221252232_Modules_for_Standard_ML/links/0f317532689526bea1000000/Modules-for-Standard-ML.pdf"}
+
    :mp1985
    {:key      "MP1985"
     :title    "Abstract types have existential types"
@@ -144,14 +153,6 @@
     :date     "1985"
     :location (techrpt-location :institution "Brown University" :number "CS-85-14")
     :url      "http://lucacardelli.name/Papers/OnUnderstanding.A4.pdf"}
-
-   :mac1985
-   {:key      "Mac1985"
-    :title    "Modules for Standard ML (Revised)"
-    :author   macqueen
-    :date     "1985"
-    :location "Polymorphism Newsletter, II, 2"
-    :url      "https://www.researchgate.net/profile/David_Macqueen/publication/221252232_Modules_for_Standard_ML/links/0f317532689526bea1000000/Modules-for-Standard-ML.pdf"}
 
    :mit1986
    {:key      "Mit1986"
