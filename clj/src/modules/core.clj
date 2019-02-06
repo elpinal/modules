@@ -32,6 +32,7 @@
 (def nakata "Keiko Nakata")
 (def rossberg "Andreas Rossberg")
 (def russo "Claudio V. Russo")
+(def stone "Christopher Stone")
 (def tofte "Mads Tofte")
 (def wells "J. B. Wells")
 (def zucca "Elena Zucca")
@@ -405,6 +406,14 @@
     :date     1997
     :location (dissertation-location :institution "Carnegie Mellon University" :degree "PhD")
     :url      "https://www.cs.cmu.edu/Groups/fox/papers/mdl-thesis.ps"}
+
+   :hs1997
+   {:key      "HS1997"
+    :title    "An interpretation of Standard ML in type theory"
+    :author   (authors harper stone)
+    :date     1997
+    :location (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-97-147")
+    :url      "https://www.cs.cmu.edu/Groups/fox/papers/sml96-v3.ps"}
 
    :rus1998
    {:key      "Rus1998"
