@@ -21,6 +21,7 @@
 (def cardelli "Luca Cardelli")
 (def crary "Karl Crary")
 (def dreyer "Derek Dreyer")
+(def frisch "Alain Frisch")
 (def garrigue "Jacques Garrigue")
 (def harper "Robert Harper")
 (def leroy "Xavier Leroy")
@@ -35,6 +36,7 @@
 (def stone "Christopher Stone")
 (def tofte "Mads Tofte")
 (def wells "J. B. Wells")
+(def white "Leo P. White")
 (def zucca "Elena Zucca")
 
 (def harvard-cs-group "Harvard Computer Science Group")
@@ -802,6 +804,15 @@
     :location (proceedings-location tldi)
     :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf"}
 
+   :fg2010
+   {:key      "FG2010"
+    :title    "First-class modules and composable signatures in Objective Caml 3.12"
+    :author   (authors frisch garrigue)
+    :date     2010
+    :location (proceedings-location "ML Workshop")
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/ml2010.pdf"
+    :slides   "http://www.math.nagoya-u.ac.jp/~garrigue/papers/ml2010-show.pdf"}
+
    :ingp2011
    {:key      "INGP2011"
     :title    "A syntactic type system for recursive modules"
@@ -851,6 +862,15 @@
     :url      "https://people.mpi-sws.org/~dreyer/papers/backpack/paper.pdf"
     :appendix "https://people.mpi-sws.org/~dreyer/papers/backpack/appendix.pdf"
     :slides   "https://plv.mpi-sws.org/backpack/backpack-popl.pdf"}
+
+   :gw2014
+   {:key      "GW2014"
+    :title    "Type-level module aliases: independent and equal"
+    :author   (authors garrigue white)
+    :date     2014
+    :location (proceedings-location "ML Family Workshop")
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/modalias.pdf"
+    :slides   "http://www.math.nagoya-u.ac.jp/~garrigue/papers/modalias-show.pdf"}
 
    :ros2015
    {:key      "Ros2015"
