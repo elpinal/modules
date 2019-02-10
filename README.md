@@ -4,7 +4,7 @@ Type-theoretic analysis of ML-style modules.
 
 This repository contains <ul><li>An implementation (<a href="https://github.com/elpinal/modules/blob/master/src/Language/Modules/RRD2014.hs">RRD2014.hs</a>) of F-ing modules (<a href="https://github.com/elpinal/modules#f-ing-modules-1">Rossberg et al. 2014</a>), and</li><li>A bibliography of modules and type abstraction, which is given below.</li></ul>
 
-## Incomplete Bibliography of Modules and Type Abstraction
+## Bibliography of Modules and Type Abstraction
 
 <div><h4>Types, abstraction and parametric polymorphism</h4><p>J. C. Reynolds</p><p>Information Processing, pp. 513–523, 1983</p><p>Available at <a href="http://www.cse.chalmers.se/edu/year/2010/course/DAT140_Types/Reynolds_typesabpara.pdf">http://www.cse.chalmers.se/edu/year/2010/course/DAT140_Types/Reynolds_typesabpara.pdf</a></p></div>
 <div><h4>A kernel language for abstract data types and modules</h4><p>R. Burstall and B. Lampson</p><p>Semantics of Data Types, pp. 1–50, 1984</p><p>Available at <a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf">https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf</a></p></div>

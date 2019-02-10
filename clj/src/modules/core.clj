@@ -954,5 +954,5 @@
                                             "), and"]
                                            [:li "A bibliography of modules and type abstraction, which is given below."]])
                              "\n\n"
-                             "## Incomplete Bibliography of Modules and Type Abstraction\n\n"
+                             "## Bibliography of Modules and Type Abstraction\n\n"
                              (html-entries (vals entries)))))
