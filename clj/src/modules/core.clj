@@ -954,5 +954,9 @@
                                             "), and"]
                                            [:li "A bibliography of modules and type abstraction, which is given below."]])
                              "\n\n"
+                             "## See also\n\n"
+                             "- [elpinal/modules-rs](https://github.com/elpinal/modules-rs)\n"
+                             "contains another implementation of F-ing modules in Rust."
+                             "\n\n"
                              "## Bibliography of Modules and Type Abstraction\n\n"
                              (html-entries (vals entries)))))
