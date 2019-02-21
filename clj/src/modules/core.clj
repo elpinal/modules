@@ -850,6 +850,7 @@
     :title    "F-ing modules"
     :author   (authors rossberg russo dreyer)
     :date     2014
+    :month    "September"
     :location (journal-location jfp :volume 24 :number 5)
     :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing-jfp.pdf"}
 
@@ -868,6 +869,7 @@
     :title    "Type-level module aliases: independent and equal"
     :author   (authors garrigue white)
     :date     2014
+    :month    "September"
     :location (proceedings-location "ML Family Workshop")
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/modalias.pdf"
     :slides   "http://www.math.nagoya-u.ac.jp/~garrigue/papers/modalias-show.pdf"}
