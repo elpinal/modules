@@ -30,6 +30,7 @@
 (def mitchell "John C. Mitchell")
 (def moggi "Eugenio Moggi")
 (def montagu "Benoît Montagu")
+(def mp-jones "Mark P. Jones")
 (def nakata "Keiko Nakata")
 (def rossberg "Andreas Rossberg")
 (def russo "Claudio V. Russo")
@@ -338,6 +339,15 @@
     :location (proceedings-location popl :pages '(142 153))
     :url      "https://xavierleroy.org/publi/applicative-functors.pdf"}
 
+   :jon1995
+   {:key      "Jon1995"
+    :title    "From Hindley-Milner types to first-class structures"
+    :author   mp-jones
+    :date     1995
+    :month    "June"
+    :location (proceedings-location "The Haskell workshop")
+    :url      "http://web.cecs.pdx.edu/~mpj/pubs/haskwork95.pdf"}
+
    :ds1996
    {:key      "DS1996"
     :title    "Mixin modules"
@@ -592,6 +602,15 @@
     :date     2002
     :location (proceedings-location fool)
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/first_class_modules.pdf"}
+
+   :djh2002
+   {:key      "DJH2002"
+    :title    "A formal specification for the Haskell 98 module system"
+    :author   (authors "Iavor S. Diatchki" mp-jones "Thomas Hallgren")
+    :date     2002
+    :month    "October"
+    :location (proceedings-location "ACM SIGPLAN 2002 Haskell Workshop")
+    :url      "http://web.cecs.pdx.edu/~mpj/pubs/hsmods.pdf"}
 
    :afmz2003
    {:key      "AFMZ2003"
