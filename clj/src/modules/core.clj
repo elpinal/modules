@@ -543,7 +543,7 @@
    :hs2000
    {:key      "HS2000"
     :title    "A type-theoretic interpretation of Standard ML"
-    :author   (authors harper "Chris Stone")
+    :author   (authors harper stone)
     :date     2000
     :location (book-location "Proof, language, and interaction: Essays in honor of robin milner" :publisher "MIT Press")
     :url      "https://www.cs.cmu.edu/~rwh/papers/ttisml/ttisml.pdf"}
