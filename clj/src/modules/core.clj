@@ -106,7 +106,10 @@
 (defn journal-location
   [title & {:keys [pages volume number]}]
   (if volume
-    [[:i title] (str volume (wrap-with-paren number) (if pages (str ", pp. " (str-pages pages))))]
+    [[:i title] (str volume (wrap-with-paren number) (if pages
+                                                       (if (string? pages)
+                                                         (str ", " pages)
+                                                         (str ", pp. " (str-pages pages)))))]
     [[:i title]]))
 
 (defn book-location
@@ -946,8 +949,8 @@
    {:key      "Ros2019"
     :title    "1ML — Core and modules united"
     :author   rossberg
-    :date     "2019, to appear"
-    :location (journal-location jfp)
+    :date     2018
+    :location (journal-location jfp :volume 28 :pages "e22")
     :url      "https://people.mpi-sws.org/~rossberg/papers/Rossberg%20-%201ML%20--%20Core%20and%20modules%20united%20[JFP].pdf"}
 
    :cra2019
