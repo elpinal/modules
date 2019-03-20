@@ -957,9 +957,10 @@
    {:key      "Cra2019"
     :title    "Fully abstract module compilation"
     :author   crary
-    :date     "2019, to appear"
-    :location (proceedings-location popl)
-    :url      "http://www.cs.cmu.edu/~crary/papers/2019/famc.pdf"}
+    :date     2019
+    :location (journal-location popl :volume 3 :number "POPL" :pages '("10:1" "10:29"))
+    :url      "https://dl.acm.org/ft_gateway.cfm?id=3290323"
+    :slides   "https://popl19.sigplan.org/event/popl-2019-research-papers-fully-abstract-module-compilation"}
    ))
 
 (defn -main
