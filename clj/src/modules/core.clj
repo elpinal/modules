@@ -946,15 +946,15 @@
     :url      "http://www.cs.cmu.edu/~crary/papers/2017/mapp.pdf"}
 
    :ehao2018
-   {:key      "EHAO2019"
+   {:key      "EHAO2018"
     :title    "Static interpretation of higher-order modules in Futhark: Functional GPU programming in the large"
     :author   (authors "Martin Elsman" "Troels Henriksen" "Danil Annenkov" "Cosmin E. Oancea")
     :date     2018
     :location (proceedings-location icfp :pages '(1 30))
     :url      "https://futhark-lang.org/publications/icfp18.pdf"}
 
-   :ros2019
-   {:key      "Ros2019"
+   :ros2018
+   {:key      "Ros2018"
     :title    "1ML — Core and modules united"
     :author   rossberg
     :date     2018
