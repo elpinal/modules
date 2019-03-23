@@ -937,6 +937,14 @@
     :location (dissertation-location :institution "Stanford University" :degree "PhD")
     :url      "https://github.com/ezyang/thesis/releases"}
 
+   :ly2017
+   {:key      "LY2017"
+    :title    "Extending OCaml's open (extended abstract)"
+    :author   (authors "Runhang Li" "Jeremy Yallop")
+    :date     2017
+    :location (proceedings-location "The OCaml Users and Developers Workshop")
+    :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open.pdf"}
+
    :cra2017
    {:key      "Cra2017"
     :title    "Modules, abstraction, and parametric polymorphism"
@@ -969,6 +977,14 @@
     :location (journal-location popl :volume 3 :number "POPL" :pages '("10:1" "10:29"))
     :url      "https://dl.acm.org/ft_gateway.cfm?id=3290323"
     :slides   "https://popl19.sigplan.org/event/popl-2019-research-papers-fully-abstract-module-compilation"}
+
+   :ly
+   {:key      "LY"
+    :title    "Extending OCaml's open"
+    :author   (authors "Runhang Li" "Jeremy Yallop")
+    :date     "to appear" ; 2019
+    :location (proceedings-location "ML & OCaml 2017 post-proceedings")
+    :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open-draft.pdf"}
    ))
 
 (defn -main
