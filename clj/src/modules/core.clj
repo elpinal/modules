@@ -648,13 +648,21 @@
     :location (journal-location "Electronic Notes in Theoretical Computer Science" :volume 60)
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1998/03/Types-for-Modules.pdf"}
 
-   :dre2005
-   {:key      "Dre2005"
+   :dre2005a
+   {:key      "Dre2005a"
     :title    "Understanding and evolving the ML module system"
     :author   dreyer
     :date     "2005"
     :location (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")
     :url      "https://people.mpi-sws.org/~dreyer/thesis/main.pdf"}
+
+   :dre2005b
+   {:key      "Dre2005b"
+    :title    "Recursive type generativity"
+    :author   dreyer
+    :date     2005
+    :location (proceedings-location icfp :pages '(41 53))
+    :url      "https://people.mpi-sws.org/~dreyer/papers/dps/main.pdf"}
 
    :gov2005
    {:key      "Gov2005"
