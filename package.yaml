@@ -25,6 +25,8 @@ dependencies:
 
 library:
   source-dirs: src
+  default-extensions:
+  - FlexibleContexts
 
 tests:
   modules-test:
