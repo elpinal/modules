@@ -115,6 +115,7 @@ insertType :: (Shift ty, ?env :: Env f ty) => f Kind -> Env f ty
 insertType k = ?env
   { tenv = k : tenv ?env
   , venv = shift 1 $ venv ?env
+  , tempVenv = shift 1 $ tempVenv ?env
   }
 
 insertValue :: (?env :: Env f ty) => Name -> ty -> Env f ty
