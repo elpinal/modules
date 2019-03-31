@@ -1,4 +1,5 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImplicitParams #-}
 
 module Language.Modules.Ros2018.Internal
@@ -79,13 +80,22 @@ data Env f ty = Env
 class Annotated f where
   extract :: f a -> a
 
-data Failure = forall a. Failure a (a -> String)
+data Failure = forall a. Failure a (Maybe (Evidence a)) (a -> String)
+
+data Evidence a where
+  EvidEnv :: Evidence EnvError
+
+class Display a => SpecificError a where
+  evidence :: Evidence a
 
 fromDisplay :: Display a => a -> Failure
-fromDisplay x = Failure x display
+fromDisplay x = Failure x Nothing display
 
-throw :: (Member (Error Failure) r, Display a) => a -> Eff r b
-throw = throwError . fromDisplay
+fromSpecific :: SpecificError a => a -> Failure
+fromSpecific x = Failure x (Just evidence) display
+
+throw :: (Member (Error Failure) r, SpecificError a) => a -> Eff r b
+throw = throwError . fromSpecific
 
 data EnvError
   = UnboundName Name
@@ -97,6 +107,9 @@ instance Display EnvError where
   display (UnboundName name) = "unbound name: " ++ display name
   display (UnboundVariable v) = "unbound variable: " ++ display v
   display (UnboundTypeVariable v) = "unbound type variable: " ++ display v
+
+instance SpecificError EnvError where
+  evidence = EvidEnv
 
 insertType :: (Shift ty, ?env :: Env f ty) => f Kind -> Env f ty
 insertType k = ?env
