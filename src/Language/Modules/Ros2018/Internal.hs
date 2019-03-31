@@ -4,6 +4,17 @@
 
 module Language.Modules.Ros2018.Internal
   (
+  -- * Environments
+    Env
+  , emptyEnv
+  , insertType
+  , insertValue
+  , lookupType
+  , lookupValueByName
+
+  -- * Failure
+  , Failure
+  , Evidence
   ) where
 
 import Control.Monad.Freer
@@ -75,6 +86,14 @@ data Env f ty = Env
   , venv :: [ty]
   , nmap :: Map.Map Name Int
   , tempVenv :: [ty]
+  }
+
+emptyEnv :: Env f ty
+emptyEnv = Env
+  { tenv = []
+  , venv = []
+  , nmap = mempty
+  , tempVenv = []
   }
 
 class Annotated f where
