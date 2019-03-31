@@ -21,7 +21,7 @@ shouldBeRight (Right x) expected         = x `shouldBe` expected
 spec :: Spec
 spec = do
   describe "lookupType" $
-    it "look up a type in an environment" $ do
+    it "look up information about a type variable in an environment" $ do
       let ?env = emptyEnv :: Env [] ()
       run (runError $ lookupType $ variable 0) `shouldBeEnvError` UnboundTypeVariable (variable 0)
 

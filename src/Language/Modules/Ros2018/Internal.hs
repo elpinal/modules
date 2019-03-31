@@ -154,8 +154,8 @@ data EnvError
   deriving (Eq, Show)
 
 instance Display EnvError where
-  display (UnboundName name) = "unbound name: " ++ display name
-  display (UnboundVariable v) = "unbound variable: " ++ display v
+  display (UnboundName name)      = "unbound name: " ++ display name
+  display (UnboundVariable v)     = "unbound variable: " ++ display v
   display (UnboundTypeVariable v) = "unbound type variable: " ++ display v
 
 instance SpecificError EnvError where
