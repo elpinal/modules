@@ -1,25 +1,42 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 
 module Language.Modules.Ros2018.Internal
   (
+  -- * Objects
+    Variable
+  , variable
+
+  -- * Syntax
+  , Kind(..)
+  , Type(..)
+  , BaseType(..)
+
   -- * Environments
-    Env
+  , Env
   , emptyEnv
   , insertType
   , insertValue
   , lookupType
   , lookupValueByName
 
+  -- * Errors
+  , EnvError(..)
+
   -- * Failure
-  , Failure
-  , Evidence
+  , Failure(..)
+  , Evidence(..)
   ) where
 
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
+import Data.Coerce
 import qualified Data.Map.Lazy as Map
+import GHC.Generics
 
 import Language.Modules.Ros2018.Display
 import Language.Modules.Ros2018.Shift
@@ -29,6 +46,10 @@ newtype Label = Label String
 
 newtype Variable = Variable Int
   deriving (Eq, Show)
+  deriving Shift via IndexedVariable
+
+variable :: Int -> Variable
+variable = coerce
 
 instance Display Variable where
   display (Variable n) = "v[" ++ show n ++ "]"
@@ -44,17 +65,23 @@ instance Display Name where
 
 newtype Record a = Record { getRecord :: Map.Map Label a }
   deriving (Eq, Show)
+  deriving Functor
+
+instance Shift a => Shift (Record a) where
+  shiftAbove c d = fmap $ shiftAbove c d
 
 data Kind
   = Base
   | KFun Kind Kind
   deriving (Eq, Show)
+  deriving Shift via Fixed Kind
 
 data BaseType
   = Bool
   | Int
   | Char
   deriving (Eq, Show)
+  deriving Shift via Fixed BaseType
 
 data Type
   = BaseType BaseType
@@ -66,6 +93,13 @@ data Type
   | TAbs Kind Type
   | TApp Type Type
   deriving (Eq, Show)
+  deriving Generic
+
+instance Shift Type where
+  shiftAbove c d (Forall k ty) = Forall k $ shiftAbove (c + 1) d ty
+  shiftAbove c d (Some k ty)   = Some k $ shiftAbove (c + 1) d ty
+  shiftAbove c d (TAbs k ty)   = TAbs k $ shiftAbove (c + 1) d ty
+  shiftAbove c d ty            = to $ gShiftAbove c d $ from ty
 
 data Term
   = Var Variable
@@ -99,7 +133,7 @@ emptyEnv = Env
 class Annotated f where
   extract :: f a -> a
 
-data Failure = forall a. Failure a (Maybe (Evidence a)) (a -> String)
+data Failure = forall a. Failure a (Evidence a) (a -> String)
 
 data Evidence a where
   EvidEnv :: Evidence EnvError
@@ -107,11 +141,8 @@ data Evidence a where
 class Display a => SpecificError a where
   evidence :: Evidence a
 
-fromDisplay :: Display a => a -> Failure
-fromDisplay x = Failure x Nothing display
-
 fromSpecific :: SpecificError a => a -> Failure
-fromSpecific x = Failure x (Just evidence) display
+fromSpecific x = Failure x evidence display
 
 throw :: (Member (Error Failure) r, SpecificError a) => a -> Eff r b
 throw = throwError . fromSpecific
