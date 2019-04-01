@@ -94,6 +94,11 @@ data BaseType
   deriving (Eq, Show)
   deriving Shift via Fixed BaseType
 
+instance Display BaseType where
+  display Bool = "bool"
+  display Int  = "int"
+  display Char = "char"
+
 data Type
   = BaseType BaseType
   | TVar Variable
@@ -105,6 +110,12 @@ data Type
   | TApp Type Type
   deriving (Eq, Show)
   deriving Generic
+
+instance Display Type where
+  displaysPrec n (BaseType b)   = displaysPrec n b
+  displaysPrec n (TVar v)       = displaysPrec n v
+  displaysPrec n (TFun ty1 ty2) = showParen (4 <= n) $ displaysPrec 4 ty1 . showString " -> " . displaysPrec 3 ty2
+  displaysPrec n (Forall k ty)  = showParen (4 <= n) $ showChar '∀' . displaysPrec n k . showString ". " . displaysPrec 0 ty
 
 instance Shift Type where
   shiftAbove c d (Forall k ty) = Forall k $ shiftAbove (c + 1) d ty

@@ -85,7 +85,7 @@ spec = do
       shift (-2) (Forall Base $ tvar 1)     `shouldBe` Forall Base (tvar (-1))
 
   describe "display" $
-    it "displays" $ do
+    it "displays something" $ do
       display Base                                   `shouldBe` "*"
       display (KFun Base Base)                       `shouldBe` "* -> *"
       display (KFun Base Base `KFun` Base)           `shouldBe` "(* -> *) -> *"
@@ -94,3 +94,12 @@ spec = do
 
       display ((KFun Base Base `KFun` Base) `KFun` KFun Base Base)                       `shouldBe` "((* -> *) -> *) -> * -> *"
       display ((KFun Base Base `KFun` KFun Base Base) `KFun` KFun Base (KFun Base Base)) `shouldBe` "((* -> *) -> * -> *) -> * -> * -> *"
+
+      display (BaseType Int)                                           `shouldBe` "int"
+      display (tvar 3)                                                 `shouldBe` "v[3]"
+      display (TFun (tvar 2) (tvar 44))                                `shouldBe` "v[2] -> v[44]"
+      display (TFun (tvar 2) (tvar 44) `TFun` tvar 3)                  `shouldBe` "(v[2] -> v[44]) -> v[3]"
+      display (tvar 44 `TFun` TFun (tvar 87) (tvar 3))                 `shouldBe` "v[44] -> v[87] -> v[3]"
+      display (TFun (tvar 2) (tvar 44) `TFun` TFun (tvar 87) (tvar 3)) `shouldBe` "(v[2] -> v[44]) -> v[87] -> v[3]"
+
+      display (Forall Base $ tvar 0) `shouldBe` "∀*. v[0]"
