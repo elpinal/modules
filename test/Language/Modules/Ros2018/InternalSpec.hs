@@ -20,6 +20,9 @@ shouldBeRight :: (HasCallStack, Eq a, Show a) => Either Failure a -> a -> Expect
 shouldBeRight (Left (Failure err _ f)) _ = expectationFailure $ "error: " ++ f err
 shouldBeRight (Right x) expected         = x `shouldBe` expected
 
+var :: Int -> Term
+var = Var . variable
+
 tvar :: Int -> Type
 tvar = TVar . variable
 
@@ -116,6 +119,19 @@ spec = do
       display (record mempty :: Record Type)                                             `shouldBe` "{}"
       display (record [(label "a", BaseType Char)])                                      `shouldBe` "{a: char}"
       display (record [(label "a", BaseType Char), (label "abc", tvar 3 `TFun` tvar 1)]) `shouldBe` "{a: char, abc: v[3] -> v[1]}"
+
+      display (var 0)                                             `shouldBe` "v[0]"
+      display (Abs (tvar 0) $ var 0)                              `shouldBe` "λv[0]. v[0]"
+      display (App (var 0) (var 1))                               `shouldBe` "v[0] v[1]"
+      display (App (var 0) (var 1) `App` App (var 2) (var 99))    `shouldBe` "v[0] v[1] (v[2] v[99])"
+      display (Proj (var 0) $ label "a")                          `shouldBe` "v[0].a"
+      display (Proj (var 0 `App` var 1) $ label "body")           `shouldBe` "(v[0] v[1]).body"
+      display (Proj (Abs (BaseType Bool) $ var 2) $ label "body") `shouldBe` "(λbool. v[2]).body"
+      display (Poly Base $ var 0)                                 `shouldBe` "Λ*. v[0]"
+      display (Poly (KFun Base Base) $ var 0)                     `shouldBe` "Λ* -> *. v[0]"
+      display (Inst (var 0) $ tvar 0)                             `shouldBe` "v[0] [v[0]]"
+      display ((Inst (var 0) $ tvar 0) `App` var 28)              `shouldBe` "v[0] [v[0]] v[28]"
+      display ((var 3 `App` var 28) `Inst` tvar 38)               `shouldBe` "v[3] v[28] [v[38]]"
 
       let ?nctx = nameContext
       displayWithName (tvar 0)                                         `shouldBe` "v[0]"
