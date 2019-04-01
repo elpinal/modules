@@ -5,11 +5,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 module Language.Modules.Ros2018.Internal
   (
   -- * Objects
     Variable
   , variable
+  , Name
+  , name
 
   -- * Syntax
   , Kind(..)
@@ -59,6 +63,9 @@ newtype Generated = Generated Int
 
 newtype Name = Name String
   deriving (Eq, Ord, Show)
+
+name :: String -> Name
+name = coerce
 
 instance Display Name where
   display (Name s) = s

@@ -34,6 +34,30 @@ spec = do
 
       run (runError $ lookupType $ variable 1) `shouldBeEnvError` UnboundTypeVariable (variable 1)
 
+  describe "insertType" $
+    it "inserts a new type variable into an environment" $ do
+      let ?env = emptyEnv :: Env [] Type
+      let ?env = insertType [Base]
+      let ?env = insertValue (name "x") $ BaseType Char
+      run (runError $ lookupValueByName $ name "x") `shouldBeRight` BaseType Char
+
+      let ?env = insertValue (name "y") $ tvar 0
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 0
+
+      let ?env = insertValue (name "z") $ tvar 0
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 0
+      run (runError $ lookupValueByName $ name "z") `shouldBeRight` tvar 0
+
+      let ?env = insertType [Base]
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 1
+      run (runError $ lookupValueByName $ name "z") `shouldBeRight` tvar 1
+
+      let ?env = insertValue (name "v") $ tvar 0
+      run (runError $ lookupValueByName $ name "x") `shouldBeRight` BaseType Char
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 1
+      run (runError $ lookupValueByName $ name "z") `shouldBeRight` tvar 1
+      run (runError $ lookupValueByName $ name "v") `shouldBeRight` tvar 0
+
   describe "shift" $
     it "shifts type variables" $ do
       shift 1 (variable 0)      `shouldBe` variable 1
