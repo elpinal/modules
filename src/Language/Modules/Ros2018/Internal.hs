@@ -83,6 +83,10 @@ data Kind
   deriving (Eq, Show)
   deriving Shift via Fixed Kind
 
+instance Display Kind where
+  displaysPrec _ Base         = showString "*"
+  displaysPrec n (KFun k1 k2) = showParen (4 <= n) $ displaysPrec 4 k1 . showString " -> " . displaysPrec 3 k2
+
 data BaseType
   = Bool
   | Int

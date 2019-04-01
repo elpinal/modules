@@ -8,6 +8,7 @@ import Test.Hspec
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 
+import Language.Modules.Ros2018.Display
 import Language.Modules.Ros2018.Internal
 import Language.Modules.Ros2018.Shift
 
@@ -82,3 +83,14 @@ spec = do
       shift (-1) (Forall Base $ tvar 1)     `shouldBe` Forall Base (tvar 0)
       shift (-1) (Forall Base $ tvar 0)     `shouldBe` Forall Base (tvar 0)
       shift (-2) (Forall Base $ tvar 1)     `shouldBe` Forall Base (tvar (-1))
+
+  describe "display" $
+    it "displays" $ do
+      display Base                                   `shouldBe` "*"
+      display (KFun Base Base)                       `shouldBe` "* -> *"
+      display (KFun Base Base `KFun` Base)           `shouldBe` "(* -> *) -> *"
+      display (Base `KFun` KFun Base Base)           `shouldBe` "* -> * -> *"
+      display (KFun Base Base `KFun` KFun Base Base) `shouldBe` "(* -> *) -> * -> *"
+
+      display ((KFun Base Base `KFun` Base) `KFun` KFun Base Base)                       `shouldBe` "((* -> *) -> *) -> * -> *"
+      display ((KFun Base Base `KFun` KFun Base Base) `KFun` KFun Base (KFun Base Base)) `shouldBe` "((* -> *) -> * -> *) -> * -> * -> *"
