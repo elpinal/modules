@@ -102,4 +102,25 @@ spec = do
       display (tvar 44 `TFun` TFun (tvar 87) (tvar 3))                 `shouldBe` "v[44] -> v[87] -> v[3]"
       display (TFun (tvar 2) (tvar 44) `TFun` TFun (tvar 87) (tvar 3)) `shouldBe` "(v[2] -> v[44]) -> v[87] -> v[3]"
 
-      display (Forall Base $ tvar 0) `shouldBe` "∀*. v[0]"
+      display (Forall Base $ tvar 0)                                  `shouldBe` "∀*. v[0]"
+      display (TApp (tvar 0) (tvar 2))                                `shouldBe` "v[0] v[2]"
+      display (TApp (tvar 0) (tvar 2) `TApp` tvar 1)                  `shouldBe` "v[0] v[2] v[1]"
+      display (tvar 2 `TApp` TApp (tvar 99) (tvar 1))                 `shouldBe` "v[2] (v[99] v[1])"
+      display (TApp (tvar 0) (tvar 2) `TApp` TApp (tvar 99) (tvar 1)) `shouldBe` "v[0] v[2] (v[99] v[1])"
+
+      display (TApp (tvar 0) (tvar 2) `TFun` TApp (tvar 99) (tvar 1)) `shouldBe` "v[0] v[2] -> v[99] v[1]"
+      display (TFun (tvar 0) (tvar 2) `TApp` TFun (tvar 99) (tvar 1)) `shouldBe` "(v[0] -> v[2]) (v[99] -> v[1])"
+
+      display (Some Base (tvar 2) `TApp` TAbs (KFun Base Base) (TApp (tvar 33) $ BaseType Bool)) `shouldBe` "(∃*. v[2]) (λ* -> *. v[33] bool)"
+
+      display (record mempty :: Record Type)                                             `shouldBe` "{}"
+      display (record [(label "a", BaseType Char)])                                      `shouldBe` "{a: char}"
+      display (record [(label "a", BaseType Char), (label "abc", tvar 3 `TFun` tvar 1)]) `shouldBe` "{a: char, abc: v[3] -> v[1]}"
+
+      let ?nctx = nameContext
+      displayWithName (tvar 0)                                         `shouldBe` "v[0]"
+      displayWithName (Forall Base $ tvar 0)                           `shouldBe` "∀t0 : *. t0"
+      displayWithName (Forall Base $ Forall Base $ tvar 0)             `shouldBe` "∀t0 : *. ∀t1 : *. t1"
+      displayWithName (Forall Base $ Forall Base $ tvar 1)             `shouldBe` "∀t0 : *. ∀t1 : *. t0"
+      displayWithName (Forall Base $ Forall Base $ tvar 2)             `shouldBe` "∀t0 : *. ∀t1 : *. v[2]"
+      displayWithName (Forall Base (tvar 0) `TFun` Some Base (tvar 1)) `shouldBe` "(∀t0 : *. t0) -> ∃t0 : *. v[1]"

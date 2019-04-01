@@ -14,6 +14,12 @@ module Language.Modules.Ros2018.Internal
   , variable
   , Name
   , name
+  , Label
+  , label
+
+  -- * Records
+  , Record
+  , record
 
   -- * Syntax
   , Kind(..)
@@ -39,7 +45,9 @@ module Language.Modules.Ros2018.Internal
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Data.Coerce
+import Data.List
 import qualified Data.Map.Lazy as Map
+import Data.Monoid
 import GHC.Generics
 
 import Language.Modules.Ros2018.Display
@@ -48,7 +56,13 @@ import Language.Modules.Ros2018.Shift
 newtype Label = Label String
   deriving (Eq, Ord, Show)
 
-newtype Variable = Variable Int
+label :: String -> Label
+label = coerce
+
+instance Display Label where
+  display (Label s) = s
+
+newtype Variable = Variable { getVariable :: Int }
   deriving (Eq, Show)
   deriving Shift via IndexedVariable
 
@@ -74,8 +88,23 @@ newtype Record a = Record { getRecord :: Map.Map Label a }
   deriving (Eq, Show)
   deriving Functor
 
+instance Display a => Display (Record a) where
+  displaysPrec _ (Record m) =
+    let xs = map (\(l, x) -> displays l . showString ": " . displays x) $ Map.toList m in
+    let ys = intersperse (showString ", ") xs in
+      showString "{" . appEndo (mconcat $ coerce ys) . showString "}"
+
+instance DisplayName a => DisplayName (Record a) where
+  displaysWithName _ (Record m) =
+    let xs = map (\(l, x) -> displays l . showString ": " . displaysWithName 0 x) $ Map.toList m in
+    let ys = intersperse (showString ", ") xs in
+      showString "{" . appEndo (mconcat $ coerce ys) . showString "}"
+
 instance Shift a => Shift (Record a) where
   shiftAbove c d = fmap $ shiftAbove c d
+
+record :: [(Label, a)] -> Record a
+record = Record . Map.fromList
 
 data Kind
   = Base
@@ -115,7 +144,27 @@ instance Display Type where
   displaysPrec n (BaseType b)   = displaysPrec n b
   displaysPrec n (TVar v)       = displaysPrec n v
   displaysPrec n (TFun ty1 ty2) = showParen (4 <= n) $ displaysPrec 4 ty1 . showString " -> " . displaysPrec 3 ty2
-  displaysPrec n (Forall k ty)  = showParen (4 <= n) $ showChar '∀' . displaysPrec n k . showString ". " . displaysPrec 0 ty
+  displaysPrec n (TRecord r)    = displaysPrec n r
+  displaysPrec n (Forall k ty)  = showParen (4 <= n) $ showChar '∀' . displays k . showString ". " . displays ty
+  displaysPrec n (Some k ty)    = showParen (4 <= n) $ showChar '∃' . displays k . showString ". " . displays ty
+  displaysPrec n (TAbs k ty)    = showParen (4 <= n) $ showChar 'λ' . displays k . showString ". " . displays ty
+  displaysPrec n (TApp ty1 ty2) = showParen (5 <= n) $ displaysPrec 4 ty1 . showString " " . displaysPrec 5 ty2
+
+instance DisplayName Type where
+  displaysWithName n (BaseType b)   = displaysPrec n b
+  displaysWithName _ (TVar v)       = displayTypeVariable $ getVariable v
+  displaysWithName n (TFun ty1 ty2) = showParen (4 <= n) $ displaysWithName 4 ty1 . showString " -> " . displaysWithName 3 ty2
+  displaysWithName n (TRecord r)    = displaysWithName n r
+  displaysWithName n (Forall k ty)  =
+    let ?nctx = newType in
+      showParen (4 <= n) $ showChar '∀' . displayTypeVariable 0 . showString " : " . displays k . showString ". " . displaysWithName 0 ty
+  displaysWithName n (Some k ty)    =
+    let ?nctx = newType in
+      showParen (4 <= n) $ showChar '∃' . displayTypeVariable 0 . showString " : " . displays k . showString ". " . displaysWithName 0 ty
+  displaysWithName n (TAbs k ty)    =
+    let ?nctx = newType in
+      showParen (4 <= n) $ showChar 'λ' . displayTypeVariable 0 . showString " : " . displays k . showString ". " . displaysWithName 0 ty
+  displaysWithName n (TApp ty1 ty2) = showParen (5 <= n) $ displaysWithName 4 ty1 . showString " " . displaysWithName 5 ty2
 
 instance Shift Type where
   shiftAbove c d (Forall k ty) = Forall k $ shiftAbove (c + 1) d ty
