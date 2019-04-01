@@ -23,9 +23,6 @@ shouldBeRight (Right x) expected         = x `shouldBe` expected
 var :: Int -> Term
 var = Var . variable
 
-tvar :: Int -> Type
-tvar = TVar . variable
-
 spec :: Spec
 spec = do
   describe "lookupType" $
@@ -140,3 +137,26 @@ spec = do
       displayWithName (Forall Base $ Forall Base $ tvar 1)             `shouldBe` "∀t0 : *. ∀t1 : *. t0"
       displayWithName (Forall Base $ Forall Base $ tvar 2)             `shouldBe` "∀t0 : *. ∀t1 : *. v[2]"
       displayWithName (Forall Base (tvar 0) `TFun` Some Base (tvar 1)) `shouldBe` "(∀t0 : *. t0) -> ∃t0 : *. v[1]"
+
+  describe "reduce" $
+    it "reduces a type to weak-head normal form" $ do
+      reduce (BaseType Int) `shouldBe` BaseType Int
+      reduce (tvar 0) `shouldBe` tvar 0
+      reduce (TAbs Base $ tvar 0) `shouldBe` TAbs Base (tvar 0)
+      reduce (TAbs Base (tvar 0) `TApp` tvar 333) `shouldBe` tvar 333
+
+  describe "equal" $
+    it "tests type equivalence" $ do
+      let ?env = emptyEnv :: Env Id Type
+      run (runError $ equal (BaseType Int) (BaseType Int) Base) `shouldBeRight` ()
+
+      let ?env = insertType $ Id $ KFun Base Base
+      run (runError $ equal (tvar 0) (tvar 0) $ KFun Base Base) `shouldBeRight` ()
+
+      run (runError $ equal (TAbs Base (tvar 1) `TApp` tvar 0) (tvar 0) $ KFun Base Base) `shouldBeRight` ()
+
+newtype Id a = Id a
+
+instance Annotated Id where
+  extract (Id x) = x
+  unannotated = Id

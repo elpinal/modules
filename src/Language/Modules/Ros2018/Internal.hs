@@ -27,6 +27,13 @@ module Language.Modules.Ros2018.Internal
   , BaseType(..)
   , Term(..)
 
+  -- * Useful functions
+  , tvar
+
+  -- * Type equivalence and reduction
+  , equal
+  , reduce
+
   -- * Environments
   , Env
   , emptyEnv
@@ -34,6 +41,9 @@ module Language.Modules.Ros2018.Internal
   , insertValue
   , lookupType
   , lookupValueByName
+
+  -- * Annotation
+  , Annotated(..)
 
   -- * Errors
   , EnvError(..)
@@ -46,8 +56,11 @@ module Language.Modules.Ros2018.Internal
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Data.Coerce
+import Data.Functor
 import Data.List
 import qualified Data.Map.Lazy as Map
+import Data.Maybe
+import Data.Map.Merge.Lazy
 import Data.Monoid
 import GHC.Generics
 
@@ -64,7 +77,7 @@ instance Display Label where
   display (Label s) = s
 
 newtype Variable = Variable { getVariable :: Int }
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
   deriving Shift via IndexedVariable
 
 variable :: Int -> Variable
@@ -173,6 +186,9 @@ instance Shift Type where
   shiftAbove c d (TAbs k ty)   = TAbs k $ shiftAbove (c + 1) d ty
   shiftAbove c d ty            = to $ gShiftAbove c d $ from ty
 
+tvar :: Int -> Type
+tvar = TVar . variable
+
 data Term
   = Var Variable
   | Abs Type Term
@@ -213,11 +229,13 @@ emptyEnv = Env
 
 class Annotated f where
   extract :: f a -> a
+  unannotated :: a -> f a
 
 data Failure = forall a. Failure a (Evidence a) (a -> String)
 
 data Evidence a where
   EvidEnv :: Evidence EnvError
+  EvidTypeEquiv :: Evidence TypeEquivError
 
 class Display a => SpecificError a where
   evidence :: Evidence a
@@ -271,3 +289,96 @@ lookupValue (Variable n) = do
   case venv ?env of
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundVariable $ Variable n
+
+data TypeEquivError
+  = StructurallyInequivalent Type Type
+  | KindMismatch Kind Kind
+  | MissingLabelL Label (Record Type) (Record Type)
+  | MissingLabelR Label (Record Type) (Record Type)
+
+instance Display TypeEquivError where
+  display (StructurallyInequivalent ty1 ty2) = "structurally inequivalent types: " ++ display ty1 ++ " and " ++ display ty2
+  display (KindMismatch k1 k2)               = "kind mismatch: " ++ display k1 ++ " and " ++ display k2
+  display (MissingLabelL l r1 r2)            = "comparing " ++ display r1 ++ " and " ++ display r2 ++ ": missing label " ++ display l ++ "in left"
+  display (MissingLabelR l r1 r2)            = "comparing " ++ display r1 ++ " and " ++ display r2 ++ ": missing label " ++ display l ++ "in right"
+
+instance SpecificError TypeEquivError where
+  evidence = EvidTypeEquiv
+
+-- Assumes well-kindness of input types.
+equal :: (Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => Type -> Type -> Kind -> Eff r ()
+equal ty1 ty2 Base         = void $ strEquiv (reduce ty1) (reduce ty2)
+equal ty1 ty2 (KFun k1 k2) =
+  let ?env = insertType $ unannotated k1 in
+    equal (TApp (shift 1 ty1) $ tvar 0) (TApp (shift 1 ty2) $ tvar 0) k2
+
+strEquiv :: (Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => Type -> Type -> Eff r Kind
+strEquiv ty1 @ (BaseType b1) ty2 @ (BaseType b2)
+  | b1 == b2  = return Base -- Assumes base types have the base kind.
+  | otherwise = throw $ StructurallyInequivalent ty1 ty2
+strEquiv ty1 @ (TVar v1) ty2 @ (TVar v2)
+  | v1 == v2  = extract <$> lookupType v1
+  | otherwise = throw $ StructurallyInequivalent ty1 ty2
+strEquiv (TFun ty11 ty12) (TFun ty21 ty22) = do
+  equal ty11 ty21 Base
+  equal ty12 ty22 Base
+  return Base
+strEquiv (TRecord r1 @ (Record m1)) (TRecord r2 @ (Record m2)) = do
+  let f l _ = throw $ MissingLabelL l r1 r2
+  let g l _ = throw $ MissingLabelR l r1 r2
+  let h _ ty1 ty2 = equal ty1 ty2 Base
+  _ <- mergeA (traverseMissing f) (traverseMissing g) (zipWithAMatched h) m1 m2
+  return Base
+strEquiv (Forall k1 ty1) (Forall k2 ty2)
+  | k1 == k2  = let ?env = insertType $ unannotated k1 in equal ty1 ty2 Base $> Base
+  | otherwise = throw $ KindMismatch k1 k2
+strEquiv (Some k1 ty1) (Some k2 ty2)
+  | k1 == k2  = let ?env = insertType $ unannotated k1 in equal ty1 ty2 Base $> Base
+  | otherwise = throw $ KindMismatch k1 k2
+strEquiv (TApp ty11 ty12) (TApp ty21 ty22) = do
+  k <- strEquiv ty11 ty21
+  case k of
+    KFun k1 k2 -> do
+      equal ty12 ty22 k1
+      return k2
+    Base -> error $ "unexpected base kind, which is kind of " ++ display ty11
+strEquiv ty1 ty2 = throw $ StructurallyInequivalent ty1 ty2
+
+reduce :: Type -> Type
+reduce (TApp ty1 ty2) = reduce' (reduce ty1) ty2
+reduce ty             = ty
+
+reduce' :: Type -> Type -> Type
+reduce' (TAbs _ ty1) ty2 = substTop ty2 ty1
+reduce' ty1 ty2          = TApp ty1 ty2
+
+newtype Subst = Subst (Map.Map Variable Type)
+  deriving (Eq, Show)
+
+instance Shift Subst where
+  shiftAbove c d (Subst m) = Subst $ shiftAbove c d <$> m
+
+lookupSubst :: Variable -> Subst -> Maybe Type
+lookupSubst v (Subst m) = Map.lookup v m
+
+class Substitution a where
+  apply :: Subst -> a -> a
+
+instance Substitution Type where
+  apply _ ty @ (BaseType _) = ty
+  apply s ty @ (TVar v)     = fromMaybe ty $ lookupSubst v s
+  apply s (TFun ty1 ty2)    = apply s ty1 `TFun` apply s ty2
+  apply s (TRecord r)       = TRecord $ apply s r
+  apply s (Forall k ty)     = Forall k $ apply (shift 1 s) ty
+  apply s (Some k ty)       = Some k $ apply (shift 1 s) ty
+  apply s (TAbs k ty)       = TAbs k $ apply (shift 1 s) ty
+  apply s (TApp ty1 ty2)    = apply s ty1 `TApp` apply s ty2
+
+instance Substitution a => Substitution (Record a) where
+  apply s (Record m) = Record $ apply s <$> m
+
+substTop :: Type -> Type -> Type
+substTop by ty = shift (-1) $ subst 0 ty $ shift 1 by
+
+subst :: Int -> Type -> Type -> Type
+subst n by = apply $ Subst $ Map.singleton (Variable n) by
