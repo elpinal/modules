@@ -132,6 +132,18 @@ spec = do
       display ((Inst (var 0) $ tvar 0) `App` var 28)              `shouldBe` "v[0] [v[0]] v[28]"
       display ((var 3 `App` var 28) `Inst` tvar 38)               `shouldBe` "v[3] v[28] [v[38]]"
 
+      display (Pack (var 0) [] [] $ tvar 1)                                                `shouldBe` "pack [; v[0]] as v[1]"
+      display (Pack (var 0) [BaseType Int] [Base] $ tvar 1)                                `shouldBe` "pack [int; v[0]] as ∃*. v[1]"
+      display (Pack (var 0) [BaseType Int, BaseType Bool] [KFun Base Base, Base] $ tvar 1) `shouldBe` "pack [bool, int; v[0]] as ∃*. ∃* -> *. v[1]"
+
+      display (Unpack Nothing (var 2) 0 $ var 1)   `shouldBe` "unpack [0] = v[2] in v[1]"
+      display (Unpack Nothing (var 2) 1 $ var 7)   `shouldBe` "unpack [1] = v[2] in v[7]"
+      display (Unpack Nothing (var 2) 136 $ var 7) `shouldBe` "unpack [136] = v[2] in v[7]"
+
+      display (Let (var 0) $ var 37)                `shouldBe` "let v[0] in v[37]"
+      display (App (Let (var 0) $ var 37) $ var 3)  `shouldBe` "(let v[0] in v[37]) v[3]"
+      display (App (var 84) $ Let (var 0) $ var 37) `shouldBe` "v[84] (let v[0] in v[37])"
+
       let ?nctx = nameContext
       displayWithName (tvar 0)                                         `shouldBe` "v[0]"
       displayWithName (Forall Base $ tvar 0)                           `shouldBe` "∀t0 : *. t0"

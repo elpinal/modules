@@ -190,6 +190,9 @@ instance Shift Type where
 tvar :: Int -> Type
 tvar = TVar . variable
 
+some :: [Kind] -> Type -> Type
+some ks ty = foldl (flip Some) ty ks
+
 data Term
   = Var Variable
   | Abs Type Term
@@ -205,13 +208,21 @@ data Term
   deriving (Eq, Show)
 
 instance Display Term where
-  displaysPrec n (Var v)       = displaysPrec n v
-  displaysPrec n (Abs ty t)    = showParen (4 <= n) $ showChar 'λ' . displays ty . showString ". " . displays t
-  displaysPrec n (App t1 t2)   = showParen (5 <= n) $ displaysPrec 4 t1 . showString " " . displaysPrec 5 t2
-  displaysPrec n (TmRecord r)  = displaysPrec n r
-  displaysPrec _ (Proj t l)    = displaysPrec 5 t . showChar '.' . displays l
-  displaysPrec n (Poly k t)    = showParen (4 <= n) $ showChar 'Λ' . displays k . showString ". " . displays t
-  displaysPrec n (Inst t ty)   = showParen (5 <= n) $ displaysPrec 4 t . showString " [" . displays ty . showChar ']'
+  displaysPrec n (Var v)             = displaysPrec n v
+  displaysPrec n (Abs ty t)          = showParen (4 <= n) $ showChar 'λ' . displays ty . showString ". " . displays t
+  displaysPrec n (App t1 t2)         = showParen (5 <= n) $ displaysPrec 4 t1 . showString " " . displaysPrec 5 t2
+  displaysPrec n (TmRecord r)        = displaysPrec n r
+  displaysPrec _ (Proj t l)          = displaysPrec 5 t . showChar '.' . displays l
+  displaysPrec n (Poly k t)          = showParen (4 <= n) $ showChar 'Λ' . displays k . showString ". " . displays t
+  displaysPrec n (Inst t ty)         = showParen (5 <= n) $ displaysPrec 4 t . showString " [" . displays ty . showChar ']'
+  displaysPrec n (Pack t tys ks ty)  = showParen (2 <= n) $ showString "pack [" . displayTypesRev tys . showString "; " . displays t . showString "] as " . displays (some ks ty)
+  displaysPrec n (Unpack mg t1 m t2) =
+    case mg of
+      Nothing -> showParen (4 <= n) $ showString "unpack [" . shows m . showString "] = " . displays t1 . showString " in " . displays t2
+  displaysPrec n (Let t1 t2)         = showParen (4 <= n) $ showString "let " . displays t1 . showString " in " . displays t2
+
+displayTypesRev :: [Type] -> ShowS
+displayTypesRev = appEndo . getDual . mconcat . coerce . intersperse (showString ", ") . map displays
 
 data Env f ty = Env
   { tenv :: [f Kind]
