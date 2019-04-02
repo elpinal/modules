@@ -12,13 +12,19 @@ import Language.Modules.Ros2018.Display
 import Language.Modules.Ros2018.Internal
 import Language.Modules.Ros2018.Shift
 
-shouldBeEnvError :: (HasCallStack, Show a) => Either Failure a -> EnvError -> Expectation
-shouldBeEnvError (Left (Failure err EvidEnv _)) expected = err `shouldBe` expected
-shouldBeEnvError (Right x) _                             = expectationFailure $ "unexpectedly Right value: " ++ show x
-
 shouldBeRight :: (HasCallStack, Eq a, Show a) => Either Failure a -> a -> Expectation
 shouldBeRight (Left (Failure err _ f)) _ = expectationFailure $ "error: " ++ f err
 shouldBeRight (Right x) expected         = x `shouldBe` expected
+
+shouldBeEnvError :: (HasCallStack, Show a) => Either Failure a -> EnvError -> Expectation
+shouldBeEnvError (Left (Failure err EvidEnv _)) expected = err `shouldBe` expected
+shouldBeEnvError (Left (Failure err _ f)) _              = expectationFailure $ "unexpected sort of error: " ++ f err
+shouldBeEnvError (Right x) _                             = expectationFailure $ "unexpectedly Right value: " ++ show x
+
+shouldBeTypeEquivError :: (HasCallStack, Show a) => Either Failure a -> TypeEquivError -> Expectation
+shouldBeTypeEquivError (Left (Failure err EvidTypeEquiv _)) expected = err `shouldBe` expected
+shouldBeTypeEquivError (Left (Failure err _ f)) _                    = expectationFailure $ "unexpected sort of error: " ++ f err
+shouldBeTypeEquivError (Right x) _                                   = expectationFailure $ "unexpectedly Right value: " ++ show x
 
 var :: Int -> Term
 var = Var . variable
@@ -148,7 +154,8 @@ spec = do
   describe "equal" $
     it "tests type equivalence" $ do
       let ?env = emptyEnv :: Env Id Type
-      run (runError $ equal (BaseType Int) (BaseType Int) Base) `shouldBeRight` ()
+      run (runError $ equal (BaseType Int) (BaseType Int) Base)  `shouldBeRight` ()
+      run (runError $ equal (BaseType Int) (BaseType Bool) Base) `shouldBeTypeEquivError` StructurallyInequivalent (BaseType Int) (BaseType Bool)
 
       let ?env = insertType $ Id $ KFun Base Base
       run (runError $ equal (tvar 0) (tvar 0) $ KFun Base Base) `shouldBeRight` ()

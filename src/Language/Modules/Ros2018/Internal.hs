@@ -47,6 +47,7 @@ module Language.Modules.Ros2018.Internal
 
   -- * Errors
   , EnvError(..)
+  , TypeEquivError(..)
 
   -- * Failure
   , Failure(..)
@@ -295,6 +296,7 @@ data TypeEquivError
   | KindMismatch Kind Kind
   | MissingLabelL Label (Record Type) (Record Type)
   | MissingLabelR Label (Record Type) (Record Type)
+  deriving (Eq, Show)
 
 instance Display TypeEquivError where
   display (StructurallyInequivalent ty1 ty2) = "structurally inequivalent types: " ++ display ty1 ++ " and " ++ display ty2
