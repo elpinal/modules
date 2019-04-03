@@ -25,6 +25,9 @@ mkShouldBeError ''TypeEquivError 'EvidTypeEquiv
 var :: Int -> Term
 var = Var . variable
 
+gvar :: Int -> Term
+gvar = GVar . generated
+
 spec :: Spec
 spec = do
   describe "lookupType" $
@@ -120,6 +123,7 @@ spec = do
       display (record [(label "a", BaseType Char), (label "abc", tvar 3 `TFun` tvar 1)]) `shouldBe` "{a: char, abc: v[3] -> v[1]}"
 
       display (var 0)                                             `shouldBe` "v[0]"
+      display (gvar 0)                                            `shouldBe` "g0"
       display (Abs (tvar 0) $ var 0)                              `shouldBe` "λv[0]. v[0]"
       display (App (var 0) (var 1))                               `shouldBe` "v[0] v[1]"
       display (App (var 0) (var 1) `App` App (var 2) (var 99))    `shouldBe` "v[0] v[1] (v[2] v[99])"
@@ -139,6 +143,10 @@ spec = do
       display (Unpack Nothing (var 2) 0 $ var 1)   `shouldBe` "unpack [0] = v[2] in v[1]"
       display (Unpack Nothing (var 2) 1 $ var 7)   `shouldBe` "unpack [1] = v[2] in v[7]"
       display (Unpack Nothing (var 2) 136 $ var 7) `shouldBe` "unpack [136] = v[2] in v[7]"
+
+      display (Unpack (Just $ generated 71) (var 2) 0 $ var 1)     `shouldBe` "unpack [g71, 0] = v[2] in v[1]"
+      display (Unpack (Just $ generated 39) (var 2) 1 $ gvar 39)   `shouldBe` "unpack [g39, 1] = v[2] in g39"
+      display (Unpack (Just $ generated 42) (var 2) 136 $ gvar 5)  `shouldBe` "unpack [g42, 136] = v[2] in g5"
 
       display (Let (var 0) $ var 37)                `shouldBe` "let v[0] in v[37]"
       display (App (Let (var 0) $ var 37) $ var 3)  `shouldBe` "(let v[0] in v[37]) v[3]"
