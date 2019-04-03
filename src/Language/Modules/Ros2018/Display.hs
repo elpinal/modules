@@ -8,7 +8,9 @@ module Language.Modules.Ros2018.Display
   , NameContext
   , nameContext
   , newType
+  , newTypes
   , newValue
+  , newValues
   , displayVariable
   , displayTypeVariable
   ) where
@@ -52,11 +54,19 @@ newType = ?nctx
   , tnameCtx = toName 't' (count ?nctx) : tnameCtx ?nctx
   }
 
+newTypes :: (?nctx :: NameContext) => Int -> NameContext
+newTypes 0 = ?nctx
+newTypes n = let ?nctx = newType in newTypes $ n - 1
+
 newValue :: (?nctx :: NameContext) => NameContext
 newValue = ?nctx
   { count = 1 + count ?nctx
   , vnameCtx = toName 'v' (count ?nctx) : vnameCtx ?nctx
   }
+
+newValues :: (?nctx :: NameContext) => Int -> NameContext
+newValues 0 = ?nctx
+newValues n = let ?nctx = newValue in newValues $ n - 1
 
 toName :: Char -> Int -> String
 toName ch n = ch: show n

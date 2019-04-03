@@ -230,13 +230,51 @@ instance Display Term where
     case mg of
       Nothing -> showParen (4 <= n) $ showString "unpack [" . shows m . showString "] = " . displays t1 . showString " in " . displays t2
       Just g  -> showParen (4 <= n) $ showString "unpack [" . displays g . showString ", " . shows m . showString "] = " . displays t1 . showString " in " . displays t2
-  displaysPrec n (Let tys t)         = showParen (4 <= n) $ showString "let " . displaySemi tys . showString " in " . displays t
+  displaysPrec n (Let ts t)          = showParen (4 <= n) $ showString "let " . displaySemi ts . showString " in " . displays t
+
+instance DisplayName Term where
+  displaysWithName _ (Var v)       = displayVariable $ getVariable v
+  displaysWithName _ t @ (GVar _)  = displays t
+  displaysWithName n (Abs ty t)    =
+    let ?nctx = newValue in
+      showParen (4 <= n) $ showChar 'λ' . displayVariable 0 . showString " : " . displaysWithName 0 ty . showString ". " . displaysWithName 0 t
+  displaysWithName n (App t1 t2)   = showParen (5 <= n) $ displaysWithName 4 t1 . showString " " . displaysWithName 5 t2
+  displaysWithName n (TmRecord r)  = displaysWithName n r
+  displaysWithName _ (Proj t l)    = displaysWithName 5 t . showChar '.' . displays l
+  displaysWithName n (Poly k t)    =
+    let ?nctx = newType in
+      showParen (4 <= n) $ showChar 'Λ' . displayTypeVariable 0 . showString " : " . displays k . showString ". " . displaysWithName 0 t
+  displaysWithName n (Inst t ty)   = showParen (5 <= n) $ displaysWithName 4 t . showString " [" . displaysWithName 0 ty . showChar ']'
+  displaysWithName n (Pack t tys ks ty) = showParen (2 <= n) $ showString "pack [" . displayTypesRevWithName tys . showString "; " . displaysWithName 0 t . showString "] as " . displaysWithName 0 (some ks ty)
+  displaysWithName n (Unpack mg t1 m t2) =
+    case mg of
+      Nothing ->
+        let f = displaysWithName 0 t1 in
+        let ?nctx = newValue in
+        let ?nctx = newTypes m in
+          showParen (4 <= n) $ showString "unpack [" . displayVariable 0 . showString ", " . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
+  displaysWithName n (Let ts t)         =
+    let fs = displaySemiWithName ts in
+    let ?nctx = newValues $ length ts in
+    let f = displaysWithName 0 t in
+      showParen (4 <= n) $ showString "let " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ fst $ foldr (\f (fs, i) -> (displayVariable i . showString " = " . f : fs, i + 1)) ([], 0) fs) . showString " in " . f
+
+displayTypeVariables :: (?nctx :: NameContext) => Int -> ShowS
+displayTypeVariables 0 = id
+displayTypeVariables 1 = displayTypeVariable 0
+displayTypeVariables n = displayTypeVariable (n - 1) . showString ".." . displayTypeVariable 0
 
 displaySemi :: Display a => [a] -> ShowS
 displaySemi = appEndo . mconcat . coerce . intersperse (showString "; ") . map displays
 
+displaySemiWithName :: (DisplayName a, ?nctx :: NameContext) => [a] -> [ShowS]
+displaySemiWithName = map $ displaysWithName 0
+
 displayTypesRev :: [Type] -> ShowS
 displayTypesRev = appEndo . getDual . mconcat . coerce . intersperse (showString ", ") . map displays
+
+displayTypesRevWithName :: (?nctx :: NameContext) => [Type] -> ShowS
+displayTypesRevWithName = appEndo . getDual . mconcat . coerce . intersperse (showString ", ") . map (displaysWithName 0)
 
 data Env f ty = Env
   { tenv :: [f Kind]

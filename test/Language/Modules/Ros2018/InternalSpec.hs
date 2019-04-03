@@ -165,6 +165,33 @@ spec = do
       displayWithName (Forall Base $ Forall Base $ tvar 2)             `shouldBe` "∀t0 : *. ∀t1 : *. v[2]"
       displayWithName (Forall Base (tvar 0) `TFun` Some Base (tvar 1)) `shouldBe` "(∀t0 : *. t0) -> ∃t0 : *. v[1]"
 
+      displayWithName (var 0)                `shouldBe` "v[0]"
+      displayWithName (gvar 0)               `shouldBe` "g0"
+      displayWithName (Abs (tvar 0) $ var 0) `shouldBe` "λv0 : v[0]. v0"
+      displayWithName (Abs (tvar 0) $ Abs (BaseType Char) $ var 0) `shouldBe` "λv0 : v[0]. λv1 : char. v1"
+      displayWithName (Abs (tvar 0) $ Abs (BaseType Char) $ var 1) `shouldBe` "λv0 : v[0]. λv1 : char. v0"
+
+      displayWithName (Poly Base $ var 0)                `shouldBe` "Λt0 : *. v[0]"
+      displayWithName (Poly Base $ Abs (tvar 0) $ var 0) `shouldBe` "Λt0 : *. λv1 : t0. v1"
+
+      displayWithName (Pack (var 0) [] [] $ tvar 1)                                                `shouldBe` "pack [; v[0]] as v[1]"
+      displayWithName (Pack (var 0) [BaseType Int] [Base] $ tvar 0)                                `shouldBe` "pack [int; v[0]] as ∃t0 : *. t0"
+      displayWithName (Pack (var 0) [BaseType Int] [Base] $ tvar 1)                                `shouldBe` "pack [int; v[0]] as ∃t0 : *. v[1]"
+      displayWithName (Pack (var 0) [BaseType Int, BaseType Bool] [KFun Base Base, Base] $ tvar 1) `shouldBe` "pack [bool, int; v[0]] as ∃t0 : *. ∃t1 : * -> *. t0"
+
+      displayWithName (Let [] $ var 0)                                  `shouldBe` "let  in v[0]"
+      displayWithName (Let [var 0] $ var 0)                             `shouldBe` "let v0 = v[0] in v0"
+      displayWithName (Let [var 0, var 1] $ var 0)                      `shouldBe` "let v0 = v[0]; v1 = v[1] in v1"
+      displayWithName (Let [var 0, var 1] $ Let [var 0, var 1] $ var 0) `shouldBe` "let v0 = v[0]; v1 = v[1] in let v2 = v1; v3 = v0 in v3"
+
+      displayWithName (Unpack Nothing (var 2) 0 $ var 0) `shouldBe` "unpack [v0, ] = v[2] in v0"
+      displayWithName (Unpack Nothing (var 2) 0 $ var 1) `shouldBe` "unpack [v0, ] = v[2] in v[1]"
+
+      displayWithName (Unpack Nothing (var 2) 0 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0, ] = v[2] in λv1 : v[0]. v1"
+      displayWithName (Unpack Nothing (var 2) 1 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0, t1] = v[2] in λv2 : t1. v2"
+      displayWithName (Unpack Nothing (var 2) 2 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0, t1..t2] = v[2] in λv3 : t2. v3"
+      displayWithName (Unpack Nothing (Abs (tvar 0) $ var 0) 30 $ Abs (tvar 1) $ var 0) `shouldBe` "unpack [v0, t1..t30] = λv0 : v[0]. v0 in λv31 : t29. v31"
+
   describe "reduce" $
     it "reduces a type to weak-head normal form" $ do
       reduce (BaseType Int) `shouldBe` BaseType Int
