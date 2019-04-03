@@ -21,6 +21,7 @@ shouldBeRight (Right x) expected         = x `shouldBe` expected
 
 mkShouldBeError ''EnvError 'EvidEnv
 mkShouldBeError ''TypeEquivError 'EvidTypeEquiv
+mkShouldBeError ''KindError 'EvidKind
 
 var :: Int -> Term
 var = Var . variable
@@ -209,6 +210,26 @@ spec = do
       run (runError $ equal (tvar 0) (tvar 0) $ KFun Base Base) `shouldBeRight` ()
 
       run (runError $ equal (TAbs Base (tvar 1) `TApp` tvar 0) (tvar 0) $ KFun Base Base) `shouldBeRight` ()
+
+  describe "kindOf" $
+    it "obtains the kind of a type" $ do
+      let ?env = emptyEnv :: Env Id Type
+      run (runError $ kindOf $ BaseType Char)        `shouldBeRight` Base
+      run (runError $ kindOf $ Forall Base $ tvar 0) `shouldBeRight` Base
+      run (runError $ kindOf $ TAbs Base $ tvar 0)   `shouldBeRight` KFun Base Base
+
+      run (runError $ kindOf $ tvar 0) `shouldBeEnvError` UnboundTypeVariable (variable 0)
+
+      run (runError $ kindOf $ Forall (KFun Base Base) $ BaseType Char) `shouldBeRight` Base
+      run (runError $ kindOf $ Forall (KFun Base Base) $ tvar 0)        `shouldBeKindError` NotBase (KFun Base Base)
+
+      run (runError $ kindOf $ TApp (TAbs Base $ tvar 0) $ BaseType Int)                          `shouldBeRight` Base
+      run (runError $ kindOf $ TApp (TAbs (KFun Base Base) $ tvar 0) $ TAbs Base $ BaseType Bool) `shouldBeRight` KFun Base Base
+      run (runError $ kindOf $ TApp (TAbs (KFun Base Base) $ BaseType Char) $ TAbs Base $ tvar 0) `shouldBeRight` Base
+
+      run (runError $ kindOf $ TApp (TAbs (KFun Base Base) $ BaseType Char) $ BaseType Int) `shouldBeKindError` KindMismatch_ (KFun Base Base) Base
+      run (runError $ kindOf $ TApp (TAbs Base $ BaseType Char) $ TAbs Base $ tvar 0)       `shouldBeKindError` KindMismatch_ Base (KFun Base Base)
+      run (runError $ kindOf $ TApp (BaseType Int) $ TAbs Base $ tvar 0)                    `shouldBeKindError` NotFunctionKind Base
 
 newtype Id a = Id a
 

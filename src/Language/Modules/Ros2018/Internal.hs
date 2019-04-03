@@ -32,6 +32,9 @@ module Language.Modules.Ros2018.Internal
   -- * Useful functions
   , tvar
 
+  -- * Kinding
+  , Kinded(..)
+
   -- * Type equivalence and reduction
   , equal
   , reduce
@@ -50,6 +53,7 @@ module Language.Modules.Ros2018.Internal
   -- * Errors
   , EnvError(..)
   , TypeEquivError(..)
+  , KindError(..)
 
   -- * Failure
   , Failure(..)
@@ -300,6 +304,7 @@ data Failure = forall a. Failure a (Evidence a) (a -> String)
 data Evidence a where
   EvidEnv :: Evidence EnvError
   EvidTypeEquiv :: Evidence TypeEquivError
+  EvidKind :: Evidence KindError
 
 class Display a => SpecificError a where
   evidence :: Evidence a
@@ -447,3 +452,53 @@ substTop by ty = shift (-1) $ subst 0 ty $ shift 1 by
 
 subst :: Int -> Type -> Type -> Type
 subst n by = apply $ Subst $ Map.singleton (Variable n) by
+
+class Kinded a where
+  kindOf :: (Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => a -> Eff r Kind
+
+data KindError
+  = NotBase Kind
+  | NotFunctionKind Kind
+  | KindMismatch_ Kind Kind
+  deriving (Eq, Show)
+
+instance Display KindError where
+  display (NotBase k)          = "not base kind: " ++ show k
+  display (NotFunctionKind k)  = "not function kind: " ++ show k
+  display (KindMismatch_ k1 k2) = "kind mismatch: " ++ show k1 ++ " and " ++ show k2
+
+instance SpecificError KindError where
+  evidence = EvidKind
+
+instance Kinded BaseType where
+  kindOf _ = return Base
+
+instance Kinded a => Kinded (Record a) where
+  kindOf (Record m) = mapM_ mustBeBase m $> Base
+
+instance Kinded Type where
+  kindOf (BaseType b)   = kindOf b
+  kindOf (TVar v)       = extract <$> lookupType v
+  kindOf (TFun ty1 ty2) = do
+    mustBeBase ty1
+    mustBeBase ty2
+    return Base
+  kindOf (TRecord r)    = kindOf r
+  kindOf (Forall k ty)  = let ?env = insertType $ unannotated k in mustBeBase ty $> Base
+  kindOf (Some k ty)    = let ?env = insertType $ unannotated k in mustBeBase ty $> Base
+  kindOf (TAbs k ty)    = let ?env = insertType $ unannotated k in (KFun k) <$> kindOf ty
+  kindOf (TApp ty1 ty2) = do
+    k1 <- kindOf ty1
+    k2 <- kindOf ty2
+    case k1 of
+      KFun k11 k12
+        | k11 == k2 -> return k12
+        | otherwise -> throw $ KindMismatch_ k11 k2
+      Base -> throw $ NotFunctionKind k1
+
+mustBeBase :: (Kinded a, Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => a -> Eff r ()
+mustBeBase x = do
+  k <- kindOf x
+  case k of
+    Base     -> return ()
+    KFun _ _ -> throw $ NotBase k
