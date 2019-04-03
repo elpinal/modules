@@ -213,7 +213,7 @@ data Term
   | Pack Term [Type] [Kind] Type
   | Unpack (Maybe Generated) Term Int Term
   -- To make debug easy.
-  | Let Term Term
+  | Let [Term] Term
   deriving (Eq, Show)
 
 instance Display Term where
@@ -230,7 +230,10 @@ instance Display Term where
     case mg of
       Nothing -> showParen (4 <= n) $ showString "unpack [" . shows m . showString "] = " . displays t1 . showString " in " . displays t2
       Just g  -> showParen (4 <= n) $ showString "unpack [" . displays g . showString ", " . shows m . showString "] = " . displays t1 . showString " in " . displays t2
-  displaysPrec n (Let t1 t2)         = showParen (4 <= n) $ showString "let " . displays t1 . showString " in " . displays t2
+  displaysPrec n (Let tys t)         = showParen (4 <= n) $ showString "let " . displaySemi tys . showString " in " . displays t
+
+displaySemi :: Display a => [a] -> ShowS
+displaySemi = appEndo . mconcat . coerce . intersperse (showString "; ") . map displays
 
 displayTypesRev :: [Type] -> ShowS
 displayTypesRev = appEndo . getDual . mconcat . coerce . intersperse (showString ", ") . map displays

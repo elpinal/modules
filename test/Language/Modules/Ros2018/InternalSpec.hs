@@ -28,6 +28,9 @@ var = Var . variable
 gvar :: Int -> Term
 gvar = GVar . generated
 
+let1 :: Term -> Term -> Term
+let1 t1 = Let [t1]
+
 spec :: Spec
 spec = do
   describe "lookupType" $
@@ -148,9 +151,11 @@ spec = do
       display (Unpack (Just $ generated 39) (var 2) 1 $ gvar 39)   `shouldBe` "unpack [g39, 1] = v[2] in g39"
       display (Unpack (Just $ generated 42) (var 2) 136 $ gvar 5)  `shouldBe` "unpack [g42, 136] = v[2] in g5"
 
-      display (Let (var 0) $ var 37)                `shouldBe` "let v[0] in v[37]"
-      display (App (Let (var 0) $ var 37) $ var 3)  `shouldBe` "(let v[0] in v[37]) v[3]"
-      display (App (var 84) $ Let (var 0) $ var 37) `shouldBe` "v[84] (let v[0] in v[37])"
+      display (let1 (var 0) $ var 37)                `shouldBe` "let v[0] in v[37]"
+      display (App (let1 (var 0) $ var 37) $ var 3)  `shouldBe` "(let v[0] in v[37]) v[3]"
+      display (App (var 84) $ let1 (var 0) $ var 37) `shouldBe` "v[84] (let v[0] in v[37])"
+
+      display (Let [var 0, Poly Base $ var 44] $ var 37) `shouldBe` "let v[0]; Λ*. v[44] in v[37]"
 
       let ?nctx = nameContext
       displayWithName (tvar 0)                                         `shouldBe` "v[0]"
