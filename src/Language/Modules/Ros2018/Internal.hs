@@ -28,6 +28,7 @@ module Language.Modules.Ros2018.Internal
   , Type(..)
   , BaseType(..)
   , Term(..)
+  , Literal(..)
 
   -- * Useful functions
   , tvar
@@ -205,8 +206,22 @@ tvar = TVar . variable
 some :: [Kind] -> Type -> Type
 some ks ty = foldl (flip Some) ty ks
 
+data Literal
+  = LBool Bool
+  | LInt Int
+  | LChar Char
+  deriving (Eq, Show)
+
+instance Display Literal where
+  display (LBool b)
+    | b         = "true"
+    | otherwise = "false"
+  display (LInt n)   = show n
+  display (LChar ch) = show ch
+
 data Term
-  = Var Variable
+  = Lit Literal
+  | Var Variable
   | GVar Generated
   | Abs Type Term
   | App Term Term
@@ -221,6 +236,7 @@ data Term
   deriving (Eq, Show)
 
 instance Display Term where
+  displaysPrec _ (Lit l)             = displays l
   displaysPrec _ (Var v)             = displays v
   displaysPrec _ (GVar g)            = displays g
   displaysPrec n (Abs ty t)          = showParen (4 <= n) $ showChar 'λ' . displays ty . showString ". " . displays t
@@ -237,6 +253,7 @@ instance Display Term where
   displaysPrec n (Let ts t)          = showParen (4 <= n) $ showString "let " . displaySemi ts . showString " in " . displays t
 
 instance DisplayName Term where
+  displaysWithName _ (Lit l)       = displays l
   displaysWithName _ (Var v)       = displayVariable $ getVariable v
   displaysWithName _ t @ (GVar _)  = displays t
   displaysWithName n (Abs ty t)    =
@@ -257,6 +274,7 @@ instance DisplayName Term where
         let ?nctx = newValue in
         let ?nctx = newTypes m in
           showParen (4 <= n) $ showString "unpack [" . displayVariable 0 . showString ", " . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
+      -- TODO: Just g
   displaysWithName n (Let ts t)         =
     let fs = displaySemiWithName ts in
     let ?nctx = newValues $ length ts in
