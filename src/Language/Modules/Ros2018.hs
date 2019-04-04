@@ -1,18 +1,23 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE TypeFamilies #-}
+
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Language.Modules.Ros2018
   (
   ) where
 
 import Control.Monad.Freer
+import Control.Monad.Freer.Error
+import Data.Coerce
+import Data.Functor.Identity
 
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Internal as I
-import Language.Modules.Ros2018.Internal (Term, Name)
+import Language.Modules.Ros2018.Internal (Term, Literal(..), BaseType, Name, lookupValueByName)
 
 type IType = I.Type
-type ILiteral = I.Literal
 
 newtype Ident = Ident Name
   deriving (Eq, Show)
@@ -24,23 +29,41 @@ data Binding
   = Val Ident Expr
   deriving (Eq, Show)
 
-data Literal
-  = LBool Bool
+data Expr
+  = Lit Literal
+  | Id Ident
   deriving (Eq, Show)
 
-data Expr
-  = Id Ident
-  | Lit Literal
+type Env = I.Env Identity LargeType
+
+data LargeType
+  = BaseType BaseType
+  deriving (Eq, Show)
+
+data Purity
+  = Pure
+  | Impure
   deriving (Eq, Show)
 
 class Elaboration a where
   type Output a
   type Effs a :: [* -> *]
 
-  elaborate :: Members (Effs a) r => a -> Eff r (Output a)
+  elaborate :: (Members (Effs a) r, ?env :: Env) => a -> Eff r (Output a)
 
 instance Elaboration Literal where
-  type Output Literal = (ILiteral, I.BaseType)
+  type Output Literal = BaseType
   type Effs Literal = '[]
 
-  elaborate (LBool b) = return (I.LBool b, I.Bool)
+  elaborate = return . I.typeOfLiteral
+
+instance Elaboration Expr where
+  type Output Expr = (Term, LargeType, Purity)
+  type Effs Expr = '[Error I.Failure]
+
+  elaborate (Lit l) = do
+    b <- elaborate l
+    return (I.Lit l, BaseType b, Pure) -- Literals are always pure.
+  elaborate (Id id) = do
+    (lty, v) <- lookupValueByName $ coerce id
+    return (I.Var v, lty, Pure)

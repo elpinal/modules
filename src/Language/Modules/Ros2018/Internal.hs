@@ -39,6 +39,7 @@ module Language.Modules.Ros2018.Internal
   -- * Typing
   , Typed(..)
   , whTypeOf
+  , typeOfLiteral
 
   -- * Type equivalence and reduction
   , equal
@@ -410,10 +411,12 @@ lookupType (Variable n) = do
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundTypeVariable $ Variable n
 
-lookupValueByName :: (Member (Error Failure) r, ?env :: Env f ty) => Name -> Eff r ty
+lookupValueByName :: (Member (Error Failure) r, ?env :: Env f ty) => Name -> Eff r (ty, Variable)
 lookupValueByName name = do
   n <- maybe (throw $ UnboundName name) return $ Map.lookup name $ nmap ?env
-  lookupValue $ Variable $ length (venv ?env) - n
+  let v = Variable $ length (venv ?env) - n
+  ty <- lookupValue v
+  return (ty, v)
 
 lookupValue :: (Member (Error Failure) r, ?env :: Env f ty) => Variable -> Eff r ty
 lookupValue (Variable n) = do
@@ -599,10 +602,13 @@ instance Display TypeError where
 instance SpecificError TypeError where
   evidence = EvidType
 
+typeOfLiteral :: Literal -> BaseType
+typeOfLiteral (LBool _) = Bool
+typeOfLiteral (LInt _)  = Int
+typeOfLiteral (LChar _) = Char
+
 instance Typed Literal where
-  typeOf (LBool _) = return $ BaseType Bool
-  typeOf (LInt _)  = return $ BaseType Int
-  typeOf (LChar _) = return $ BaseType Char
+  typeOf = return . BaseType . typeOfLiteral
 
 instance Typed a => Typed (Record a) where
   typeOf (Record m) = tRecord <$> mapM typeOf m

@@ -58,24 +58,24 @@ spec = do
       let ?env = emptyEnv :: Env [] Type
       let ?env = insertType [Base]
       let ?env = insertValue (name "x") $ BaseType Char
-      run (runError $ lookupValueByName $ name "x") `shouldBeRight` BaseType Char
+      run (runError $ lookupValueByName $ name "x") `shouldBeRight` (BaseType Char, variable 0)
 
       let ?env = insertValue (name "y") $ tvar 0
-      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 0
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` (tvar 0, variable 0)
 
       let ?env = insertValue (name "z") $ tvar 0
-      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 0
-      run (runError $ lookupValueByName $ name "z") `shouldBeRight` tvar 0
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` (tvar 0, variable 1)
+      run (runError $ lookupValueByName $ name "z") `shouldBeRight` (tvar 0, variable 0)
 
       let ?env = insertType [Base]
-      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 1
-      run (runError $ lookupValueByName $ name "z") `shouldBeRight` tvar 1
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` (tvar 1, variable 1)
+      run (runError $ lookupValueByName $ name "z") `shouldBeRight` (tvar 1, variable 0)
 
       let ?env = insertValue (name "v") $ tvar 0
-      run (runError $ lookupValueByName $ name "x") `shouldBeRight` BaseType Char
-      run (runError $ lookupValueByName $ name "y") `shouldBeRight` tvar 1
-      run (runError $ lookupValueByName $ name "z") `shouldBeRight` tvar 1
-      run (runError $ lookupValueByName $ name "v") `shouldBeRight` tvar 0
+      run (runError $ lookupValueByName $ name "x") `shouldBeRight` (BaseType Char, variable 3)
+      run (runError $ lookupValueByName $ name "y") `shouldBeRight` (tvar 1, variable 2)
+      run (runError $ lookupValueByName $ name "z") `shouldBeRight` (tvar 1, variable 1)
+      run (runError $ lookupValueByName $ name "v") `shouldBeRight` (tvar 0, variable 0)
 
   describe "shift" $
     it "shifts type variables" $ do
