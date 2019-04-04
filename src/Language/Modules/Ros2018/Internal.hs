@@ -69,6 +69,7 @@ module Language.Modules.Ros2018.Internal
   , Evidence(..)
   ) where
 
+import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Data.Coerce
@@ -214,6 +215,16 @@ tvar = TVar . variable
 some :: [Kind] -> Type -> Type
 some ks ty = foldl (flip Some) ty ks
 
+tRecord :: Map.Map Label Type -> Type
+tRecord = TRecord . Record
+
+splitExQuantifiers :: Member (Error Failure) r => Int -> Type -> Eff r ([Kind], Type)
+splitExQuantifiers 0 ty          = return ([], ty)
+splitExQuantifiers n (Some k ty) = do
+  (ks, ty) <- splitExQuantifiers (n - 1) ty
+  return (k : ks, ty)
+splitExQuantifiers _ ty = throw $ NotSome ty
+
 data Literal
   = LBool Bool
   | LInt Int
@@ -313,7 +324,7 @@ data Env f ty = Env
   { tenv :: [f Kind]
   , venv :: [ty]
   , nmap :: Map.Map Name Int
-  , tempVenv :: [ty]
+  , tempVenv :: Map.Map Int ty
   }
 
 emptyEnv :: Env f ty
@@ -321,7 +332,7 @@ emptyEnv = Env
   { tenv = []
   , venv = []
   , nmap = mempty
-  , tempVenv = []
+  , tempVenv = mempty
   }
 
 class Annotated f where
@@ -368,6 +379,10 @@ insertType k = ?env
   , tempVenv = shift 1 $ tempVenv ?env
   }
 
+insertTypes :: (Shift ty, ?env :: Env f ty) => [f Kind] -> Env f ty
+insertTypes []       = ?env
+insertTypes (k : ks) = let ?env = insertType k in insertTypes ks
+
 insertValue :: (?env :: Env f ty) => Name -> ty -> Env f ty
 insertValue name ty = ?env
   { venv = ty : venv ?env
@@ -377,6 +392,16 @@ insertValue name ty = ?env
 insertValueWithoutName :: (?env :: Env f ty) => ty -> Env f ty
 insertValueWithoutName ty = ?env
   { venv = ty : venv ?env
+  }
+
+insertValuesWithoutName :: (?env :: Env f ty) => [ty] -> Env f ty
+insertValuesWithoutName tys = ?env
+  { venv = foldl (\xs ty -> ty : xs) (venv ?env) tys
+  }
+
+insertTempValue :: (?env :: Env f ty) => Generated -> ty -> Env f ty
+insertTempValue (Generated n) ty = ?env
+  { tempVenv = Map.insert n ty $ tempVenv ?env
   }
 
 lookupType :: (Member (Error Failure) r, ?env :: Env f ty) => Variable -> Eff r (f Kind)
@@ -398,9 +423,9 @@ lookupValue (Variable n) = do
 
 lookupTempValue :: (Member (Error Failure) r, ?env :: Env f ty) => Generated -> Eff r ty
 lookupTempValue (Generated n) = do
-  case tempVenv ?env of
-    xs | 0 <= n && n < length xs -> return $ xs !! n
-    _                            -> throw $ UnboundGeneratedVariable $ Generated n
+  case Map.lookup n $ tempVenv ?env of
+    Just ty -> return ty
+    Nothing -> throw $ UnboundGeneratedVariable $ Generated n
 
 data TypeEquivError
   = StructurallyInequivalent Type Type
@@ -554,12 +579,22 @@ whTypeOf x = reduce <$> typeOf x
 
 data TypeError
   = NotFunction Type
+  | NotRecord Type
+  | NotForall Type
+  | NotSome Type
   | TypeMismatch Type Type
+  | MissingLabel Label (Record Type)
+  | IllFormedPack [Type] [Kind]
   deriving (Eq, Show)
 
 instance Display TypeError where
   display (NotFunction ty)       = "not function type: " ++ display ty
+  display (NotRecord ty)         = "not record type: " ++ display ty
+  display (NotForall ty)         = "not universal type: " ++ display ty
+  display (NotSome ty)           = "not existential type: " ++ display ty
   display (TypeMismatch ty1 ty2) = "type mismatch: " ++ display ty1 ++ " and " ++ display ty2
+  display (MissingLabel l r)     = "missing label (" ++ display l ++ ") in " ++ display r
+  display (IllFormedPack tys ks) = "ill-formed 'pack': the number of witness types (" ++ show (length tys) ++ ") and that of existential quantifiers (" ++ show (length ks) ++ ")"
 
 instance SpecificError TypeError where
   evidence = EvidType
@@ -569,15 +604,76 @@ instance Typed Literal where
   typeOf (LInt _)  = return $ BaseType Int
   typeOf (LChar _) = return $ BaseType Char
 
+instance Typed a => Typed (Record a) where
+  typeOf (Record m) = tRecord <$> mapM typeOf m
+
+lookupRecord :: Member (Error Failure) r => Label -> Record Type -> Eff r Type
+lookupRecord l (Record m) = maybe (throw $ MissingLabel l $ Record m) return $ Map.lookup l m
+
 -- Invariant: `typeOf` always returns, if any, a type which has the base kind.
 instance Typed Term where
-  typeOf (Lit l)    = typeOf l
-  typeOf (Var v)    = lookupValue v
-  typeOf (GVar g)   = lookupTempValue g
-  typeOf (Abs ty t) = mustBeBase ty >> let ?env = insertValueWithoutName ty in (TFun ty) <$> typeOf t
+  typeOf (Lit l)     = typeOf l
+  typeOf (Var v)     = lookupValue v
+  typeOf (GVar g)    = lookupTempValue g
+  typeOf (Abs ty t)  = mustBeBase ty >> let ?env = insertValueWithoutName ty in (TFun ty) <$> typeOf t
   typeOf (App t1 t2) = do
     ty1 <- whTypeOf t1
     ty2 <- typeOf t2
     case ty1 of
       TFun ty11 ty12 -> equal ty11 ty2 Base $> ty12
       _              -> throw $ NotFunction ty1
+  typeOf (TmRecord r) = typeOf r
+  typeOf (Proj t l)   = do
+    ty <- whTypeOf t
+    case ty of
+      TRecord r -> lookupRecord l r
+      _         -> throw $ NotRecord ty
+  typeOf (Poly k t) = do
+    let ?env = insertType $ unannotated k
+    Forall k <$> typeOf t
+  typeOf (Inst t ty) = do
+    ty0 <- whTypeOf t
+    k <- kindOf ty
+    case ty0 of
+      Forall k0 ty0
+        | k0 == k   -> return $ substTop ty ty0
+        | otherwise -> throw $ KindMismatch_ k0 k
+      _ -> throw $ NotForall ty0
+  typeOf (Pack t tys ks1 ty1) = do
+    unless (length tys == length ks1) $
+      throw $ IllFormedPack tys ks1
+    ks2 <- mapM kindOf tys
+    mapM_ (uncurry equalKind) $ zip ks1 ks2
+    ty2 <- typeOf t
+    let ty = some ks1 ty1
+    mustBeBase ty
+    equal (applyShiftNeg tys ty1) ty2 Base
+    return ty
+  typeOf (Unpack mg t1 n t2) = do
+    ty <- whTypeOf t1
+    (ks, ty) <- splitExQuantifiers n ty
+    ty <-
+      let ?env = insertTypes $ map unannotated ks in
+      let ?env =
+            case mg of
+              Nothing -> insertValueWithoutName ty
+              Just g  -> insertTempValue g ty
+      in
+      shift (-n) <$> typeOf t2
+    mustBeBase ty
+    return ty
+  typeOf (Let ts t) = do
+    tys <- mapM typeOf ts
+    let ?env = insertValuesWithoutName tys
+    typeOf t
+
+equalKind :: Member (Error Failure) r => Kind -> Kind -> Eff r ()
+equalKind k1 k2
+  | k1 == k2  = return ()
+  | otherwise = throw $ KindMismatch_ k1 k2
+
+applyShiftNeg :: [Type] -> Type -> Type
+applyShiftNeg tys ty =
+  let n = length tys in
+  let s = Subst $ Map.fromList $ zip (map Variable [0..]) (map (shift n) tys) in
+    shift (-n) $ apply s ty

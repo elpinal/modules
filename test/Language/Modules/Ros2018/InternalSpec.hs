@@ -294,6 +294,35 @@ spec = do
       run (runError $ whTypeOf $ App (Abs (TAbs (KFun Base Base) int `TApp` TAbs Base (tvar 0)) $ var 0) $ Lit $ LInt 48)                 `shouldBeRight` int
       run (runError $ whTypeOf $ App (Abs (TAbs (KFun Base Base) (TApp (tvar 0) int) `TApp` TAbs Base (tvar 0)) $ var 0) $ Lit $ LInt 48) `shouldBeRight` int
 
+      run (runError $ whTypeOf $ TmRecord $ record [])                          `shouldBeRight` TRecord (record [])
+      run (runError $ whTypeOf $ TmRecord $ record [(label "a", Lit $ LInt 3)]) `shouldBeRight` TRecord (record [(label "a", int)])
+
+      run (runError $ whTypeOf $ Proj (TmRecord $ record [(label "a", Lit $ LInt 3)]) $ label "a") `shouldBeRight` int
+      run (runError $ whTypeOf $ Proj (TmRecord $ record [(label "a", Lit $ LInt 3)]) $ label "b") `shouldBeTypeError` MissingLabel (label "b") (record [(label "a", int)])
+
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [] [] char) `shouldBeRight` char
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [] [] int)  `shouldBeTypeEquivError` StructurallyInequivalent int char
+
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [char] [Base] char)                    `shouldBeRight` Some Base char
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [char] [Base] $ tvar 0)                `shouldBeRight` Some Base (tvar 0)
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [int] [Base] $ tvar 0)                 `shouldBeTypeEquivError` StructurallyInequivalent int char
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [char] [KFun Base Base] $ tvar 0)      `shouldBeKindError` KindMismatch_ (KFun Base Base) Base
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [TAbs Base int] [KFun Base Base] char) `shouldBeRight` Some (KFun Base Base) char
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [char, int] [Base, Base] $ tvar 0)     `shouldBeRight` Some Base (Some Base $ tvar 0)
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [int, char] [Base, Base] $ tvar 1)     `shouldBeRight` Some Base (Some Base $ tvar 1)
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [char, int] [Base, Base] $ tvar 1)     `shouldBeTypeEquivError` StructurallyInequivalent int char
+      run (runError $ whTypeOf $ Pack (Lit $ LChar 'v') [int, char] [Base, Base] $ tvar 0)     `shouldBeTypeEquivError` StructurallyInequivalent int char
+
+      run (runError $ whTypeOf $ Abs (Some Base int) $ Unpack Nothing (var 0) 0 $ var 0)      `shouldBeRight` TFun (Some Base int) (Some Base int)
+      run (runError $ whTypeOf $ Abs (Some Base int) $ Unpack Nothing (var 0) 1 $ var 0)      `shouldBeRight` TFun (Some Base int) int
+      run (runError $ whTypeOf $ Abs (Some Base $ tvar 0) $ Unpack Nothing (var 0) 0 $ var 0) `shouldBeRight` TFun (Some Base $ tvar 0) (Some Base $ tvar 0)
+      run (runError $ whTypeOf $ Abs (Some Base $ tvar 0) $ Unpack Nothing (var 0) 1 $ var 0) `shouldBeEnvError` UnboundTypeVariable (variable (-1))
+
+      run (runError $ whTypeOf $ Abs (Some Base $ tvar 0) $ Unpack Nothing (var 0) 2 $ var 0) `shouldBeTypeError` NotSome (tvar 0)
+      run (runError $ whTypeOf $ Abs (Some Base $ Some (KFun Base Base) $ tvar 0) $ Unpack Nothing (var 0) 2 $ var 0) `shouldBeKindError` NotBase (KFun Base Base)
+      run (runError $ whTypeOf $ Abs (Some Base $ Some (KFun Base Base) $ tvar 1) $ Unpack Nothing (var 0) 2 $ var 0) `shouldBeEnvError` UnboundTypeVariable (variable (-1))
+      run (runError $ whTypeOf $ Abs (Some Base $ Some (KFun Base Base) $ tvar 1) $ Unpack Nothing (var 0) 2 $ Lit $ LInt 7) `shouldBeRight` TFun (Some Base $ Some (KFun Base Base) $ tvar 1) int
+
 newtype Id a = Id a
 
 instance Annotated Id where

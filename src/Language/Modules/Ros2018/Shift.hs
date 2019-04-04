@@ -9,6 +9,7 @@ module Language.Modules.Ros2018.Shift
   , IndexedVariable(..)
   ) where
 
+import qualified Data.Map.Lazy as Map
 import GHC.Generics
 
 -- Shifts variables.
@@ -59,3 +60,6 @@ instance Shift IndexedVariable where
 
 instance Shift a => Shift [a] where
   shiftAbove c d xs = map (shiftAbove c d) xs
+
+instance Shift a => Shift (Map.Map k a) where
+  shiftAbove c d = fmap $ shiftAbove c d
