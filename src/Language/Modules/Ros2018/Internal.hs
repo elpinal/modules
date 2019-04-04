@@ -253,19 +253,19 @@ instance Display Term where
   displaysPrec n (Let ts t)          = showParen (4 <= n) $ showString "let " . displaySemi ts . showString " in " . displays t
 
 instance DisplayName Term where
-  displaysWithName _ (Lit l)       = displays l
-  displaysWithName _ (Var v)       = displayVariable $ getVariable v
-  displaysWithName _ t @ (GVar _)  = displays t
-  displaysWithName n (Abs ty t)    =
+  displaysWithName _ (Lit l)      = displays l
+  displaysWithName _ (Var v)      = displayVariable $ getVariable v
+  displaysWithName _ (GVar g)     = displays g
+  displaysWithName n (Abs ty t)   =
     let ?nctx = newValue in
       showParen (4 <= n) $ showChar 'λ' . displayVariable 0 . showString " : " . displaysWithName 0 ty . showString ". " . displaysWithName 0 t
-  displaysWithName n (App t1 t2)   = showParen (5 <= n) $ displaysWithName 4 t1 . showString " " . displaysWithName 5 t2
-  displaysWithName n (TmRecord r)  = displaysWithName n r
-  displaysWithName _ (Proj t l)    = displaysWithName 5 t . showChar '.' . displays l
-  displaysWithName n (Poly k t)    =
+  displaysWithName n (App t1 t2)  = showParen (5 <= n) $ displaysWithName 4 t1 . showString " " . displaysWithName 5 t2
+  displaysWithName n (TmRecord r) = displaysWithName n r
+  displaysWithName _ (Proj t l)   = displaysWithName 5 t . showChar '.' . displays l
+  displaysWithName n (Poly k t)   =
     let ?nctx = newType in
       showParen (4 <= n) $ showChar 'Λ' . displayTypeVariable 0 . showString " : " . displays k . showString ". " . displaysWithName 0 t
-  displaysWithName n (Inst t ty)   = showParen (5 <= n) $ displaysWithName 4 t . showString " [" . displaysWithName 0 ty . showChar ']'
+  displaysWithName n (Inst t ty)        = showParen (5 <= n) $ displaysWithName 4 t . showString " [" . displaysWithName 0 ty . showChar ']'
   displaysWithName n (Pack t tys ks ty) = showParen (2 <= n) $ showString "pack [" . displayTypesRevWithName tys . showString "; " . displaysWithName 0 t . showString "] as " . displaysWithName 0 (some ks ty)
   displaysWithName n (Unpack mg t1 m t2) =
     case mg of
@@ -274,8 +274,11 @@ instance DisplayName Term where
         let ?nctx = newValue in
         let ?nctx = newTypes m in
           showParen (4 <= n) $ showString "unpack [" . displayVariable 0 . showString ", " . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
-      -- TODO: Just g
-  displaysWithName n (Let ts t)         =
+      Just g ->
+        let f = displaysWithName 0 t1 in
+        let ?nctx = newTypes m in
+          showParen (4 <= n) $ showString "unpack [" . displays g . showString ", " . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
+  displaysWithName n (Let ts t) =
     let fs = displaySemiWithName ts in
     let ?nctx = newValues $ length ts in
     let f = displaysWithName 0 t in

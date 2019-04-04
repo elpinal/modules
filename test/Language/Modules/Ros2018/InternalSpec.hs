@@ -193,6 +193,11 @@ spec = do
       displayWithName (Unpack Nothing (var 2) 2 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0, t1..t2] = v[2] in λv3 : t2. v3"
       displayWithName (Unpack Nothing (Abs (tvar 0) $ var 0) 30 $ Abs (tvar 1) $ var 0) `shouldBe` "unpack [v0, t1..t30] = λv0 : v[0]. v0 in λv31 : t29. v31"
 
+      displayWithName (Unpack (Just $ generated 3) (var 2) 1 $ Abs (tvar 0) $ var 0) `shouldBe` "unpack [g3, t0] = v[2] in λv1 : t0. v1"
+      displayWithName (Unpack (Just $ generated 3) (var 2) 1 $ var 0)                `shouldBe` "unpack [g3, t0] = v[2] in v[0]"
+      displayWithName (Unpack (Just $ generated 3) (var 2) 1 $ gvar 4)               `shouldBe` "unpack [g3, t0] = v[2] in g4"
+      displayWithName (Unpack (Just $ generated 3) (var 2) 1 $ gvar 3)               `shouldBe` "unpack [g3, t0] = v[2] in g3"
+
   describe "reduce" $
     it "reduces a type to weak-head normal form" $ do
       reduce (BaseType Int) `shouldBe` BaseType Int
