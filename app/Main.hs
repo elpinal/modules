@@ -7,6 +7,17 @@ import qualified Data.Text.IO as TIO
 
 import Options.Applicative
 
+import Language.Modules.Ros2018.Parser
+import Language.Modules.Ros2018.Display
+
+data InterpretException
+  = SyntaxError SyntaxError
+
+instance Exception InterpretException
+
+instance Show InterpretException where
+  show (SyntaxError e) = "syntax error: " ++ display e
+
 main :: IO ()
 main = run
 
@@ -31,9 +42,14 @@ run = do
   cmd <- liftIO $ customExecParser (prefs showHelpOnEmpty) $ info (parser <**> helper) $ information
   interpret cmd
 
+instance Display Int where
+  display = show
+
 interpret :: (MonadIO m, MonadThrow m) => Command -> m ()
 interpret Command
   { filename = fp
   } = do
   txt <- liftIO $ TIO.readFile fp
-  liftIO $ TIO.putStrLn txt
+  case parseText fp txt of
+    Right n -> liftIO $ putStrLn $ display n
+    Left e -> throw $ SyntaxError e
