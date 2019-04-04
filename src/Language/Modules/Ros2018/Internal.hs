@@ -36,9 +36,16 @@ module Language.Modules.Ros2018.Internal
   -- * Kinding
   , Kinded(..)
 
+  -- * Typing
+  , Typed(..)
+  , whTypeOf
+
   -- * Type equivalence and reduction
   , equal
   , reduce
+
+  -- * Type substitution
+  , substTop
 
   -- * Environments
   , Env
@@ -55,6 +62,7 @@ module Language.Modules.Ros2018.Internal
   , EnvError(..)
   , TypeEquivError(..)
   , KindError(..)
+  , TypeError(..)
 
   -- * Failure
   , Failure(..)
@@ -326,6 +334,7 @@ data Evidence a where
   EvidEnv :: Evidence EnvError
   EvidTypeEquiv :: Evidence TypeEquivError
   EvidKind :: Evidence KindError
+  EvidType :: Evidence TypeError
 
 class Display a => SpecificError a where
   evidence :: Evidence a
@@ -339,13 +348,15 @@ throw = throwError . fromSpecific
 data EnvError
   = UnboundName Name
   | UnboundVariable Variable
+  | UnboundGeneratedVariable Generated
   | UnboundTypeVariable Variable
   deriving (Eq, Show)
 
 instance Display EnvError where
-  display (UnboundName name)      = "unbound name: " ++ display name
-  display (UnboundVariable v)     = "unbound variable: " ++ display v
-  display (UnboundTypeVariable v) = "unbound type variable: " ++ display v
+  display (UnboundName name)           = "unbound name: " ++ display name
+  display (UnboundVariable v)          = "unbound variable: " ++ display v
+  display (UnboundGeneratedVariable g) = "unbound generated variable: " ++ display g
+  display (UnboundTypeVariable v)      = "unbound type variable: " ++ display v
 
 instance SpecificError EnvError where
   evidence = EvidEnv
@@ -361,6 +372,11 @@ insertValue :: (?env :: Env f ty) => Name -> ty -> Env f ty
 insertValue name ty = ?env
   { venv = ty : venv ?env
   , nmap = Map.insert name (length (venv ?env) + 1) $ nmap ?env
+  }
+
+insertValueWithoutName :: (?env :: Env f ty) => ty -> Env f ty
+insertValueWithoutName ty = ?env
+  { venv = ty : venv ?env
   }
 
 lookupType :: (Member (Error Failure) r, ?env :: Env f ty) => Variable -> Eff r (f Kind)
@@ -379,6 +395,12 @@ lookupValue (Variable n) = do
   case venv ?env of
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundVariable $ Variable n
+
+lookupTempValue :: (Member (Error Failure) r, ?env :: Env f ty) => Generated -> Eff r ty
+lookupTempValue (Generated n) = do
+  case tempVenv ?env of
+    xs | 0 <= n && n < length xs -> return $ xs !! n
+    _                            -> throw $ UnboundGeneratedVariable $ Generated n
 
 data TypeEquivError
   = StructurallyInequivalent Type Type
@@ -440,7 +462,7 @@ reduce (TApp ty1 ty2) = reduce' (reduce ty1) ty2
 reduce ty             = ty
 
 reduce' :: Type -> Type -> Type
-reduce' (TAbs _ ty1) ty2 = substTop ty2 ty1
+reduce' (TAbs _ ty1) ty2 = reduce $ substTop ty2 ty1
 reduce' ty1 ty2          = TApp ty1 ty2
 
 newtype Subst = Subst (Map.Map Variable Type)
@@ -469,7 +491,7 @@ instance Substitution a => Substitution (Record a) where
   apply s (Record m) = Record $ apply s <$> m
 
 substTop :: Type -> Type -> Type
-substTop by ty = shift (-1) $ subst 0 ty $ shift 1 by
+substTop by = shift (-1) . subst 0 (shift 1 by)
 
 subst :: Int -> Type -> Type -> Type
 subst n by = apply $ Subst $ Map.singleton (Variable n) by
@@ -523,3 +545,39 @@ mustBeBase x = do
   case k of
     Base     -> return ()
     KFun _ _ -> throw $ NotBase k
+
+class Typed a where
+  typeOf :: (Annotated f, Member (Error Failure) r, ?env :: Env f Type) => a -> Eff r Type
+
+whTypeOf :: (Typed a, Annotated f, Member (Error Failure) r, ?env :: Env f Type) => a -> Eff r Type
+whTypeOf x = reduce <$> typeOf x
+
+data TypeError
+  = NotFunction Type
+  | TypeMismatch Type Type
+  deriving (Eq, Show)
+
+instance Display TypeError where
+  display (NotFunction ty)       = "not function type: " ++ display ty
+  display (TypeMismatch ty1 ty2) = "type mismatch: " ++ display ty1 ++ " and " ++ display ty2
+
+instance SpecificError TypeError where
+  evidence = EvidType
+
+instance Typed Literal where
+  typeOf (LBool _) = return $ BaseType Bool
+  typeOf (LInt _)  = return $ BaseType Int
+  typeOf (LChar _) = return $ BaseType Char
+
+-- Invariant: `typeOf` always returns, if any, a type which has the base kind.
+instance Typed Term where
+  typeOf (Lit l)    = typeOf l
+  typeOf (Var v)    = lookupValue v
+  typeOf (GVar g)   = lookupTempValue g
+  typeOf (Abs ty t) = mustBeBase ty >> let ?env = insertValueWithoutName ty in (TFun ty) <$> typeOf t
+  typeOf (App t1 t2) = do
+    ty1 <- whTypeOf t1
+    ty2 <- typeOf t2
+    case ty1 of
+      TFun ty11 ty12 -> equal ty11 ty2 Base $> ty12
+      _              -> throw $ NotFunction ty1

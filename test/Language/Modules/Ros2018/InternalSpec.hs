@@ -2,6 +2,8 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 module Language.Modules.Ros2018.InternalSpec where
 
 import Test.Hspec
@@ -22,6 +24,7 @@ shouldBeRight (Right x) expected         = x `shouldBe` expected
 mkShouldBeError ''EnvError 'EvidEnv
 mkShouldBeError ''TypeEquivError 'EvidTypeEquiv
 mkShouldBeError ''KindError 'EvidKind
+mkShouldBeError ''TypeError 'EvidType
 
 var :: Int -> Term
 var = Var . variable
@@ -31,6 +34,12 @@ gvar = GVar . generated
 
 let1 :: Term -> Term -> Term
 let1 t1 = Let [t1]
+
+int :: Type
+int = BaseType Int
+
+char :: Type
+char = BaseType Char
 
 spec :: Spec
 spec = do
@@ -198,18 +207,32 @@ spec = do
       displayWithName (Unpack (Just $ generated 3) (var 2) 1 $ gvar 4)               `shouldBe` "unpack [g3, t0] = v[2] in g4"
       displayWithName (Unpack (Just $ generated 3) (var 2) 1 $ gvar 3)               `shouldBe` "unpack [g3, t0] = v[2] in g3"
 
+  describe "substTop" $
+    it "beta reduction" $ do
+      substTop char int `shouldBe` int
+
   describe "reduce" $
     it "reduces a type to weak-head normal form" $ do
-      reduce (BaseType Int) `shouldBe` BaseType Int
-      reduce (tvar 0) `shouldBe` tvar 0
-      reduce (TAbs Base $ tvar 0) `shouldBe` TAbs Base (tvar 0)
+      reduce (BaseType Int)                       `shouldBe` BaseType Int
+      reduce (tvar 0)                             `shouldBe` tvar 0
+      reduce (TAbs Base $ tvar 0)                 `shouldBe` TAbs Base (tvar 0)
       reduce (TAbs Base (tvar 0) `TApp` tvar 333) `shouldBe` tvar 333
+      reduce (TAbs Base int `TApp` char)          `shouldBe` int
+      reduce (TAbs Base (tvar 0) `TApp` int)      `shouldBe` int
+
+      let ty = TAbs (KFun Base Base) (TApp (tvar 0) int) `TApp` TAbs Base (tvar 0)
+      reduce ty `shouldBe` int
 
   describe "equal" $
     it "tests type equivalence" $ do
       let ?env = emptyEnv :: Env Id Type
       run (runError $ equal (BaseType Int) (BaseType Int) Base)  `shouldBeRight` ()
       run (runError $ equal (BaseType Int) (BaseType Bool) Base) `shouldBeTypeEquivError` StructurallyInequivalent (BaseType Int) (BaseType Bool)
+
+      run (runError $ equal (TAbs Base int `TApp` char) int Base) `shouldBeRight` ()
+
+      let ty = TAbs (KFun Base Base) (TApp (tvar 0) int) `TApp` TAbs Base (tvar 0)
+      run (runError $ equal ty int Base) `shouldBeRight` ()
 
       let ?env = insertType $ Id $ KFun Base Base
       run (runError $ equal (tvar 0) (tvar 0) $ KFun Base Base) `shouldBeRight` ()
@@ -235,6 +258,41 @@ spec = do
       run (runError $ kindOf $ TApp (TAbs (KFun Base Base) $ BaseType Char) $ BaseType Int) `shouldBeKindError` KindMismatch_ (KFun Base Base) Base
       run (runError $ kindOf $ TApp (TAbs Base $ BaseType Char) $ TAbs Base $ tvar 0)       `shouldBeKindError` KindMismatch_ Base (KFun Base Base)
       run (runError $ kindOf $ TApp (BaseType Int) $ TAbs Base $ tvar 0)                    `shouldBeKindError` NotFunctionKind Base
+
+  describe "typeOf" $
+    it "obtains the type of a term" $ do
+      let ?env = emptyEnv :: Env Id Type
+      run (runError $ typeOf $ LChar 'w') `shouldBeRight` BaseType Char
+      run (runError $ typeOf $ var 0)     `shouldBeEnvError` UnboundVariable (variable 0)
+      run (runError $ typeOf $ gvar 0)    `shouldBeEnvError` UnboundGeneratedVariable (generated 0)
+
+      run (runError $ typeOf $ Abs int $ var 0)                 `shouldBeRight` TFun int int
+      run (runError $ typeOf $ Abs int $ gvar 0)                `shouldBeEnvError` UnboundGeneratedVariable (generated 0)
+      run (runError $ typeOf $ Abs (tvar 0) $ Lit $ LBool True) `shouldBeEnvError` UnboundTypeVariable (variable 0)
+      run (runError $ typeOf $ Abs (tvar 0) $ var 0)            `shouldBeEnvError` UnboundTypeVariable (variable 0)
+
+      run (runError $ typeOf $ Abs (TAbs Base $ tvar 0) $ var 0)             `shouldBeKindError` NotBase (KFun Base Base)
+      run (runError $ typeOf $ Abs (TAbs Base $ tvar 0) $ Lit $ LBool False) `shouldBeKindError` NotBase (KFun Base Base)
+
+      run (runError $ typeOf $ App (Lit $ LInt 3) $ Lit $ LChar 'x')    `shouldBeTypeError` NotFunction int
+      run (runError $ typeOf $ App (Abs int $ var 0) $ Lit $ LChar 'x') `shouldBeTypeEquivError` StructurallyInequivalent int char
+      run (runError $ typeOf $ App (Abs int $ var 0) $ Lit $ LInt 48)   `shouldBeRight` int
+
+      let ty = TAbs Base int `TApp` char
+      run (runError $ typeOf $ Abs (TAbs Base int `TApp` char) $ var 0)   `shouldBeRight` TFun ty ty
+      run (runError $ whTypeOf $ Abs (TAbs Base int `TApp` char) $ var 0) `shouldBeRight` TFun ty ty
+
+      let ty = TAbs (KFun Base Base) (TApp (tvar 0) int) `TApp` TAbs Base (tvar 0)
+      run (runError $ typeOf $ Abs ty $ var 0)   `shouldBeRight` TFun ty ty
+      run (runError $ whTypeOf $ Abs ty $ var 0) `shouldBeRight` TFun ty ty
+
+      run (runError $ whTypeOf $ App (Abs (TAbs Base (tvar 0) `TApp` int) $ var 0) $ Lit $ LInt 48)                                       `shouldBeRight` int
+      run (runError $ typeOf $ App (Abs (TAbs Base (tvar 1) `TApp` int) $ var 0) $ Lit $ LInt 48)                                         `shouldBeEnvError` UnboundTypeVariable (variable 1)
+      run (runError $ whTypeOf $ App (Abs (TAbs Base int `TApp` int) $ var 0) $ Lit $ LInt 48)                                            `shouldBeRight` int
+      run (runError $ whTypeOf $ App (Abs (TAbs Base int `TApp` char) $ var 0) $ Lit $ LInt 48)                                           `shouldBeRight` int
+      run (runError $ typeOf $ App (Abs (TAbs (KFun Base Base) int `TApp` char) $ var 0) $ Lit $ LInt 48)                                 `shouldBeKindError` KindMismatch_ (KFun Base Base) Base
+      run (runError $ whTypeOf $ App (Abs (TAbs (KFun Base Base) int `TApp` TAbs Base (tvar 0)) $ var 0) $ Lit $ LInt 48)                 `shouldBeRight` int
+      run (runError $ whTypeOf $ App (Abs (TAbs (KFun Base Base) (TApp (tvar 0) int) `TApp` TAbs Base (tvar 0)) $ var 0) $ Lit $ LInt 48) `shouldBeRight` int
 
 newtype Id a = Id a
 
