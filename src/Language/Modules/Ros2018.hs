@@ -97,9 +97,6 @@ newtype Quantified a = Quantified ([Positional IKind], a)
   deriving (Eq, Show)
   deriving Functor
 
-toQuantified :: a -> Quantified a
-toQuantified x = Quantified ([], x)
-
 class Quantification f where
   getKinds :: f a -> [IKind]
   qsLen :: f a -> Int
@@ -125,16 +122,10 @@ instance DisplayName a => DisplayName (Existential a) where
     let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] ks in
     showString "∃" . appEndo f . showString ". " . displaysWithName 0 x
 
-toExistential :: a -> Existential a
-toExistential = Existential . toQuantified
-
 newtype Universal a = Universal (Quantified a)
   deriving (Eq, Show)
   deriving Functor
   deriving Quantification
-
-toUniversal :: a -> Universal a
-toUniversal = Universal . toQuantified
 
 type AbstractType = Existential LargeType
 
@@ -178,10 +169,10 @@ instance Elaboration Expr where
 
   elaborate (Positional pos (Lit l)) = do
     b <- elaborate $ Positional pos l
-    return (I.Lit l, toExistential $ BaseType b, Pure) -- Literals are always pure.
+    return (I.Lit l, fromBody $ BaseType b, Pure) -- Literals are always pure.
   elaborate (Positional _ (Id id)) = do
     (lty, v) <- lookupValueByName $ coerce id
-    return (I.Var v, toExistential lty, Pure)
+    return (I.Var v, fromBody lty, Pure)
 
 instance Elaboration Binding where
   type Output Binding = (Term, AbstractType, Purity)
