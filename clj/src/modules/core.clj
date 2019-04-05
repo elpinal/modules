@@ -1000,6 +1000,14 @@
                                             ") of F-ing modules ("
                                             [:a {:href "https://github.com/elpinal/modules#f-ing-modules-1"}
                                              "Rossberg et al. 2014"]
+                                            "),"]
+                                           [:li
+                                            "[WIP] An interpreter ("
+                                            [:a {:href "https://github.com/elpinal/modules/blob/master/src/Language/Modules/Ros2018.hs"}
+                                             "Ros2018.hs"]
+                                            ") of 1ML" [:sub "ex"] "("
+                                            [:a {:href "https://github.com/elpinal/modules#1ml--core-and-modules-united"}
+                                             "Rossberg 2018"]
                                             "), and"]
                                            [:li "A bibliography of modules and type abstraction, which is given below."]])
                              "\n\n"
