@@ -24,6 +24,7 @@ module Language.Modules.Ros2018
   -- * Elaboration
   , Elaboration(..)
   , translate
+  , runElaborate
 
   -- * Errors
   , ElaborateError
@@ -186,6 +187,9 @@ instance ToType a => ToType (Record a) where
 
 translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e
+
+runElaborate :: Eff '[Fresh, Error ElaborateError, Error I.Failure] a -> Either I.Failure (Either ElaborateError a)
+runElaborate x = run $ runError $ runError $ evalFresh 0 x
 
 class Elaboration a where
   type Output a
