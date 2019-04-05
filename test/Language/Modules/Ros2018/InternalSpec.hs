@@ -190,10 +190,10 @@ spec = do
       displayWithName (Let [var 0, var 1] $ var 0)                      `shouldBe` "let v0 = v[0]; v1 = v[1] in v1"
       displayWithName (Let [var 0, var 1] $ Let [var 0, var 1] $ var 0) `shouldBe` "let v0 = v[0]; v1 = v[1] in let v2 = v1; v3 = v0 in v3"
 
-      displayWithName (Unpack Nothing (var 2) 0 $ var 0) `shouldBe` "unpack [v0, ] = v[2] in v0"
-      displayWithName (Unpack Nothing (var 2) 0 $ var 1) `shouldBe` "unpack [v0, ] = v[2] in v[1]"
+      displayWithName (Unpack Nothing (var 2) 0 $ var 0) `shouldBe` "unpack [v0] = v[2] in v0"
+      displayWithName (Unpack Nothing (var 2) 0 $ var 1) `shouldBe` "unpack [v0] = v[2] in v[1]"
 
-      displayWithName (Unpack Nothing (var 2) 0 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0, ] = v[2] in λv1 : v[0]. v1"
+      displayWithName (Unpack Nothing (var 2) 0 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0] = v[2] in λv1 : v[0]. v1"
       displayWithName (Unpack Nothing (var 2) 1 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0, t1] = v[2] in λv2 : t1. v2"
       displayWithName (Unpack Nothing (var 2) 2 $ Abs (tvar 0) $ var 0)                 `shouldBe` "unpack [v0, t1..t2] = v[2] in λv3 : t2. v3"
       displayWithName (Unpack Nothing (Abs (tvar 0) $ var 0) 30 $ Abs (tvar 1) $ var 0) `shouldBe` "unpack [v0, t1..t30] = λv0 : v[0]. v0 in λv31 : t29. v31"

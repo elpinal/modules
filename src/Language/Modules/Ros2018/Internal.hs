@@ -311,16 +311,17 @@ instance DisplayName Term where
   displaysWithName n (Inst t ty)        = showParen (5 <= n) $ displaysWithName 4 t . showString " [" . displaysWithName 0 ty . showChar ']'
   displaysWithName n (Pack t tys ks ty) = showParen (2 <= n) $ showString "pack [" . displayTypesRevWithName tys . showString "; " . displaysWithName 0 t . showString "] as " . displaysWithName 0 (some ks ty)
   displaysWithName n (Unpack mg t1 m t2) =
+    let sep = if m == 0 then id else showString ", " in
     case mg of
       Nothing ->
         let f = displaysWithName 0 t1 in
         let ?nctx = newValue in
         let ?nctx = newTypes m in
-          showParen (4 <= n) $ showString "unpack [" . displayVariable 0 . showString ", " . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
+          showParen (4 <= n) $ showString "unpack [" . displayVariable 0 . sep . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
       Just g ->
         let f = displaysWithName 0 t1 in
         let ?nctx = newTypes m in
-          showParen (4 <= n) $ showString "unpack [" . displays g . showString ", " . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
+          showParen (4 <= n) $ showString "unpack [" . displays g . sep . displayTypeVariables m . showString "] = " . f . showString " in " . displaysWithName 0 t2
   displaysWithName n (Let ts t) =
     let fs = displaySemiWithName ts in
     let ?nctx = newValues $ length ts in
