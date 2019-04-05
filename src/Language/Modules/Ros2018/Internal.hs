@@ -354,7 +354,8 @@ pack t tys ks ty
   | otherwise               = Pack t tys ks ty
 
 unpack :: Maybe Generated -> Term -> Int -> Term -> Term
-unpack = Unpack
+unpack Nothing t1 0 = Let [t1]
+unpack mg t1 n      = Unpack mg t1 n
 
 data Env f ty = Env
   { tenv :: [f Kind]
