@@ -9,6 +9,30 @@
 
 module Language.Modules.Ros2018
   (
+  -- * Objects
+    Ident
+  , ident
+
+  -- * Syntax
+  , Expr(..)
+  , Binding(..)
+
+  -- * Environments
+  , Env
+
+  -- * Elaboration
+  , Elaboration(..)
+
+  -- * Purity
+  , Purity(..)
+
+  -- * Semantic objects
+  , LargeType(..)
+
+  -- * Quantification
+  , Existential
+  , Universal
+  , Quantification(..)
   ) where
 
 import Control.Monad.Freer
@@ -27,6 +51,9 @@ type IKind = I.Kind
 
 newtype Ident = Ident Name
   deriving (Eq, Show)
+
+ident :: String -> Ident
+ident = Ident . name
 
 instance Display Ident where
   display (Ident name) = display name
@@ -59,12 +86,14 @@ class Quantification f where
   qsLen :: f a -> Int
   enumVars :: f a -> [Variable]
   getBody :: f a -> a
+  fromBody :: a -> f a
 
 instance Quantification Quantified where
   getKinds (Quantified (ks, _)) = map fromPositional ks
   qsLen (Quantified (ks, _)) = length ks
-  enumVars q = map variable [0..qsLen q]
+  enumVars q = map variable [0..qsLen q-1]
   getBody (Quantified (_, x)) = x
+  fromBody x = Quantified ([], x)
 
 newtype Existential a = Existential (Quantified a)
   deriving (Eq, Show)
@@ -126,4 +155,4 @@ instance Elaboration Binding where
   elaborate (Positional _ (Val id e)) = do
     (t, aty, p) <- elaborate e
     let l = I.toLabel $ coerce id
-    return (I.Unpack Nothing t (qsLen aty) $ I.Pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty, (\x -> Structure $ record [(l, x)]) <$> aty, p)
+    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty, (\x -> Structure $ record [(l, x)]) <$> aty, p)

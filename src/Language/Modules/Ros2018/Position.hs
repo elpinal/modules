@@ -3,6 +3,7 @@
 module Language.Modules.Ros2018.Position
   ( Position
   , position
+  , dummyPos
   , Positional(..)
   , positional
   , getPosition
@@ -24,6 +25,9 @@ instance Display Position where
 
 position :: SourcePos -> SourcePos -> Position
 position s e = Position s e
+
+dummyPos :: Position
+dummyPos = position (initialPos "") (initialPos "")
 
 data Positional a = Positional Position a
   deriving (Eq, Show, Functor)

@@ -34,6 +34,8 @@ module Language.Modules.Ros2018.Internal
   -- * Useful functions
   , tvar
   , var
+  , pack
+  , unpack
 
   -- * Kinding
   , Kinded(..)
@@ -328,6 +330,15 @@ displayTypesRevWithName = appEndo . getDual . mconcat . coerce . intersperse (sh
 
 var :: Int -> Term
 var = Var . variable
+
+pack :: Term -> [Type] -> [Kind] -> Type -> Term
+pack t [] []   _ = t
+pack t tys ks ty
+  | length tys /= length ks = error "pack: ill-formed expression"
+  | otherwise               = Pack t tys ks ty
+
+unpack :: Maybe Generated -> Term -> Int -> Term -> Term
+unpack = Unpack
 
 data Env f ty = Env
   { tenv :: [f Kind]
