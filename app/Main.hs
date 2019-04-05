@@ -7,6 +7,7 @@ import qualified Data.Text.IO as TIO
 
 import Options.Applicative
 
+import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Parser
 import Language.Modules.Ros2018.Display
 
@@ -55,3 +56,11 @@ interpret Command
   when p $ do
     liftIO $ putStrLn $ display b
     exit ()
+  case translate b of
+    Right (t, aty, p) -> liftIO $ do
+      putStrLn "Term:"
+      putStrLn $ display $ WithName t
+      putStrLn "Semantic type:"
+      putStrLn $ display $ WithName aty
+      putStrLn "Purity:"
+      putStrLn $ display p

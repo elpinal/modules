@@ -22,6 +22,7 @@ module Language.Modules.Ros2018
 
   -- * Elaboration
   , Elaboration(..)
+  , translate
 
   -- * Purity
   , Purity(..)
@@ -35,10 +36,12 @@ module Language.Modules.Ros2018
   , Quantification(..)
   ) where
 
-import Control.Monad.Freer
+import Control.Monad.Freer hiding (translate)
 import Control.Monad.Freer.Error
 import Data.Coerce
 import Data.Functor.Identity
+import Data.List
+import Data.Monoid
 import qualified Data.Text as T
 
 import Language.Modules.Ros2018.Display
@@ -82,6 +85,10 @@ data LargeType
   | Structure (Record LargeType)
   deriving (Eq, Show)
 
+instance DisplayName LargeType where
+  displaysWithName _ (BaseType b)  = displays b
+  displaysWithName _ (Structure r) = displaysWithName 0 r
+
 newtype Quantified a = Quantified ([Positional IKind], a)
   deriving (Eq, Show)
   deriving Functor
@@ -108,6 +115,12 @@ newtype Existential a = Existential (Quantified a)
   deriving Functor
   deriving Quantification
 
+instance DisplayName a => DisplayName (Existential a) where
+  displaysWithName _ (Existential (Quantified (ks, x))) =
+    let ?nctx = newTypes $ length ks in
+    let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] ks in
+    showString "∃" . appEndo f . showString ". " . displaysWithName 0 x
+
 toExistential :: a -> Existential a
 toExistential = Existential . toQuantified
 
@@ -126,12 +139,19 @@ data Purity
   | Impure
   deriving (Eq, Show)
 
+instance Display Purity where
+  display Pure   = "pure"
+  display Impure = "impure"
+
 class ToType a where
   toType :: a -> IType
 
 instance ToType LargeType where
   toType (BaseType b)  = I.BaseType b
   toType (Structure r) = I.TRecord $ toType <$> r
+
+translate :: Positional Binding -> Either I.Failure (Term, AbstractType, Purity)
+translate b = run $ runError $ let ?env = I.emptyEnv in elaborate b
 
 class Elaboration a where
   type Output a

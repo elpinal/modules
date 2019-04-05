@@ -5,6 +5,7 @@ module Language.Modules.Ros2018.Display
   , displays
   , DisplayName(..)
   , displayWithName
+  , WithName(..)
   , NameContext
   , nameContext
   , newType
@@ -29,11 +30,16 @@ displays = displaysPrec 0
 instance Display Char where
   display ch = [ch]
 
-class Display a => DisplayName a where
+class DisplayName a where
   displaysWithName :: (?nctx :: NameContext) => Int -> a -> ShowS
 
 displayWithName :: (DisplayName a, ?nctx :: NameContext) => a -> String
 displayWithName x = displaysWithName 0 x ""
+
+newtype WithName a = WithName a
+
+instance DisplayName a => Display (WithName a) where
+  displaysPrec n (WithName x) = let ?nctx = nameContext in displaysWithName n x
 
 data NameContext = NameContext
   { tnameCtx :: [String]
