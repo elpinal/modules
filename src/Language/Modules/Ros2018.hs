@@ -16,6 +16,7 @@ import Data.Functor.Identity
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Term, Literal(..), BaseType, Name, lookupValueByName)
+import Language.Modules.Ros2018.Position
 
 type IType = I.Type
 
@@ -26,7 +27,7 @@ instance Display Ident where
   display (Ident name) = display name
 
 data Binding
-  = Val Ident Expr
+  = Val Ident (Positional Expr)
   deriving (Eq, Show)
 
 data Expr
