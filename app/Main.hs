@@ -42,14 +42,11 @@ run = do
   cmd <- liftIO $ customExecParser (prefs showHelpOnEmpty) $ info (parser <**> helper) $ information
   interpret cmd
 
-instance Display Int where
-  display = show
-
 interpret :: (MonadIO m, MonadThrow m) => Command -> m ()
 interpret Command
   { filename = fp
   } = do
   txt <- liftIO $ TIO.readFile fp
   case parseText fp txt of
-    Right n -> liftIO $ putStrLn $ display n
+    Right l -> liftIO $ putStrLn $ display l
     Left e -> throw $ SyntaxError e

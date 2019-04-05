@@ -14,7 +14,10 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char as C
 import qualified Text.Megaparsec.Char.Lexer as L
 
+import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
+import Language.Modules.Ros2018.Internal (Literal(..))
+import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Position
 
 newtype SyntaxError = SyntaxError (ParseErrorBundle T.Text Void)
@@ -23,7 +26,7 @@ newtype SyntaxError = SyntaxError (ParseErrorBundle T.Text Void)
 instance Display SyntaxError where
   display (SyntaxError eb) = errorBundlePretty eb
 
-parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Int)
+parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Literal)
 parseText fp xs = coerce $ parse whileParser fp xs
 
 type Parser = Parsec Void T.Text
@@ -55,6 +58,16 @@ bool :: Parser (Positional Bool)
 bool = flip positional True <$> reserved "true"
    <|> flip positional False <$> reserved "false"
 
+character :: Parser (Positional Char)
+character = lexeme $ between (char '\'') (char '\'') anySingle
+
+literal :: Parser (Positional Literal)
+literal = foldl (<|>) empty
+  [ fmap LInt <$> integer
+  , fmap LBool <$> bool
+  , fmap LChar <$> character
+  ]
+
 -- Reserved words, that is, keywords.
 reserved :: T.Text -> Parser Position
 reserved w = fmap getPosition $ lexeme $ try $ string w *> notFollowedBy alphaNumChar
@@ -74,5 +87,5 @@ identifier = lexeme $ try $ p >>= check
         then fail $ "keyword " ++ show x ++ " is not an identifier"
         else return x
 
-whileParser :: Parser (Positional Int)
-whileParser = between sc eof integer
+whileParser :: Parser (Positional Literal)
+whileParser = between sc eof literal
