@@ -26,7 +26,7 @@ instance Show InterpretException where
   show (TranslateError (Failure e _ f))         = "elaboration error: " ++ f e
   show (ElaborateError e)                       = "elaboration error: " ++ display e
   show (InternalTypeError (Failure e _ f))      = "[bug(unsound)] internal type error: " ++ f e
-  show (TypeChangeError aty ty (Failure e _ f)) = "[bug(unsound)] type has been changed during elaboration: expected " ++ display (WithName aty) ++ "but got " ++ display (WithName ty) ++ ": " ++ f e
+  show (TypeChangeError aty ty (Failure e _ f)) = "[bug(unsound)] type has been changed during elaboration: expected " ++ display (WithName aty) ++ ", but got " ++ display (WithName ty) ++ ": " ++ f e
 
 orThrow :: (MonadThrow m, Exception x) => (e -> x) -> Either e a -> m a
 orThrow f = either (throw . f) return
