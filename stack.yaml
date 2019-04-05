@@ -66,4 +66,4 @@ packages:
 # compiler-check: newer-minor
 
 ghc-options:
-  "$locals": -Wall -Werror=overflowed-literals -Wno-simplifiable-class-constraints
+  "$locals": -Wall -Werror=overflowed-literals -Wno-simplifiable-class-constraints -Wno-name-shadowing

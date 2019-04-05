@@ -5,8 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 module Language.Modules.Ros2018.Internal
   (
   -- * Objects

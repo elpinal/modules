@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 module Language.Modules.RRD2014Spec where
 
 import Test.Hspec

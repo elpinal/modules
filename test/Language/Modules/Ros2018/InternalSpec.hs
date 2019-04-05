@@ -3,8 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 module Language.Modules.Ros2018.InternalSpec where
 
 import Test.Hspec
