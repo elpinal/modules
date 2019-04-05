@@ -1,8 +1,8 @@
 module Main where
 
 import Control.Exception.Safe
-import Control.Monad.IO.Class
-import qualified Data.Text as T
+import Control.Monad
+import Control.Monad.Cont
 import qualified Data.Text.IO as TIO
 
 import Options.Applicative
@@ -17,6 +17,9 @@ instance Exception InterpretException
 
 instance Show InterpretException where
   show (SyntaxError e) = "syntax error: " ++ display e
+
+orThrow :: (MonadThrow m, Exception x) => (e -> x) -> Either e a -> m a
+orThrow f = either (throw . f) return
 
 main :: IO ()
 main = run
@@ -40,13 +43,15 @@ parser = Command <$>
 run :: (MonadIO m, MonadThrow m) => m ()
 run = do
   cmd <- liftIO $ customExecParser (prefs showHelpOnEmpty) $ info (parser <**> helper) $ information
-  interpret cmd
+  runContT (interpret cmd) return
 
-interpret :: (MonadIO m, MonadThrow m) => Command -> m ()
+interpret :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
 interpret Command
   { filename = fp
-  } = do
+  , parse = p
+  } = callCC $ \exit -> do
   txt <- liftIO $ TIO.readFile fp
-  case parseText fp txt of
-    Right b -> liftIO $ putStrLn $ display b
-    Left e -> throw $ SyntaxError e
+  b <- orThrow SyntaxError $ parseText fp txt
+  when p $ do
+    liftIO $ putStrLn $ display b
+    exit ()
