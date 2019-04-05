@@ -226,7 +226,7 @@ instance Elaboration Expr where
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls
   where
-    f = foldl (\(m', n') l -> (Map.insertWith const l (var n') m', n' + 1))
+    f = foldr (\l (m', n') -> (Map.insertWith const l (var n') m', n' + 1))
 
 joinBindings :: Member Fresh r => Term -> (Term, Int, [I.Label]) -> Eff r Term
 joinBindings acc (t, n, ls) = do
