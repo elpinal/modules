@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
@@ -50,21 +51,24 @@ class Elaboration a where
   type Output a
   type Effs a :: [* -> *]
 
-  elaborate :: (Members (Effs a) r, ?env :: Env) => a -> Eff r (Output a)
+  elaborate :: (Members (Effs a) r, ?env :: Env) => Positional a -> Eff r (Output a)
 
 instance Elaboration Literal where
   type Output Literal = BaseType
   type Effs Literal = '[]
 
-  elaborate = return . I.typeOfLiteral
+  elaborate = return . I.typeOfLiteral . fromPositional
+
+pattern WoPos :: a -> Positional a
+pattern WoPos x <- Positional _ x
 
 instance Elaboration Expr where
   type Output Expr = (Term, LargeType, Purity)
   type Effs Expr = '[Error I.Failure]
 
-  elaborate (Lit l) = do
-    b <- elaborate l
+  elaborate (Positional pos (Lit l)) = do
+    b <- elaborate $ Positional pos l
     return (I.Lit l, BaseType b, Pure) -- Literals are always pure.
-  elaborate (Id id) = do
+  elaborate (WoPos (Id id)) = do
     (lty, v) <- lookupValueByName $ coerce id
     return (I.Var v, lty, Pure)

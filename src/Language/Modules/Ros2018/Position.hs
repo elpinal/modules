@@ -3,9 +3,10 @@
 module Language.Modules.Ros2018.Position
   ( Position
   , position
-  , Positional
+  , Positional(..)
   , positional
   , getPosition
+  , fromPositional
   ) where
 
 import Text.Megaparsec.Pos
@@ -35,3 +36,6 @@ positional pos x = Positional pos x
 
 getPosition :: Positional a -> Position
 getPosition (Positional pos _) = pos
+
+fromPositional :: Positional a -> a
+fromPositional (Positional _ x) = x
