@@ -68,6 +68,10 @@ data Expr
   | Id Ident
   deriving (Eq, Show)
 
+instance Display Expr where
+  display (Lit l) = display l
+  display (Id id) = display id
+
 type Env = I.Env Identity LargeType
 
 data LargeType

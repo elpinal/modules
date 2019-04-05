@@ -48,5 +48,5 @@ interpret Command
   } = do
   txt <- liftIO $ TIO.readFile fp
   case parseText fp txt of
-    Right l -> liftIO $ putStrLn $ display l
+    Right e -> liftIO $ putStrLn $ display e
     Left e -> throw $ SyntaxError e

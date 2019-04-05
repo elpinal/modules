@@ -26,7 +26,7 @@ newtype SyntaxError = SyntaxError (ParseErrorBundle T.Text Void)
 instance Display SyntaxError where
   display (SyntaxError eb) = errorBundlePretty eb
 
-parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Literal)
+parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Expr)
 parseText fp xs = coerce $ parse whileParser fp xs
 
 type Parser = Parsec Void T.Text
@@ -78,14 +78,20 @@ reservedWords =
   , "false"
   ]
 
-identifier :: Parser (Positional T.Text)
+identifier :: Parser (Positional Ident)
 identifier = lexeme $ try $ p >>= check
   where
     p = fmap T.pack $ (:) <$> letterChar <*> many alphaNumChar
     check x =
       if x `elem` reservedWords
         then fail $ "keyword " ++ show x ++ " is not an identifier"
-        else return x
+        else return $ ident x
 
-whileParser :: Parser (Positional Literal)
-whileParser = between sc eof literal
+expression :: Parser (Positional Expr)
+expression = foldl (<|>) empty
+  [ fmap Lit <$> literal
+  , fmap Id <$> identifier
+  ]
+
+whileParser :: Parser (Positional Expr)
+whileParser = between sc eof expression
