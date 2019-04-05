@@ -15,6 +15,7 @@ import Language.Modules.Ros2018.Display
 data InterpretException
   = SyntaxError SyntaxError
   | TranslateError Failure
+  | ElaborateError ElaborateError
   | InternalTypeError Failure
   | TypeChangeError AbstractType Type Failure
 
@@ -23,6 +24,7 @@ instance Exception InterpretException
 instance Show InterpretException where
   show (SyntaxError e)                          = "syntax error: " ++ display e
   show (TranslateError (Failure e _ f))         = "elaboration error: " ++ f e
+  show (ElaborateError e)                       = "elaboration error: " ++ display e
   show (InternalTypeError (Failure e _ f))      = "[bug(unsound)] internal type error: " ++ f e
   show (TypeChangeError aty ty (Failure e _ f)) = "[bug(unsound)] type has been changed during elaboration: expected " ++ display (WithName aty) ++ "but got " ++ display (WithName ty) ++ ": " ++ f e
 
@@ -68,7 +70,7 @@ interpret Command
     liftIO $ putStrLn $ display e
     exit ()
 
-  (t, aty, p) <- orThrow TranslateError $ translate e
+  (t, aty, p) <- orThrow TranslateError (translate e) >>= orThrow ElaborateError
   when switchE $ do
     liftIO $ do
       putStrLn "Term:"

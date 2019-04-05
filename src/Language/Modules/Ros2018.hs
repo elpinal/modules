@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -24,6 +25,9 @@ module Language.Modules.Ros2018
   , Elaboration(..)
   , translate
 
+  -- * Errors
+  , ElaborateError
+
   -- * Purity
   , Purity(..)
 
@@ -42,17 +46,21 @@ module Language.Modules.Ros2018
 
 import Control.Monad.Freer hiding (translate)
 import Control.Monad.Freer.Error
+import Control.Monad.Freer.Fresh
 import Data.Coerce
-import Data.Functor.Identity
+import Data.Foldable
 import Data.List
+import qualified Data.Map.Lazy as Map
 import Data.Monoid
 import qualified Data.Text as T
+import GHC.Generics
 
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..))
 import Language.Modules.Ros2018.Internal (Term)
 import Language.Modules.Ros2018.Position
+import Language.Modules.Ros2018.Shift
 
 type IType = I.Type
 type IKind = I.Kind
@@ -84,16 +92,30 @@ instance Display Expr where
   displaysPrec _ (Id id)     = displays id
   displaysPrec _ (Struct bs) = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
 
-type Env = I.Env Identity LargeType
+type Env = I.Env Positional LargeType
+
+data ElaborateError
+  = NotStructure LargeType
+  deriving (Eq, Show)
+
+instance Display ElaborateError where
+  display (NotStructure lty) = "not structure type: " ++ display (WithName lty)
 
 data LargeType
   = BaseType BaseType
   | Structure (Record LargeType)
   deriving (Eq, Show)
+  deriving Generic
+
+instance Shift LargeType
 
 instance DisplayName LargeType where
   displaysWithName _ (BaseType b)  = displays b
   displaysWithName _ (Structure r) = displaysWithName 0 r
+
+getStructure :: Member (Error ElaborateError) r => LargeType -> Eff r (Record LargeType)
+getStructure (Structure r) = return r
+getStructure lty           = throwError $ NotStructure lty
 
 newtype Quantified a = Quantified ([Positional IKind], a)
   deriving (Eq, Show)
@@ -101,17 +123,21 @@ newtype Quantified a = Quantified ([Positional IKind], a)
 
 class Quantification f where
   getKinds :: f a -> [IKind]
+  getAnnotatedKinds :: f a -> [Positional IKind]
   qsLen :: f a -> Int
   enumVars :: f a -> [Variable]
   getBody :: f a -> a
   fromBody :: a -> f a
+  quantify :: [Positional IKind] -> a -> f a
 
 instance Quantification Quantified where
   getKinds (Quantified (ks, _)) = map fromPositional ks
+  getAnnotatedKinds (Quantified (ks, _)) = ks
   qsLen (Quantified (ks, _)) = length ks
   enumVars q = map variable [0..qsLen q-1]
   getBody (Quantified (_, x)) = x
   fromBody x = Quantified ([], x)
+  quantify ks x = Quantified (ks, x)
 
 newtype Existential a = Existential (Quantified a)
   deriving (Eq, Show)
@@ -143,15 +169,23 @@ instance Display Purity where
   display Pure   = "pure"
   display Impure = "impure"
 
+-- Join.
+instance Semigroup Purity where
+  Pure <> Pure = Pure
+  _ <> _       = Impure
+
 class ToType a where
   toType :: a -> IType
 
 instance ToType LargeType where
   toType (BaseType b)  = I.BaseType b
-  toType (Structure r) = I.TRecord $ toType <$> r
+  toType (Structure r) = toType r
 
-translate :: Positional Expr -> Either I.Failure (Term, AbstractType, Purity)
-translate e = run $ runError $ let ?env = I.emptyEnv in elaborate e
+instance ToType a => ToType (Record a) where
+  toType r = I.TRecord $ toType <$> r
+
+translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
+translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e
 
 class Elaboration a where
   type Output a
@@ -167,7 +201,7 @@ instance Elaboration Literal where
 
 instance Elaboration Expr where
   type Output Expr = (Term, AbstractType, Purity)
-  type Effs Expr = '[Error I.Failure]
+  type Effs Expr = '[Error I.Failure, Error ElaborateError, Fresh]
 
   elaborate (Positional pos (Lit l)) = do
     b <- elaborate $ Positional pos l
@@ -176,11 +210,42 @@ instance Elaboration Expr where
     (lty, v) <- lookupValueByName $ coerce id
     return (I.Var v, fromBody lty, Pure)
   elaborate (Positional _ (Struct bs)) = do
-    undefined
+    (_, aty, zs, p) <- foldlM elaborateBindings (?env, fromBody mempty, [], Pure) bs
+    let lls = map (\(_, _, ls) -> ls) zs
+    let t = I.TmRecord $ Record $ buildRecord lls
+    let t1 = I.pack t (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty
+    t <- foldlM joinBindings t1 zs
+    return (t, Structure <$> aty, p)
+
+buildRecord :: [[I.Label]] -> Map.Map I.Label Term
+buildRecord lls = fst $ foldl f (mempty, 0) lls
+  where
+    f = foldl (\(m', n') l -> (Map.insertWith const l (var n') m', n' + 1))
+
+joinBindings :: Member Fresh r => Term -> (Term, Int, [I.Label]) -> Eff r Term
+joinBindings acc (t, n, ls) = do
+  g <- I.generated <$> fresh
+  return $ I.unpack (Just g) t n $ I.Let (map (I.Proj $ I.GVar g) ls) acc
+
+type Acc = (Env, Existential (Record LargeType), [(Term, Int, [I.Label])], Purity)
+
+elaborateBindings :: (Members (Effs Expr) r, ?env :: Env) => Acc -> Positional Binding -> Eff r Acc
+elaborateBindings (env, whole_aty, zs, p0) b = do
+  let ?env = env
+  (t, aty, p) <- elaborate b
+  let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty
+  r <- getStructure $ getBody aty
+  let ?env = foldl (\env (l, lty) -> let ?env = env in insertValue (toName l) lty) ?env $ I.toList r
+  return (?env, merge whole_aty $ quantify (getAnnotatedKinds aty) r, (t, qsLen aty, I.labels r) : zs, p0 <> p)
+
+merge :: Existential (Record LargeType) -> Existential (Record LargeType) -> Existential (Record LargeType)
+merge aty1 aty2 =
+  let ty1 = shift (qsLen aty2) $ getBody aty1 in
+  quantify (getAnnotatedKinds aty2 ++ getAnnotatedKinds aty1) $ getBody aty2 <> ty1
 
 instance Elaboration Binding where
   type Output Binding = (Term, AbstractType, Purity)
-  type Effs Binding = '[Error I.Failure]
+  type Effs Binding = '[Error I.Failure, Error ElaborateError, Fresh]
 
   elaborate (Positional _ (Val id e)) = do
     (t, aty, p) <- elaborate e

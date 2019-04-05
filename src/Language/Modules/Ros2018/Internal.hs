@@ -14,13 +14,16 @@ module Language.Modules.Ros2018.Internal
   , generated
   , Name
   , name
+  , toName
   , Label
   , label
   , toLabel
 
   -- * Records
-  , Record
+  , Record(..)
   , record
+  , toList
+  , labels
 
   -- * Syntax
   , Kind(..)
@@ -57,6 +60,7 @@ module Language.Modules.Ros2018.Internal
   , Env
   , emptyEnv
   , insertType
+  , insertTypes
   , insertValue
   , lookupType
   , lookupValueByName
@@ -100,6 +104,9 @@ label = coerce
 instance Display Label where
   display (Label s) = T.unpack s
 
+toName :: Label -> Name
+toName = coerce
+
 newtype Variable = Variable { getVariable :: Int }
   deriving (Eq, Ord, Show)
   deriving Shift via IndexedVariable
@@ -134,6 +141,7 @@ instance Display Name where
 newtype Record a = Record { getRecord :: Map.Map Label a }
   deriving (Eq, Show)
   deriving Functor
+  deriving (Semigroup, Monoid) -- Left-associative
 
 instance Display a => Display (Record a) where
   displaysPrec _ (Record m) =
@@ -152,6 +160,12 @@ instance Shift a => Shift (Record a) where
 
 record :: [(Label, a)] -> Record a
 record = Record . Map.fromList
+
+toList :: Record a -> [(Label, a)]
+toList (Record m) = Map.toList m
+
+labels :: Record a -> [Label]
+labels (Record m) = Map.keys m
 
 data Kind
   = Base
