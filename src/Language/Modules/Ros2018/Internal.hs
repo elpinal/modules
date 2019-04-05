@@ -84,19 +84,20 @@ import qualified Data.Map.Lazy as Map
 import Data.Maybe
 import Data.Map.Merge.Lazy
 import Data.Monoid
+import qualified Data.Text as T
 import GHC.Generics
 
 import Language.Modules.Ros2018.Display
 import Language.Modules.Ros2018.Shift
 
-newtype Label = Label String
+newtype Label = Label T.Text
   deriving (Eq, Ord, Show)
 
-label :: String -> Label
+label :: T.Text -> Label
 label = coerce
 
 instance Display Label where
-  display (Label s) = s
+  display (Label s) = T.unpack s
 
 newtype Variable = Variable { getVariable :: Int }
   deriving (Eq, Ord, Show)
@@ -117,17 +118,17 @@ instance Display Generated where
 generated :: Int -> Generated
 generated = coerce
 
-newtype Name = Name String
+newtype Name = Name T.Text
   deriving (Eq, Ord, Show)
 
-name :: String -> Name
+name :: T.Text -> Name
 name = coerce
 
 toLabel :: Name -> Label
 toLabel = coerce
 
 instance Display Name where
-  display (Name s) = s
+  display (Name s) = T.unpack s
 
 newtype Record a = Record { getRecord :: Map.Map Label a }
   deriving (Eq, Show)

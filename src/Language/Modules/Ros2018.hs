@@ -39,6 +39,7 @@ import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Data.Coerce
 import Data.Functor.Identity
+import qualified Data.Text as T
 
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Internal as I
@@ -52,7 +53,7 @@ type IKind = I.Kind
 newtype Ident = Ident Name
   deriving (Eq, Show)
 
-ident :: String -> Ident
+ident :: T.Text -> Ident
 ident = Ident . name
 
 instance Display Ident where
