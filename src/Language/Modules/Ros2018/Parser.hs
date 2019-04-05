@@ -26,7 +26,7 @@ newtype SyntaxError = SyntaxError (ParseErrorBundle T.Text Void)
 instance Display SyntaxError where
   display (SyntaxError eb) = errorBundlePretty eb
 
-parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Expr)
+parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Binding)
 parseText fp xs = coerce $ parse whileParser fp xs
 
 type Parser = Parsec Void T.Text
@@ -93,5 +93,10 @@ expression = foldl (<|>) empty
   , fmap Id <$> identifier
   ]
 
-whileParser :: Parser (Positional Expr)
-whileParser = between sc eof expression
+binding :: Parser (Positional Binding)
+binding = foldl (<|>) empty
+  [ (\id e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) e) <$> identifier <*> (symbol "=" >> expression)
+  ]
+
+whileParser :: Parser (Positional Binding)
+whileParser = between sc eof binding

@@ -63,6 +63,9 @@ data Binding
   = Val Ident (Positional Expr)
   deriving (Eq, Show)
 
+instance Display Binding where
+  display (Val id e) = display id ++ " = " ++ display (fromPositional e)
+
 data Expr
   = Lit Literal
   | Id Ident

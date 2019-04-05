@@ -4,6 +4,7 @@ module Language.Modules.Ros2018.Position
   ( Position
   , position
   , dummyPos
+  , connect
   , Positional(..)
   , positional
   , getPosition
@@ -28,6 +29,12 @@ position s e = Position s e
 
 dummyPos :: Position
 dummyPos = position (initialPos "") (initialPos "")
+
+connect :: Position -> Position -> Position
+connect p1 p2 = Position
+  { start = start p1
+  , end = end p2
+  }
 
 data Positional a = Positional Position a
   deriving (Eq, Show, Functor)
