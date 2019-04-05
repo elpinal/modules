@@ -26,7 +26,7 @@ newtype SyntaxError = SyntaxError (ParseErrorBundle T.Text Void)
 instance Display SyntaxError where
   display (SyntaxError eb) = errorBundlePretty eb
 
-parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Binding)
+parseText :: FilePath -> T.Text -> Either SyntaxError (Positional Expr)
 parseText fp xs = coerce $ parse whileParser fp xs
 
 type Parser = Parsec Void T.Text
@@ -76,6 +76,8 @@ reservedWords :: [T.Text]
 reservedWords =
   [ "true"
   , "false"
+  , "struct"
+  , "end"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -87,10 +89,21 @@ identifier = lexeme $ try $ p >>= check
         then fail $ "keyword " ++ show x ++ " is not an identifier"
         else return $ ident x
 
+bindings :: Parser [Positional Binding]
+bindings = binding `sepEndBy` symbol ";"
+
+structure :: Parser (Positional Expr)
+structure = do
+  start <- reserved "struct"
+  bs <- bindings
+  end <- reserved "end"
+  return $ positional (connect start end) $ Struct bs
+
 expression :: Parser (Positional Expr)
 expression = foldl (<|>) empty
   [ fmap Lit <$> literal
   , fmap Id <$> identifier
+  , structure
   ]
 
 binding :: Parser (Positional Binding)
@@ -98,5 +111,16 @@ binding = foldl (<|>) empty
   [ (\id e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) e) <$> identifier <*> (symbol "=" >> expression)
   ]
 
-whileParser :: Parser (Positional Binding)
-whileParser = between sc eof binding
+whileParser :: Parser (Positional Expr)
+whileParser = between sc eof $ f <$> bindings
+  where
+    f :: [Positional Binding] -> Positional Expr
+    f []       = positional dummyPos $ Struct []
+    f (b : bs) =
+      let start = getPosition b in
+      let end = lastPosition b bs in
+        positional (connect start end) $ Struct $ b : bs
+
+lastPosition :: Positional a -> [Positional b] -> Position
+lastPosition x [] = getPosition x
+lastPosition _ xs = getPosition $ last xs

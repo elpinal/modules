@@ -76,11 +76,13 @@ instance Display Binding where
 data Expr
   = Lit Literal
   | Id Ident
+  | Struct [Positional Binding]
   deriving (Eq, Show)
 
 instance Display Expr where
-  display (Lit l) = display l
-  display (Id id) = display id
+  displaysPrec _ (Lit l)     = displays l
+  displaysPrec _ (Id id)     = displays id
+  displaysPrec _ (Struct bs) = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
 
 type Env = I.Env Identity LargeType
 
@@ -148,8 +150,8 @@ instance ToType LargeType where
   toType (BaseType b)  = I.BaseType b
   toType (Structure r) = I.TRecord $ toType <$> r
 
-translate :: Positional Binding -> Either I.Failure (Term, AbstractType, Purity)
-translate b = run $ runError $ let ?env = I.emptyEnv in elaborate b
+translate :: Positional Expr -> Either I.Failure (Term, AbstractType, Purity)
+translate e = run $ runError $ let ?env = I.emptyEnv in elaborate e
 
 class Elaboration a where
   type Output a
@@ -173,6 +175,8 @@ instance Elaboration Expr where
   elaborate (Positional _ (Id id)) = do
     (lty, v) <- lookupValueByName $ coerce id
     return (I.Var v, fromBody lty, Pure)
+  elaborate (Positional _ (Struct bs)) = do
+    undefined
 
 instance Elaboration Binding where
   type Output Binding = (Term, AbstractType, Purity)

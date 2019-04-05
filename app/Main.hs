@@ -58,18 +58,18 @@ run = do
 interpret :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
 interpret Command
   { filename = fp
-  , parse = p
-  , elab = e
+  , parse = switchP
+  , elab = switchE
   } = callCC $ \exit -> do
   txt <- liftIO $ TIO.readFile fp
 
-  b <- orThrow SyntaxError $ parseText fp txt
-  when p $ do
-    liftIO $ putStrLn $ display b
+  e <- orThrow SyntaxError $ parseText fp txt
+  when switchP $ do
+    liftIO $ putStrLn $ display e
     exit ()
 
-  (t, aty, p) <- orThrow TranslateError $ translate b
-  when e $ do
+  (t, aty, p) <- orThrow TranslateError $ translate e
+  when switchE $ do
     liftIO $ do
       putStrLn "Term:"
       putStrLn $ display $ WithName t
