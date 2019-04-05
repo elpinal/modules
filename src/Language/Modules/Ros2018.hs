@@ -20,6 +20,7 @@ import Language.Modules.Ros2018.Internal (Term, Literal(..), BaseType, Name, loo
 import Language.Modules.Ros2018.Position
 
 type IType = I.Type
+type IKind = I.Kind
 
 newtype Ident = Ident Name
   deriving (Eq, Show)
@@ -41,6 +42,17 @@ type Env = I.Env Identity LargeType
 data LargeType
   = BaseType BaseType
   deriving (Eq, Show)
+
+newtype Quantified a = Quantified ([Positional IKind], a)
+  deriving (Eq, Show)
+
+newtype Existential a = Existential (Quantified a)
+  deriving (Eq, Show)
+
+newtype Universal a = Universal (Quantified a)
+  deriving (Eq, Show)
+
+type AbstractType = Existential LargeType
 
 data Purity
   = Pure
