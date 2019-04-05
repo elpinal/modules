@@ -33,6 +33,7 @@ module Language.Modules.Ros2018.Internal
 
   -- * Useful functions
   , tvar
+  , some
   , var
   , pack
   , unpack
@@ -44,9 +45,11 @@ module Language.Modules.Ros2018.Internal
   , Typed(..)
   , whTypeOf
   , typeOfLiteral
+  , typecheck
 
   -- * Type equivalence and reduction
   , equal
+  , equalType
   , reduce
 
   -- * Type substitution
@@ -466,6 +469,10 @@ instance Display TypeEquivError where
 instance SpecificError TypeEquivError where
   evidence = EvidTypeEquiv
 
+-- Assumes input types have the base kind.
+equalType :: Type -> Type -> Either Failure ()
+equalType ty1 ty2 = run $ runError $ let ?env = emptyEnv :: Env Id Type in equal ty1 ty2 Base
+
 -- Assumes well-kindness of input types.
 equal :: (Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => Type -> Type -> Kind -> Eff r ()
 equal ty1 ty2 Base         = void $ strEquiv (reduce ty1) (reduce ty2)
@@ -596,6 +603,15 @@ mustBeBase x = do
 
 class Typed a where
   typeOf :: (Annotated f, Member (Error Failure) r, ?env :: Env f Type) => a -> Eff r Type
+
+newtype Id a = Id a
+
+instance Annotated Id where
+  extract (Id x) = x
+  unannotated = Id
+
+typecheck :: Term -> Either Failure Type
+typecheck t = run $ runError $ let ?env = emptyEnv :: Env Id Type in whTypeOf t
 
 whTypeOf :: (Typed a, Annotated f, Member (Error Failure) r, ?env :: Env f Type) => a -> Eff r Type
 whTypeOf x = reduce <$> typeOf x

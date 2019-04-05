@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
@@ -29,6 +31,10 @@ module Language.Modules.Ros2018
 
   -- * Semantic objects
   , LargeType(..)
+  , AbstractType
+
+  -- * Embedding to internal objects
+  , ToType(..)
 
   -- * Quantification
   , Existential
@@ -133,6 +139,9 @@ toUniversal :: a -> Universal a
 toUniversal = Universal . toQuantified
 
 type AbstractType = Existential LargeType
+
+instance ToType AbstractType where
+  toType (Existential (Quantified (ks, lty))) = I.some (map fromPositional ks) $ toType lty
 
 data Purity
   = Pure
