@@ -78,6 +78,7 @@ reservedWords =
   , "false"
   , "struct"
   , "end"
+  , "include"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -109,6 +110,7 @@ expression = foldl (<|>) empty
 binding :: Parser (Positional Binding)
 binding = foldl (<|>) empty
   [ (\id e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) e) <$> identifier <*> (symbol "=" >> expression)
+  , (\pos e -> positional pos $ Include e) <$> reserved "include" <*> expression
   ]
 
 whileParser :: Parser (Positional Expr)

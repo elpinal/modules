@@ -77,10 +77,12 @@ instance Display Ident where
 
 data Binding
   = Val Ident (Positional Expr)
+  | Include (Positional Expr)
   deriving (Eq, Show)
 
 instance Display Binding where
-  display (Val id e) = display id ++ " = " ++ display (fromPositional e)
+  displaysPrec _ (Val id e)  = displays id . showString " = " . displays (fromPositional e)
+  displaysPrec _ (Include e) = showString "include " . displaysPrec 5 (fromPositional e)
 
 data Expr
   = Lit Literal
@@ -238,7 +240,7 @@ elaborateBindings (env, whole_aty, zs, p0) b = do
   let ?env = env
   (t, aty, p) <- elaborate b
   let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty
-  r <- getStructure $ getBody aty
+  let r = getBody aty
   let ?env = foldl (\env (l, lty) -> let ?env = env in insertValue (toName l) lty) ?env $ I.toList r
   return (?env, merge whole_aty $ quantify (getAnnotatedKinds aty) r, (t, qsLen aty, I.labels r) : zs, p0 <> p)
 
@@ -248,10 +250,15 @@ merge aty1 aty2 =
   quantify (getAnnotatedKinds aty2 ++ getAnnotatedKinds aty1) $ getBody aty2 <> ty1
 
 instance Elaboration Binding where
-  type Output Binding = (Term, AbstractType, Purity)
+  type Output Binding = (Term, Existential (Record LargeType), Purity)
   type Effs Binding = '[Error I.Failure, Error ElaborateError, Fresh]
 
   elaborate (Positional _ (Val id e)) = do
     (t, aty, p) <- elaborate e
     let l = I.toLabel $ coerce id
-    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty, (\x -> Structure $ record [(l, x)]) <$> aty, p)
+    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty, (\x -> record [(l, x)]) <$> aty, p)
+
+  elaborate (Positional _ (Include e)) = do
+    (t, aty, p) <- elaborate e
+    r <- getStructure $ getBody aty
+    return (t, quantify (getAnnotatedKinds aty) r, p)
