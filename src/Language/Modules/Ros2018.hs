@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
@@ -46,11 +45,20 @@ data LargeType
 newtype Quantified a = Quantified ([Positional IKind], a)
   deriving (Eq, Show)
 
+toQuantified :: a -> Quantified a
+toQuantified x = Quantified ([], x)
+
 newtype Existential a = Existential (Quantified a)
   deriving (Eq, Show)
 
+toExistential :: a -> Existential a
+toExistential = Existential . toQuantified
+
 newtype Universal a = Universal (Quantified a)
   deriving (Eq, Show)
+
+toUniversal :: a -> Universal a
+toUniversal = Universal . toQuantified
 
 type AbstractType = Existential LargeType
 
@@ -71,16 +79,13 @@ instance Elaboration Literal where
 
   elaborate = return . I.typeOfLiteral . fromPositional
 
-pattern WoPos :: a -> Positional a
-pattern WoPos x <- Positional _ x
-
 instance Elaboration Expr where
-  type Output Expr = (Term, LargeType, Purity)
+  type Output Expr = (Term, AbstractType, Purity)
   type Effs Expr = '[Error I.Failure]
 
   elaborate (Positional pos (Lit l)) = do
     b <- elaborate $ Positional pos l
-    return (I.Lit l, BaseType b, Pure) -- Literals are always pure.
-  elaborate (WoPos (Id id)) = do
+    return (I.Lit l, toExistential $ BaseType b, Pure) -- Literals are always pure.
+  elaborate (Positional _ (Id id)) = do
     (lty, v) <- lookupValueByName $ coerce id
-    return (I.Var v, lty, Pure)
+    return (I.Var v, toExistential lty, Pure)
