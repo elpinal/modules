@@ -26,9 +26,6 @@ mkShouldBeError ''TypeEquivError 'EvidTypeEquiv
 mkShouldBeError ''KindError 'EvidKind
 mkShouldBeError ''TypeError 'EvidType
 
-var :: Int -> Term
-var = Var . variable
-
 gvar :: Int -> Term
 gvar = GVar . generated
 

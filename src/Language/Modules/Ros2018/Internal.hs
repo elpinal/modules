@@ -18,6 +18,7 @@ module Language.Modules.Ros2018.Internal
   , name
   , Label
   , label
+  , toLabel
 
   -- * Records
   , Record
@@ -32,6 +33,7 @@ module Language.Modules.Ros2018.Internal
 
   -- * Useful functions
   , tvar
+  , var
 
   -- * Kinding
   , Kinded(..)
@@ -118,6 +120,9 @@ newtype Name = Name String
 
 name :: String -> Name
 name = coerce
+
+toLabel :: Name -> Label
+toLabel = coerce
 
 instance Display Name where
   display (Name s) = s
@@ -320,6 +325,9 @@ displayTypesRev = appEndo . getDual . mconcat . coerce . intersperse (showString
 
 displayTypesRevWithName :: (?nctx :: NameContext) => [Type] -> ShowS
 displayTypesRevWithName = appEndo . getDual . mconcat . coerce . intersperse (showString ", ") . map (displaysWithName 0)
+
+var :: Int -> Term
+var = Var . variable
 
 data Env f ty = Env
   { tenv :: [f Kind]
