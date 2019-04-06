@@ -98,12 +98,14 @@ data Expr
   = Lit Literal
   | Id Ident
   | Struct [Positional Binding]
+  | Type (Positional Type)
   deriving (Eq, Show)
 
 instance Display Expr where
   displaysPrec _ (Lit l)     = displays l
   displaysPrec _ (Id id)     = displays id
   displaysPrec _ (Struct bs) = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
+  displaysPrec n (Type ty)   = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
 
 type Env = I.Env Positional LargeType
 
@@ -185,7 +187,7 @@ newtype Existential a = Existential (Quantified a)
 instance DisplayName a => DisplayName (Existential a) where
   displaysWithName _ (Existential (Quantified (ks, x))) =
     let ?nctx = newTypes $ length ks in
-    let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] ks in
+    let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays (fromPositional k)) $ zip [0..] ks in
     showString "∃" . appEndo f . showString ". " . displaysWithName 0 x
 
 newtype Universal a = Universal (Quantified a)
@@ -224,6 +226,9 @@ instance ToType LargeType where
 
 instance ToType a => ToType (Record a) where
   toType r = I.TRecord $ toType <$> r
+
+toTerm :: AbstractType -> Term
+toTerm aty = I.Abs (toType aty) $ I.TmRecord $ record []
 
 translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e
@@ -267,6 +272,9 @@ instance Elaboration Expr where
     let t1 = I.pack t (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty
     t <- foldlM joinBindings t1 zs
     return (t, Structure <$> aty, p)
+  elaborate (Positional _ (Type ty)) = do
+    aty <- elaborate ty
+    return (toTerm aty, fromBody $ AbstractType aty, Pure)
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls

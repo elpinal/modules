@@ -122,6 +122,7 @@ expression = foldl (<|>) empty
   [ fmap Lit <$> literal
   , fmap Id <$> identifier
   , structure
+  , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser
   ]
 
 binding :: Parser (Positional Binding)
