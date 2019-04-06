@@ -3,9 +3,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.Modules.Ros2018
@@ -34,7 +36,11 @@ module Language.Modules.Ros2018
   , Purity(..)
 
   -- * Semantic objects
-  , LargeType(..)
+  , SemanticType(..)
+  , Small
+  , Large
+  , SmallType
+  , LargeType
   , AbstractType
 
   -- * Embedding to internal objects
@@ -131,15 +137,29 @@ instance ToType Path where
 fromVariable :: Variable -> Path
 fromVariable v = Path v
 
-data LargeType
-  = BaseType BaseType
-  | Structure (Record LargeType)
-  | AbstractType AbstractType
-  | SemanticPath Path
-  deriving (Eq, Show)
-  deriving Generic
+data SemanticType a where
+  BaseType :: BaseType -> SemanticType a
+  Structure :: Record LargeType -> SemanticType a
+  AbstractType :: (Size a) -> SemanticType a
+  SemanticPath :: Path -> SemanticType a
 
+data Large
+data Small
+
+type LargeType = SemanticType Large
+type SmallType = SemanticType Small
+
+type family Size a = r | r -> a where
+  Size Large = AbstractType
+  Size Small = SmallType
+
+deriving instance Eq LargeType
+deriving instance Eq SmallType
+deriving instance Show LargeType
+deriving instance Show SmallType
+deriving instance Generic (SemanticType a)
 instance Shift LargeType
+instance Shift SmallType
 
 instance DisplayName LargeType where
   displaysWithName _ (BaseType b)       = displays b

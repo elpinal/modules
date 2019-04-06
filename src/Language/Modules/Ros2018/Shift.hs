@@ -25,6 +25,9 @@ class Shift a where
 class GShift f where
   gShiftAbove :: Int -> Int -> f a -> f a
 
+instance GShift V1 where
+  gShiftAbove _ _ _ = undefined
+
 instance GShift U1 where
   gShiftAbove _ _ U1 = U1
 
