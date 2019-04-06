@@ -9,6 +9,7 @@ import Data.Coerce
 import qualified Data.Text as T
 import Data.Void
 
+import Control.Monad.Combinators.Expr
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char as C
@@ -76,9 +77,20 @@ baseType = foldl (<|>) empty
   ]
 
 typeParser :: Parser (Positional Type)
-typeParser = foldl (<|>) empty
+typeParser = makeExprParser typeAtom typeOpTable
+
+typeAtom :: Parser (Positional Type)
+typeAtom = foldl (<|>) empty
   [ fmap Base <$> baseType
   , (`positional` TypeType) <$> reserved "type"
+  , parens typeParser
+  ]
+
+typeOpTable :: [[Operator Parser (Positional Type)]]
+typeOpTable =
+  [ [ InfixR $ (\ty1 ty2 -> connecting ty1 ty2 $ arrowP Nothing ty1 ty2) <$ symbol "->"
+    , InfixR $ (\ty1 ty2 -> connecting ty1 ty2 $ arrowI Nothing ty1 ty2) <$ symbol "~>"
+    ]
   ]
 
 -- Reserved words, that is, keywords.

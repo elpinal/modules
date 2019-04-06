@@ -66,3 +66,9 @@ instance Shift a => Shift [a] where
 
 instance Shift a => Shift (Map.Map k a) where
   shiftAbove c d = fmap $ shiftAbove c d
+
+instance (Shift a, Shift b) => Shift (a, b) where
+  shiftAbove c d (x, y) = (shiftAbove c d x, shiftAbove c d y)
+
+instance (Shift a, Shift b, Shift c) => Shift (a, b, c) where
+  shiftAbove c d (x, y, z) = (shiftAbove c d x, shiftAbove c d y, shiftAbove c d z)

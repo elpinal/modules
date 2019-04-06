@@ -35,6 +35,7 @@ module Language.Modules.Ros2018.Internal
   -- * Useful functions
   , tvar
   , some
+  , forall
   , var
   , pack
   , unpack
@@ -238,6 +239,9 @@ tvar = TVar . variable
 
 some :: [Kind] -> Type -> Type
 some ks ty = foldl (flip Some) ty ks
+
+forall :: [Kind] -> Type -> Type
+forall ks ty = foldl (flip Forall) ty ks
 
 tRecord :: Map.Map Label Type -> Type
 tRecord = TRecord . Record

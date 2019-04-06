@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -21,6 +22,10 @@ module Language.Modules.Ros2018
   , Type(..)
   , Expr(..)
   , Binding(..)
+
+  -- * Useful functions
+  , arrowP
+  , arrowI
 
   -- * Environments
   , Env
@@ -86,11 +91,30 @@ instance Display Ident where
 data Type
   = Base BaseType
   | TypeType
+  | Arrow (Maybe Ident) (Positional Type) Purity (Positional Type)
   deriving (Eq, Show)
 
 instance Display Type where
-  displaysPrec _ (Base b) = displays b
-  displaysPrec _ TypeType = showString "type"
+  displaysPrec _ (Base b)              = displays b
+  displaysPrec _ TypeType              = showString "type"
+  displaysPrec n (Arrow mid ty1 p ty2) =
+    let arr = displayArrow p
+        dom ty1 =
+          case mid of
+            Nothing -> displaysPrec 4 ty1
+            Just id -> showParen True $ displays id . showString " : " . displays ty1
+    in
+    showParen (4 <= n) $ dom (fromPositional ty1) . showChar ' ' . showString arr . showChar ' ' . displaysPrec 3 (fromPositional ty2)
+
+displayArrow :: Purity -> String
+displayArrow Pure   = "->"
+displayArrow Impure = "~>"
+
+arrowP :: Maybe Ident -> Positional Type -> Positional Type -> Type
+arrowP mid ty1 ty2 = Arrow mid ty1 Pure ty2
+
+arrowI :: Maybe Ident -> Positional Type -> Positional Type -> Type
+arrowI mid ty1 ty2 = Arrow mid ty1 Impure ty2
 
 data Binding
   = Val Ident (Positional Expr)
@@ -143,6 +167,7 @@ data SemanticType a where
   Structure :: Record LargeType -> SemanticType a
   AbstractType :: Size a -> SemanticType a
   SemanticPath :: Path -> SemanticType a
+  Function :: F a -> SemanticType a
 
 data Large
 data Small
@@ -153,6 +178,10 @@ type SmallType = SemanticType Small
 type family Size a = r | r -> a where
   Size Large = AbstractType
   Size Small = SmallType
+
+type family F a = r | r -> a where
+  F Large = Universal (LargeType, Purity, AbstractType)
+  F Small = (SmallType, SmallType)
 
 deriving instance Eq LargeType
 deriving instance Eq SmallType
@@ -167,6 +196,10 @@ instance DisplayName LargeType where
   displaysWithName _ (Structure r)      = displaysWithName 0 r
   displaysWithName _ (AbstractType aty) = showString "[= " . displaysWithName 0 aty . showString "]"
   displaysWithName n (SemanticPath p)   = displaysWithName n p
+  displaysWithName n (Function u)       =
+    let ?nctx = newTypes $ qsLen u in
+    let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] $ getKinds u in
+    showParen (4 <= n) $ (\(ty, p, aty) -> showChar '∀' . appEndo f . showString ". " . displaysWithName 4 ty . showString (" " ++ displayArrow p ++ " ") . displaysWithName 3 aty) $ getBody u
 
 getStructure :: Member (Error ElaborateError) r => LargeType -> Eff r (Record LargeType)
 getStructure (Structure r) = return r
@@ -184,7 +217,7 @@ class Quantification f where
   getBody :: f a -> a
   fromBody :: a -> f a
   quantify :: [Positional IKind] -> a -> f a
-  qmap :: (a -> a) -> f a -> f a
+  qmap :: (a -> b) -> f a -> f b
 
 instance Quantification Quantified where
   getKinds (Quantified (ks, _)) = map fromPositional ks
@@ -217,15 +250,22 @@ newtype Universal a = Universal (Quantified a)
   deriving Quantification
   deriving Shift
 
+toUniversal :: Existential a -> Universal a
+toUniversal = coerce
+
 type AbstractType = Existential LargeType
 
 instance ToType AbstractType where
   toType (Existential (Quantified (ks, lty))) = I.some (map fromPositional ks) $ toType lty
 
+instance ToType a => ToType (Universal a) where
+  toType u = I.forall (getKinds u) $ toType $ getBody u
+
 data Purity
   = Pure
   | Impure
   deriving (Eq, Show)
+  deriving Shift via Fixed Purity
 
 instance Display Purity where
   display Pure   = "pure"
@@ -239,14 +279,21 @@ instance Semigroup Purity where
 class ToType a where
   toType :: a -> IType
 
-instance ToType (Size a) => ToType (SemanticType a) where
+instance (ToType (F a), ToType (Size a)) => ToType (SemanticType a) where
   toType (BaseType b)       = I.BaseType b
   toType (Structure r)      = toType r
   toType (AbstractType aty) = toType aty `I.TFun` I.TRecord (record [])
   toType (SemanticPath p)   = toType p
+  toType (Function f)       = toType f
 
 instance ToType a => ToType (Record a) where
   toType r = I.TRecord $ toType <$> r
+
+instance ToType (SmallType, SmallType) where
+  toType (ty1, ty2) = toType ty1 `I.TFun` toType ty2
+
+instance ToType (LargeType, Purity, AbstractType) where
+  toType (ty, _, aty) = toType ty `I.TFun` toType aty
 
 toTerm :: AbstractType -> Term
 toTerm aty = I.Abs (toType aty) $ I.TmRecord $ record []
@@ -263,12 +310,30 @@ class Elaboration a where
 
   elaborate :: (Members (Effs a) r, ?env :: Env) => Positional a -> Eff r (Output a)
 
+freshName :: Member Fresh r => Eff r Name
+freshName = do
+  n <- fresh
+  return $ name $ "?d" <> T.pack (show n)
+
 instance Elaboration Type where
   type Output Type = AbstractType
   type Effs Type = '[Error I.Failure, Error ElaborateError, Fresh]
 
   elaborate (Positional _ (Base b)) = return $ fromBody $ BaseType b
   elaborate (Positional p TypeType) = return $ quantify [positional p I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0
+  elaborate (Positional _ (Arrow mid ty1 p ty2)) = do
+    name <- case mid of
+      Nothing -> freshName
+      Just id -> return $ coerce id
+    aty1 <- elaborate ty1
+    let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty1
+    let ?env = insertValue name $ getBody aty1
+    aty2 <- elaborate ty2
+    case p of
+      Impure -> do
+        let f ty = (ty, Impure, aty2)
+        return $ fromBody $ Function $ qmap f $ toUniversal aty1
+      Pure -> error "not yet implented: pure function type"
 
 instance Elaboration Literal where
   type Output Literal = BaseType

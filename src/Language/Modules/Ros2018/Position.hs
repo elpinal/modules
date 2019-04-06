@@ -9,6 +9,7 @@ module Language.Modules.Ros2018.Position
   , positional
   , getPosition
   , fromPositional
+  , connecting
   ) where
 
 import Text.Megaparsec.Pos
@@ -50,3 +51,6 @@ getPosition (Positional pos _) = pos
 
 fromPositional :: Positional a -> a
 fromPositional (Positional _ x) = x
+
+connecting :: Positional a -> Positional b -> c -> Positional c
+connecting (Positional p1 _) (Positional p2 _) = positional $ connect p1 p2
