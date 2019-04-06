@@ -56,3 +56,14 @@ tests:
     dependencies:
     - modules
     - hspec >= 2.5.5
+  integration:
+    main:                Main.hs
+    source-dirs:         test/integration
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - modules
+    - hspec >= 2.5.5
+    - raw-strings-qq >= 1.1
