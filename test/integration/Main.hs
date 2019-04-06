@@ -48,9 +48,17 @@ spec = do
         integration "a = 1; b = a; b = 'w'"                                                  `shouldBeRight` ()
         integration "M = struct end; include M"                                              `shouldBeRight` ()
         integration "x = true; y = false; M1 = struct x = x; y = x; z = 'c' end; include M1" `shouldBeRight` ()
-        integration "1"                                                                      `shouldThrow` anyException
-        integration "x = t"                                                                  `shouldThrow` anyException
-        integration "x = 1;;"                                                                `shouldThrow` anyException
+        integration "t = type int"                                                           `shouldBeRight` ()
+        integration "t = type char"                                                          `shouldBeRight` ()
+        integration "t = type bool"                                                          `shouldBeRight` ()
+        integration "t = type type"                                                          `shouldBeRight` ()
+        integration "t = type type; u = t; t = type int"                                     `shouldBeRight` ()
+
+        integration "1"        `shouldThrow` anyException
+        integration "x = t"    `shouldThrow` anyException
+        integration "x = 1;;"  `shouldThrow` anyException
+        integration "i = int"  `shouldThrow` anyException
+        integration "g = type" `shouldThrow` anyException
 
         integration [r|
           a = 1;
