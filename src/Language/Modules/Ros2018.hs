@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
@@ -81,6 +81,10 @@ data Type
   | TypeType
   deriving (Eq, Show)
 
+instance Display Type where
+  displaysPrec _ (Base b) = displays b
+  displaysPrec _ TypeType = showString "type"
+
 data Binding
   = Val Ident (Positional Expr)
   | Include (Positional Expr)
@@ -110,17 +114,36 @@ data ElaborateError
 instance Display ElaborateError where
   display (NotStructure lty) = "not structure type: " ++ display (WithName lty)
 
+data Path = Path Variable -- and list of small types
+  deriving (Eq, Show)
+  deriving Generic
+
+instance Shift Path
+
+instance DisplayName Path where
+  displaysWithName _ (Path v) = displays v
+
+instance ToType Path where
+  toType (Path v) = I.TVar v
+
+fromVariable :: Variable -> Path
+fromVariable v = Path v
+
 data LargeType
   = BaseType BaseType
   | Structure (Record LargeType)
+  | AbstractType AbstractType
+  | SemanticPath Path
   deriving (Eq, Show)
   deriving Generic
 
 instance Shift LargeType
 
 instance DisplayName LargeType where
-  displaysWithName _ (BaseType b)  = displays b
-  displaysWithName _ (Structure r) = displaysWithName 0 r
+  displaysWithName _ (BaseType b)       = displays b
+  displaysWithName _ (Structure r)      = displaysWithName 0 r
+  displaysWithName _ (AbstractType aty) = showString "[= " . displaysWithName 0 aty . showString "]"
+  displaysWithName n (SemanticPath p)   = displaysWithName n p
 
 getStructure :: Member (Error ElaborateError) r => LargeType -> Eff r (Record LargeType)
 getStructure (Structure r) = return r
@@ -138,6 +161,7 @@ class Quantification f where
   getBody :: f a -> a
   fromBody :: a -> f a
   quantify :: [Positional IKind] -> a -> f a
+  qmap :: (a -> a) -> f a -> f a
 
 instance Quantification Quantified where
   getKinds (Quantified (ks, _)) = map fromPositional ks
@@ -147,11 +171,16 @@ instance Quantification Quantified where
   getBody (Quantified (_, x)) = x
   fromBody x = Quantified ([], x)
   quantify ks x = Quantified (ks, x)
+  qmap f q = quantify (getAnnotatedKinds q) $ f $ getBody q
+
+instance Shift a => Shift (Quantified a) where
+  shiftAbove c d q = qmap (shiftAbove (c + qsLen q) d) q
 
 newtype Existential a = Existential (Quantified a)
   deriving (Eq, Show)
   deriving Functor
   deriving Quantification
+  deriving Shift
 
 instance DisplayName a => DisplayName (Existential a) where
   displaysWithName _ (Existential (Quantified (ks, x))) =
@@ -163,6 +192,7 @@ newtype Universal a = Universal (Quantified a)
   deriving (Eq, Show)
   deriving Functor
   deriving Quantification
+  deriving Shift
 
 type AbstractType = Existential LargeType
 
@@ -187,8 +217,10 @@ class ToType a where
   toType :: a -> IType
 
 instance ToType LargeType where
-  toType (BaseType b)  = I.BaseType b
-  toType (Structure r) = toType r
+  toType (BaseType b)       = I.BaseType b
+  toType (Structure r)      = toType r
+  toType (AbstractType aty) = toType aty `I.TFun` I.TRecord (record [])
+  toType (SemanticPath p)   = toType p
 
 instance ToType a => ToType (Record a) where
   toType r = I.TRecord $ toType <$> r
@@ -204,6 +236,13 @@ class Elaboration a where
   type Effs a :: [* -> *]
 
   elaborate :: (Members (Effs a) r, ?env :: Env) => Positional a -> Eff r (Output a)
+
+instance Elaboration Type where
+  type Output Type = AbstractType
+  type Effs Type = '[Error I.Failure, Error ElaborateError, Fresh]
+
+  elaborate (Positional _ (Base b)) = return $ fromBody $ BaseType b
+  elaborate (Positional p TypeType) = return $ quantify [positional p I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0
 
 instance Elaboration Literal where
   type Output Literal = BaseType
