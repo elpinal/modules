@@ -9,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Language.Modules.Ros2018
   (
@@ -122,20 +123,20 @@ data ElaborateError
 instance Display ElaborateError where
   display (NotStructure lty) = "not structure type: " ++ display (WithName lty)
 
-data Path = Path Variable -- and list of small types
+data Path = Path Variable [SmallType]
   deriving (Eq, Show)
   deriving Generic
 
 instance Shift Path
 
 instance DisplayName Path where
-  displaysWithName _ (Path v) = displays v
+  displaysWithName n p = displaysWithName n $ toType p
 
 instance ToType Path where
-  toType (Path v) = I.TVar v
+  toType (Path v tys) = foldl I.TApp (I.TVar v) $ map toType tys
 
 fromVariable :: Variable -> Path
-fromVariable v = Path v
+fromVariable v = Path v []
 
 data SemanticType a where
   BaseType :: BaseType -> SemanticType a
@@ -238,7 +239,7 @@ instance Semigroup Purity where
 class ToType a where
   toType :: a -> IType
 
-instance ToType LargeType where
+instance ToType (Size a) => ToType (SemanticType a) where
   toType (BaseType b)       = I.BaseType b
   toType (Structure r)      = toType r
   toType (AbstractType aty) = toType aty `I.TFun` I.TRecord (record [])
