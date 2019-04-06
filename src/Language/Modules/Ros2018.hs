@@ -141,7 +141,7 @@ fromVariable v = Path v []
 data SemanticType a where
   BaseType :: BaseType -> SemanticType a
   Structure :: Record LargeType -> SemanticType a
-  AbstractType :: (Size a) -> SemanticType a
+  AbstractType :: Size a -> SemanticType a
   SemanticPath :: Path -> SemanticType a
 
 data Large
