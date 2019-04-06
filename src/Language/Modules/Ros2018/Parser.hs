@@ -68,6 +68,19 @@ literal = foldl (<|>) empty
   , fmap LChar <$> character
   ]
 
+baseType :: Parser (Positional I.BaseType)
+baseType = foldl (<|>) empty
+  [ (`positional` I.Bool) <$> reserved "bool"
+  , (`positional` I.Int) <$> reserved "int"
+  , (`positional` I.Char) <$> reserved "char"
+  ]
+
+typeParser :: Parser (Positional Type)
+typeParser = foldl (<|>) empty
+  [ fmap Base <$> baseType
+  , (`positional` TypeType) <$> reserved "type"
+  ]
+
 -- Reserved words, that is, keywords.
 reserved :: T.Text -> Parser Position
 reserved w = fmap getPosition $ lexeme $ try $ string w *> notFollowedBy alphaNumChar
@@ -79,6 +92,10 @@ reservedWords =
   , "struct"
   , "end"
   , "include"
+  , "bool"
+  , "int"
+  , "char"
+  , "type"
   ]
 
 identifier :: Parser (Positional Ident)

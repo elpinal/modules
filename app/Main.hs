@@ -7,7 +7,7 @@ import qualified Data.Text.IO as TIO
 
 import Options.Applicative hiding (Failure)
 
-import Language.Modules.Ros2018
+import Language.Modules.Ros2018 hiding (Type)
 import Language.Modules.Ros2018.Parser
 import Language.Modules.Ros2018.Internal
 import Language.Modules.Ros2018.Display

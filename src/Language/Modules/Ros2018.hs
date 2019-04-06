@@ -15,6 +15,7 @@ module Language.Modules.Ros2018
   , ident
 
   -- * Syntax
+  , Type(..)
   , Expr(..)
   , Binding(..)
 
@@ -74,6 +75,11 @@ ident = Ident . name
 
 instance Display Ident where
   display (Ident name) = display name
+
+data Type
+  = Base BaseType
+  | TypeType
+  deriving (Eq, Show)
 
 data Binding
   = Val Ident (Positional Expr)
