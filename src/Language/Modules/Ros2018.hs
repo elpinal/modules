@@ -191,6 +191,20 @@ getStructure :: Member (Error ElaborateError) r => SemanticType -> Eff r (Record
 getStructure (Structure r) = return r
 getStructure lty           = throwError $ NotStructure lty
 
+class Sized a where
+  isSmall :: a -> Bool
+
+instance Sized SemanticType where
+  isSmall (BaseType _)       = True
+  isSmall (Structure r)      = all isSmall r
+  isSmall (AbstractType aty) = isSmall aty
+  isSmall (SemanticPath _)   = True -- maybe
+  isSmall (Function u)       = isSmall u
+
+instance Sized Fun where
+  isSmall (Fun _ Pure _)      = False
+  isSmall (Fun ty Impure aty) = isSmall ty && isSmall aty
+
 newtype Quantified a = Quantified ([Positional IKind], a)
   deriving (Eq, Show)
   deriving Functor
@@ -218,11 +232,17 @@ instance Quantification Quantified where
 instance Shift a => Shift (Quantified a) where
   shiftAbove c d q = qmap (shiftAbove (c + qsLen q) d) q
 
+instance Sized a => Sized (Quantified a) where
+  isSmall q
+    | qsLen q == 0 = isSmall $ getBody q
+    | otherwise    = False
+
 newtype Existential a = Existential (Quantified a)
   deriving (Eq, Show)
   deriving Functor
   deriving Quantification
   deriving Shift
+  deriving Sized
 
 instance DisplayName a => DisplayName (Existential a) where
   displaysWithName _ (Existential (Quantified (ks, x))) =
@@ -235,6 +255,7 @@ newtype Universal a = Universal (Quantified a)
   deriving Functor
   deriving Quantification
   deriving Shift
+  deriving Sized
 
 toUniversal :: Existential a -> Universal a
 toUniversal = coerce

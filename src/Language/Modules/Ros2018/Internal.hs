@@ -142,6 +142,7 @@ instance Display Name where
 newtype Record a = Record { getRecord :: Map.Map Label a }
   deriving (Eq, Show)
   deriving Functor
+  deriving Foldable
   deriving (Semigroup, Monoid) -- Left-associative
 
 instance Display a => Display (Record a) where
