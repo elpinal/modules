@@ -143,7 +143,7 @@ newtype Record a = Record { getRecord :: Map.Map Label a }
   deriving (Eq, Show)
   deriving Functor
   deriving Foldable
-  deriving (Semigroup, Monoid) -- Left-associative
+  deriving (Semigroup, Monoid) -- Left-biased
 
 instance Display a => Display (Record a) where
   displaysPrec _ (Record m) =
