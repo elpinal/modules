@@ -3,14 +3,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Language.Modules.Ros2018
   (
@@ -43,10 +41,6 @@ module Language.Modules.Ros2018
 
   -- * Semantic objects
   , SemanticType(..)
-  , Small
-  , Large
-  , SmallType
-  , LargeType
   , AbstractType
 
   -- * Embedding to internal objects
@@ -138,16 +132,16 @@ instance Display Expr where
   displaysPrec _ (Struct bs) = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
   displaysPrec n (Type ty)   = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
 
-type Env = I.Env Positional LargeType
+type Env = I.Env Positional SemanticType
 
 data ElaborateError
-  = NotStructure LargeType
+  = NotStructure SemanticType
   deriving (Eq, Show)
 
 instance Display ElaborateError where
   display (NotStructure lty) = "not structure type: " ++ display (WithName lty)
 
-data Path = Path Variable [SmallType]
+data Path = Path Variable [IType]
   deriving (Eq, Show)
   deriving Generic
 
@@ -157,41 +151,33 @@ instance DisplayName Path where
   displaysWithName n p = displaysWithName n $ toType p
 
 instance ToType Path where
-  toType (Path v tys) = foldl I.TApp (I.TVar v) $ map toType tys
+  toType (Path v tys) = foldl I.TApp (I.TVar v) tys
 
 fromVariable :: Variable -> Path
 fromVariable v = Path v []
 
-data SemanticType a where
-  BaseType :: BaseType -> SemanticType a
-  Structure :: Record LargeType -> SemanticType a
-  AbstractType :: Size a -> SemanticType a
-  SemanticPath :: Path -> SemanticType a
-  Function :: F a -> SemanticType a
+data Fun = Fun SemanticType Purity AbstractType
+  deriving (Eq, Show)
+  deriving Generic
 
-data Large
-data Small
+instance Shift Fun
 
-type LargeType = SemanticType Large
-type SmallType = SemanticType Small
+instance DisplayName Fun where
+  displaysWithName n (Fun ty p aty) =
+    showParen (4 <= n) $ displaysWithName 4 ty . showString (" " ++ displayArrow p ++ " ") . displaysWithName 3 aty
 
-type family Size a = r | r -> a where
-  Size Large = AbstractType
-  Size Small = SmallType
+data SemanticType
+  = BaseType BaseType
+  | Structure (Record SemanticType)
+  | AbstractType AbstractType
+  | SemanticPath Path
+  | Function (Universal Fun)
+  deriving (Eq, Show)
+  deriving Generic
 
-type family F a = r | r -> a where
-  F Large = Universal (LargeType, Purity, AbstractType)
-  F Small = (SmallType, SmallType)
+instance Shift SemanticType
 
-deriving instance Eq LargeType
-deriving instance Eq SmallType
-deriving instance Show LargeType
-deriving instance Show SmallType
-deriving instance Generic (SemanticType a)
-instance Shift LargeType
-instance Shift SmallType
-
-instance DisplayName LargeType where
+instance DisplayName SemanticType where
   displaysWithName _ (BaseType b)       = displays b
   displaysWithName _ (Structure r)      = displaysWithName 0 r
   displaysWithName _ (AbstractType aty) = showString "[= " . displaysWithName 0 aty . showString "]"
@@ -199,9 +185,9 @@ instance DisplayName LargeType where
   displaysWithName n (Function u)       =
     let ?nctx = newTypes $ qsLen u in
     let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] $ getKinds u in
-    showParen (4 <= n) $ (\(ty, p, aty) -> showChar '∀' . appEndo f . showString ". " . displaysWithName 4 ty . showString (" " ++ displayArrow p ++ " ") . displaysWithName 3 aty) $ getBody u
+    showParen (4 <= n) $ (\x -> showChar '∀' . appEndo f . showString ". " . displaysWithName 0 x) $ getBody u
 
-getStructure :: Member (Error ElaborateError) r => LargeType -> Eff r (Record LargeType)
+getStructure :: Member (Error ElaborateError) r => SemanticType -> Eff r (Record SemanticType)
 getStructure (Structure r) = return r
 getStructure lty           = throwError $ NotStructure lty
 
@@ -253,7 +239,7 @@ newtype Universal a = Universal (Quantified a)
 toUniversal :: Existential a -> Universal a
 toUniversal = coerce
 
-type AbstractType = Existential LargeType
+type AbstractType = Existential SemanticType
 
 instance ToType AbstractType where
   toType (Existential (Quantified (ks, lty))) = I.some (map fromPositional ks) $ toType lty
@@ -279,7 +265,10 @@ instance Semigroup Purity where
 class ToType a where
   toType :: a -> IType
 
-instance (ToType (F a), ToType (Size a)) => ToType (SemanticType a) where
+instance ToType Fun where
+  toType (Fun ty _ aty) = toType ty `I.TFun` toType aty
+
+instance ToType SemanticType where
   toType (BaseType b)       = I.BaseType b
   toType (Structure r)      = toType r
   toType (AbstractType aty) = toType aty `I.TFun` I.TRecord (record [])
@@ -288,12 +277,6 @@ instance (ToType (F a), ToType (Size a)) => ToType (SemanticType a) where
 
 instance ToType a => ToType (Record a) where
   toType r = I.TRecord $ toType <$> r
-
-instance ToType (SmallType, SmallType) where
-  toType (ty1, ty2) = toType ty1 `I.TFun` toType ty2
-
-instance ToType (LargeType, Purity, AbstractType) where
-  toType (ty, _, aty) = toType ty `I.TFun` toType aty
 
 toTerm :: AbstractType -> Term
 toTerm aty = I.Abs (toType aty) $ I.TmRecord $ record []
@@ -331,7 +314,7 @@ instance Elaboration Type where
     aty2 <- elaborate ty2
     case p of
       Impure -> do
-        let f ty = (ty, Impure, aty2)
+        let f ty = Fun ty Impure aty2
         return $ fromBody $ Function $ qmap f $ toUniversal aty1
       Pure -> error "not yet implented: pure function type"
 
@@ -372,7 +355,7 @@ joinBindings acc (t, n, ls) = do
   g <- I.generated <$> fresh
   return $ I.unpack (Just g) t n $ I.Let (map (I.Proj $ I.GVar g) ls) acc
 
-type Acc = (Env, Existential (Record LargeType), [(Term, Int, [I.Label])], Purity)
+type Acc = (Env, Existential (Record SemanticType), [(Term, Int, [I.Label])], Purity)
 
 elaborateBindings :: (Members (Effs Expr) r, ?env :: Env) => Acc -> Positional Binding -> Eff r Acc
 elaborateBindings (env, whole_aty, zs, p0) b = do
@@ -383,13 +366,13 @@ elaborateBindings (env, whole_aty, zs, p0) b = do
   let ?env = foldl (\env (l, lty) -> let ?env = env in insertValue (toName l) lty) ?env $ I.toList r
   return (?env, merge whole_aty $ quantify (getAnnotatedKinds aty) r, (t, qsLen aty, I.labels r) : zs, p0 <> p)
 
-merge :: Existential (Record LargeType) -> Existential (Record LargeType) -> Existential (Record LargeType)
+merge :: Existential (Record SemanticType) -> Existential (Record SemanticType) -> Existential (Record SemanticType)
 merge aty1 aty2 =
   let ty1 = shift (qsLen aty2) $ getBody aty1 in
   quantify (getAnnotatedKinds aty2 ++ getAnnotatedKinds aty1) $ getBody aty2 <> ty1
 
 instance Elaboration Binding where
-  type Output Binding = (Term, Existential (Record LargeType), Purity)
+  type Output Binding = (Term, Existential (Record SemanticType), Purity)
   type Effs Binding = '[Error I.Failure, Error ElaborateError, Fresh]
 
   elaborate (Positional _ (Val id e)) = do
