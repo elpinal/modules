@@ -55,6 +55,8 @@ module Language.Modules.Ros2018.Internal
   , reduce
 
   -- * Type substitution
+  , Subst
+  , Substitution(..)
   , substTop
 
   -- * Environments
