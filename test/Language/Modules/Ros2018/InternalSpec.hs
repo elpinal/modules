@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -206,6 +207,22 @@ spec = do
   describe "substTop" $
     it "beta reduction" $ do
       substTop char int `shouldBe` int
+
+  describe "apply" $
+    it "performs parallel substitution" $ do
+      apply [] int                                                    `shouldBe` int
+      apply [] (tvar 0)                                               `shouldBe` tvar 0
+      apply [(variable 0, int)] (tvar 0)                              `shouldBe` int
+      apply [(variable 1, int)] (tvar 0)                              `shouldBe` tvar 0
+      apply [(variable 0, int)] (tvar 1)                              `shouldBe` tvar 1
+      apply [(variable 0, tvar 0)] (tvar 0)                           `shouldBe` tvar 0
+      apply [(variable 0, tvar 20)] (tvar 20)                         `shouldBe` tvar 20
+      apply [(variable 0, tvar 20), (variable 20, tvar 40)] (tvar 20) `shouldBe` tvar 40
+      apply [(variable 0, tvar 20), (variable 20, tvar 40)] (tvar 0)  `shouldBe` tvar 20
+      apply [(variable 0, tvar 20), (variable 20, tvar 40)] (tvar 39) `shouldBe` tvar 39
+
+      apply [(variable 0, char)] (Forall Base int)      `shouldBe` Forall Base int
+      -- apply [(variable 0, char)] (Forall Base $ tvar 0) `shouldBe` Forall Base (tvar 0)
 
   describe "reduce" $
     it "reduces a type to weak-head normal form" $ do
