@@ -59,6 +59,7 @@ module Language.Modules.Ros2018.Internal
   , Subst
   , Substitution(..)
   , substTop
+  , lookupSubst
 
   -- * Environments
   , Env

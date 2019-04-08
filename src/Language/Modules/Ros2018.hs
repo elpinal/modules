@@ -187,6 +187,49 @@ instance DisplayName SemanticType where
     let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] $ getKinds u in
     showParen (4 <= n) $ (\x -> showChar '∀' . appEndo f . showString ". " . displaysWithName 0 x) $ getBody u
 
+instance Substitution SemanticType where
+  apply _ ty @ (BaseType _)  = ty
+  apply s (Structure r)      = Structure $ apply s <$> r
+  apply s (AbstractType aty) = AbstractType $ apply s aty
+  apply s (SemanticPath p)   = SemanticPath $ apply s p
+  apply s (Function u)       = Function $ apply s u
+
+instance Substitution a => Substitution (Existential a) where
+  apply s e =
+    let s1 = shift (qsLen e) s in
+    qmap (apply s1) e
+
+instance Substitution a => Substitution (Universal a) where
+  apply s u =
+    let s1 = shift (qsLen u) s in
+    qmap (apply s1) u
+
+instance Substitution Fun where
+  apply s (Fun ty p aty) = Fun (apply s ty) p (apply s aty)
+
+instance Substitution a => Substitution [a] where
+  apply s xs = apply s <$> xs
+
+instance Substitution Path where
+  apply s (Path v tys) =
+    case lookupSubst v s of
+      Nothing -> Path v $ apply s tys
+      Just ty -> either (error . display) id $ appendPath (apply s tys) <$> fromType ty
+
+newtype PathFormationError = PathFromType IType
+  deriving (Eq, Show)
+
+instance Display PathFormationError where
+  display (PathFromType ty) = "cannot create well-formed semantic path from: " ++ display ty
+
+fromType :: IType -> Either PathFormationError Path
+fromType (I.TVar v)       = return $ fromVariable v
+fromType (I.TApp ty1 ty2) = appendPath [ty2] <$> fromType ty1
+fromType ty               = Left $ PathFromType ty
+
+appendPath :: [IType] -> Path -> Path
+appendPath tys' (Path v tys) = Path v $ tys ++ tys'
+
 getStructure :: Member (Error ElaborateError) r => SemanticType -> Eff r (Record SemanticType)
 getStructure (Structure r) = return r
 getStructure lty           = throwError $ NotStructure lty
