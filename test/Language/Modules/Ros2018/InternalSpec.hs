@@ -221,8 +221,16 @@ spec = do
       apply [(variable 0, tvar 20), (variable 20, tvar 40)] (tvar 0)  `shouldBe` tvar 20
       apply [(variable 0, tvar 20), (variable 20, tvar 40)] (tvar 39) `shouldBe` tvar 39
 
-      apply [(variable 0, char)] (Forall Base int)      `shouldBe` Forall Base int
-      -- apply [(variable 0, char)] (Forall Base $ tvar 0) `shouldBe` Forall Base (tvar 0)
+      apply [(variable 0, char)] (Forall Base int)        `shouldBe` Forall Base int
+      apply [(variable 0, char)] (Forall Base $ tvar 0)   `shouldBe` Forall Base (tvar 0)
+      apply [(variable 1, char)] (Forall Base $ tvar 0)   `shouldBe` Forall Base (tvar 0)
+      apply [(variable 1, char)] (Forall Base $ tvar 1)   `shouldBe` Forall Base (tvar 1)
+      apply [(variable 0, char)] (Forall Base $ tvar 1)   `shouldBe` Forall Base char
+      apply [(variable 0, tvar 0)] (Forall Base $ tvar 1) `shouldBe` Forall Base (tvar 1)
+      apply [(variable 0, tvar 1)] (Forall Base $ tvar 1) `shouldBe` Forall Base (tvar 2)
+      apply [(variable 0, tvar 2)] (Forall Base $ tvar 1) `shouldBe` Forall Base (tvar 3)
+
+      apply [(variable 0, Some Base $ tvar 0)] (Forall Base $ tvar 1) `shouldBe` Forall Base (Some Base $ tvar 0)
 
   describe "reduce" $
     it "reduces a type to weak-head normal form" $ do

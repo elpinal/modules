@@ -556,7 +556,9 @@ instance IsList Subst where
   toList (Subst m) = Map.toList m
 
 instance Shift Subst where
-  shiftAbove c d (Subst m) = Subst $ shiftAbove c d <$> m
+  shiftAbove c d (Subst m) = Subst $ fromList $ f <$> toList m
+    where
+      f (v, ty) = (shiftAbove c d v, shiftAbove c d ty)
 
 lookupSubst :: Variable -> Subst -> Maybe Type
 lookupSubst v (Subst m) = Map.lookup v m
