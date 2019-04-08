@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Language.Modules.Ros2018.Internal
   (
@@ -93,6 +94,7 @@ import Data.Maybe
 import Data.Map.Merge.Lazy
 import Data.Monoid
 import qualified Data.Text as T
+import GHC.Exts
 import GHC.Generics
 
 import Language.Modules.Ros2018.Display
@@ -165,8 +167,11 @@ instance Shift a => Shift (Record a) where
 record :: [(Label, a)] -> Record a
 record = Record . Map.fromList
 
-toList :: Record a -> [(Label, a)]
-toList (Record m) = Map.toList m
+instance IsList (Record a) where
+  type Item (Record a) = (Label, a)
+
+  fromList = record
+  toList (Record m) = Map.toList m
 
 labels :: Record a -> [Label]
 labels (Record m) = Map.keys m
@@ -543,6 +548,12 @@ reduce' ty1 ty2          = TApp ty1 ty2
 
 newtype Subst = Subst (Map.Map Variable Type)
   deriving (Eq, Show)
+
+instance IsList Subst where
+  type Item Subst = (Variable, Type)
+
+  fromList = coerce . Map.fromList
+  toList (Subst m) = Map.toList m
 
 instance Shift Subst where
   shiftAbove c d (Subst m) = Subst $ shiftAbove c d <$> m
