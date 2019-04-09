@@ -38,6 +38,7 @@ module Language.Modules.Ros2018.Internal
   , tvar
   , some
   , forall
+  , tabs
   , var
   , pack
   , unpack
@@ -256,6 +257,9 @@ some ks ty = foldl (flip Some) ty ks
 
 forall :: [Kind] -> Type -> Type
 forall ks ty = foldl (flip Forall) ty ks
+
+tabs :: [Kind] -> Type -> Type
+tabs ks ty = foldl (flip TAbs) ty ks
 
 tRecord :: Map.Map Label Type -> Type
 tRecord = TRecord . Record

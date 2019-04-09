@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -59,8 +60,11 @@ import Data.Coerce
 import Data.Foldable
 import Data.List
 import qualified Data.Map.Lazy as Map
-import Data.Monoid
+import Data.Maybe
+import Data.Monoid hiding (First)
+import Data.Semigroup (First(..))
 import qualified Data.Text as T
+import GHC.Exts
 import GHC.Generics
 
 import Language.Modules.Ros2018.Display
@@ -165,6 +169,15 @@ instance Shift Fun
 instance DisplayName Fun where
   displaysWithName n (Fun ty p aty) =
     showParen (4 <= n) $ displaysWithName 4 ty . showString (" " ++ displayArrow p ++ " ") . displaysWithName 3 aty
+
+isPure :: Fun -> Bool
+isPure (Fun _ p _) = p == Pure
+
+domain :: Fun -> AbstractType
+domain (Fun _ _ aty) = aty
+
+codomain :: Fun -> SemanticType
+codomain (Fun ty _ _) = ty
 
 data SemanticType
   = BaseType BaseType
@@ -344,6 +357,25 @@ instance ToType a => ToType (Record a) where
 
 toTerm :: AbstractType -> Term
 toTerm aty = I.Abs (toType aty) $ I.TmRecord $ record []
+
+lookupInst :: Path -> SemanticType -> SemanticType -> Maybe (First IType)
+lookupInst p1 ty (SemanticPath p2)
+  | p1 == p2 && isSmall ty = Just $ First $ toType ty
+  | otherwise              = Nothing
+lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p) r1 r2
+lookupInst p (Function u1) (Function u2)
+  | isPure (getBody u1) && isPure (getBody u2) =
+    let s = fromList $ zip (map variable [0..]) $ lookupInsts (enumVars u1) (getBody $ domain $ getBody u2) (getBody $ domain $ getBody u1) in
+    let mfty = lookupInst (appendPath (map I.TVar $ enumVars u2) p) (apply s $ codomain $ getBody u1) (codomain $ getBody u2) in
+    fmap (I.tabs $ getKinds u2) <$> mfty
+lookupInst _ _ _ = Nothing
+
+lookupInsts :: [Variable] -> SemanticType -> SemanticType -> [IType]
+lookupInsts vs ty1 ty2 = fst $ foldr f ([], ty2) vs
+  where
+    f :: Variable -> ([IType], SemanticType) -> ([IType], SemanticType)
+    f v (tys, ty) = (res : tys, apply [(v, res)] ty)
+      where res = coerce $ fromMaybe (error "not explicit") $ lookupInst (fromVariable v) ty1 ty
 
 translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e
