@@ -25,6 +25,7 @@ module Language.Modules.Ros2018.Internal
   , record
   , toList
   , labels
+  , foldMapIntersection
 
   -- * Syntax
   , Kind(..)
@@ -88,6 +89,7 @@ import Control.Monad
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Data.Coerce
+import Data.Foldable (fold)
 import Data.Functor
 import Data.List
 import qualified Data.Map.Lazy as Map
@@ -176,6 +178,9 @@ instance IsList (Record a) where
 
 labels :: Record a -> [Label]
 labels (Record m) = Map.keys m
+
+foldMapIntersection :: Monoid m => (a -> a -> m) -> Record a -> Record a -> m
+foldMapIntersection f (Record m1) (Record m2) = fold $ Map.intersectionWith f m1 m2
 
 data Kind
   = Base
