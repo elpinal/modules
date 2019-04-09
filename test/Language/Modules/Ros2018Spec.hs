@@ -9,7 +9,7 @@ import Control.Monad.Freer
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Position
-import Language.Modules.Ros2018.Internal (emptyEnv, var, label, record, Literal(..), BaseType(..), Failure(..))
+import Language.Modules.Ros2018.Internal (emptyEnv, var, variable, label, record, Literal(..), BaseType(..), Failure(..))
 import qualified Language.Modules.Ros2018.Internal as I
 
 shouldBeRight :: (HasCallStack, Eq a, Show a) => Either Failure a -> a -> Expectation
@@ -35,3 +35,12 @@ spec = do
         , fromBody $ record [(label "x", BaseType Char)]
         , Pure
         )
+
+  describe "lookupInsts" $
+    it "look up instantiations" $ do
+      lookupInsts [] (BaseType Int) (BaseType Int) `shouldBe` []
+
+      lookupInsts [variable 0] (BaseType Int) (SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Int]
+      lookupInsts [variable 0]
+        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ BaseType Char)
+        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Char]

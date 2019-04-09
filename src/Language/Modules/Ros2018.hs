@@ -43,6 +43,14 @@ module Language.Modules.Ros2018
   -- * Semantic objects
   , SemanticType(..)
   , AbstractType
+  , Fun(..)
+
+  -- * Paths
+  , Path
+  , fromVariable
+
+  -- * Instantiation
+  , lookupInsts
 
   -- * Embedding to internal objects
   , ToType(..)
@@ -173,11 +181,11 @@ instance DisplayName Fun where
 isPure :: Fun -> Bool
 isPure (Fun _ p _) = p == Pure
 
-domain :: Fun -> AbstractType
-domain (Fun _ _ aty) = aty
+codomain :: Fun -> AbstractType
+codomain (Fun _ _ aty) = aty
 
-codomain :: Fun -> SemanticType
-codomain (Fun ty _ _) = ty
+domain :: Fun -> SemanticType
+domain (Fun ty _ _) = ty
 
 data SemanticType
   = BaseType BaseType
@@ -365,8 +373,8 @@ lookupInst p1 ty (SemanticPath p2)
 lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p) r1 r2
 lookupInst p (Function u1) (Function u2)
   | isPure (getBody u1) && isPure (getBody u2) =
-    let s = fromList $ zip (map variable [0..]) $ lookupInsts (enumVars u1) (getBody $ domain $ getBody u2) (getBody $ domain $ getBody u1) in
-    let mfty = lookupInst (appendPath (map I.TVar $ enumVars u2) p) (apply s $ codomain $ getBody u1) (codomain $ getBody u2) in
+    let s = fromList $ zip (map variable [0..]) $ lookupInsts (enumVars u1) (domain $ getBody u2) (domain $ getBody u1) in
+    let mfty = lookupInst (appendPath (map I.TVar $ enumVars u2) p) (apply s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2) in
     fmap (I.tabs $ getKinds u2) <$> mfty
 lookupInst _ _ _ = Nothing
 
