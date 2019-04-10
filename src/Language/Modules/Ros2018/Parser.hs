@@ -6,6 +6,7 @@ module Language.Modules.Ros2018.Parser
   ) where
 
 import Data.Coerce
+import Data.Functor
 import qualified Data.Text as T
 import Data.Void
 
@@ -129,9 +130,13 @@ structure = do
   end <- reserved "end"
   return $ positional (connect start end) $ Struct bs
 
+seal :: Parser ()
+seal = void $ symbol ":>"
+
 expression :: Parser (Positional Expr)
 expression = foldl (<|>) empty
   [ fmap Lit <$> literal
+  , try $ (\id ty -> connecting id ty $ Seal id ty) <$> identifier <*> (seal >> typeParser)
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser

@@ -137,13 +137,15 @@ data Expr
   | Id Ident
   | Struct [Positional Binding]
   | Type (Positional Type)
+  | Seal (Positional Ident) (Positional Type)
   deriving (Eq, Show)
 
 instance Display Expr where
-  displaysPrec _ (Lit l)     = displays l
-  displaysPrec _ (Id id)     = displays id
-  displaysPrec _ (Struct bs) = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
-  displaysPrec n (Type ty)   = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
+  displaysPrec _ (Lit l)      = displays l
+  displaysPrec _ (Id id)      = displays id
+  displaysPrec _ (Struct bs)  = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
+  displaysPrec n (Type ty)    = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
+  displaysPrec n (Seal id ty) = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
 
 type Env = I.Env Positional SemanticType
 
@@ -153,6 +155,7 @@ data ElaborateError
   | NotSubpurity
   | PathMismatch Path Path
   | MissingLabel I.Label
+  | NotPure
   deriving (Eq, Show)
 
 instance Display ElaborateError where
@@ -161,6 +164,7 @@ instance Display ElaborateError where
   display NotSubpurity         = "impure is not subtype of pure"
   display (PathMismatch p1 p2) = "path mismatch: " ++ display (WithName p1) ++ " and " ++ display (WithName p2)
   display (MissingLabel l)     = "missing label: " ++ display l
+  display NotPure              = "not pure"
 
 data Path = Path Variable [IType]
   deriving (Eq, Show)
@@ -496,6 +500,15 @@ instance Elaboration Literal where
 
   elaborate = return . I.typeOfLiteral . fromPositional
 
+mustBePure :: Member (Error ElaborateError) r => Purity -> Eff r ()
+mustBePure Pure   = return ()
+mustBePure Impure = throwError NotPure
+
+strongSealing :: AbstractType -> Purity
+strongSealing aty
+  | qsLen aty == 0 = Pure
+  | otherwise      = Impure
+
 instance Elaboration Expr where
   type Output Expr = (Term, AbstractType, Purity)
   type Effs Expr = '[Error I.Failure, Error ElaborateError, Fresh]
@@ -516,6 +529,12 @@ instance Elaboration Expr where
   elaborate (Positional _ (Type ty)) = do
     aty <- elaborate ty
     return (toTerm aty, fromBody $ AbstractType aty, Pure)
+  elaborate (Positional _ (Seal id ty)) = do
+    (t1, aty1, p) <- elaborate $ Id <$> id
+    mustBePure p
+    aty2 <- elaborate ty
+    (t2, tys) <- match (getBody aty1) aty2
+    return (I.pack (I.App t2 t1) tys (getKinds aty2) (toType $ getBody aty2), aty2, strongSealing aty2)
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls

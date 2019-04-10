@@ -54,6 +54,8 @@ spec = do
         integration "t = type type"                                                          `shouldBeRight` ()
         integration "t = type type; u = t; t = type int"                                     `shouldBeRight` ()
 
+        integration "n = 97; s = n :> int" `shouldBeRight` ()
+
         integration "1"        `shouldThrow` anyException
         integration "x = t"    `shouldThrow` anyException
         integration "x = 1;;"  `shouldThrow` anyException
