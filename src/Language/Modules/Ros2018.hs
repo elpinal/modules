@@ -577,7 +577,7 @@ instance Elaboration Binding where
   elaborate (Positional _ (Val id e)) = do
     (t, aty, p) <- elaborate e
     let l = I.toLabel $ coerce id
-    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty, (\x -> record [(l, x)]) <$> aty, p)
+    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ I.TRecord $ (\x -> [(l, x)]) $ toType $ getBody aty, (\x -> record [(l, x)]) <$> aty, p)
 
   elaborate (Positional _ (Include e)) = do
     (t, aty, p) <- elaborate e
