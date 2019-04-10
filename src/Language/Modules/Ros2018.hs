@@ -47,7 +47,7 @@ module Language.Modules.Ros2018
   , Fun(..)
 
   -- * Paths
-  , Path
+  , Path(..)
   , fromVariable
 
   -- * Subtyping
@@ -259,10 +259,10 @@ instance Substitution a => Substitution [a] where
 
 applyPath :: Subst -> Path -> Either BaseType Path
 applyPath s (Path v tys) =
-  case lookupSubst v s of
+  case (\ty -> I.reduce $ foldl I.TApp ty $ apply s tys) <$> lookupSubst v s of
     Nothing -> return $ Path v $ apply s tys
     Just (I.BaseType b) -> Left b
-    Just ty -> either (error . display) return $ appendPath (apply s tys) <$> fromType ty
+    Just ty -> either (error . display) return $ fromType ty
 
 newtype PathFormationError = PathFromType IType
   deriving (Eq, Show)

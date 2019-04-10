@@ -11,7 +11,7 @@ import Control.Monad.Freer.Error
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Position
-import Language.Modules.Ros2018.Internal (emptyEnv, var, variable, label, record, Literal(..), BaseType(..), Failure(..))
+import Language.Modules.Ros2018.Internal (emptyEnv, var, tvar, variable, label, record, Literal(..), BaseType(..), Failure(..), Substitution(..))
 import qualified Language.Modules.Ros2018.Internal as I
 
 shouldBeRight :: (HasCallStack, Eq a, Show a) => Either Failure a -> a -> Expectation
@@ -55,3 +55,7 @@ spec = do
 
       run (runError $ match (BaseType Int) (fromBody $ BaseType Int)) `shouldBe` right (I.Abs (I.BaseType Int) $ var 0, [])
       run (runError $ match (AbstractType $ fromBody $ BaseType Int) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.BaseType Int `I.TFun` I.TRecord []) $ I.Abs (I.BaseType Int) $ I.TmRecord [], [I.BaseType Int])
+
+  describe "apply" $
+    it "performs parallel substitution" $ do
+      apply [(variable 0, I.TAbs I.Base $ tvar 0)] (SemanticPath $ Path (variable 0) [I.BaseType Int]) `shouldBe` BaseType Int
