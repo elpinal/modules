@@ -238,7 +238,7 @@ instance Substitution SemanticType where
   apply _ ty @ (BaseType _)  = ty
   apply s (Structure r)      = Structure $ apply s <$> r
   apply s (AbstractType aty) = AbstractType $ apply s aty
-  apply s (SemanticPath p)   = SemanticPath $ apply s p
+  apply s (SemanticPath p)   = either BaseType SemanticPath $ applyPath s p
   apply s (Function u)       = Function $ apply s u
 
 instance Substitution a => Substitution (Existential a) where
@@ -257,11 +257,12 @@ instance Substitution Fun where
 instance Substitution a => Substitution [a] where
   apply s xs = apply s <$> xs
 
-instance Substitution Path where
-  apply s (Path v tys) =
-    case lookupSubst v s of
-      Nothing -> Path v $ apply s tys
-      Just ty -> either (error . display) id $ appendPath (apply s tys) <$> fromType ty
+applyPath :: Subst -> Path -> Either BaseType Path
+applyPath s (Path v tys) =
+  case lookupSubst v s of
+    Nothing -> return $ Path v $ apply s tys
+    Just (I.BaseType b) -> Left b
+    Just ty -> either (error . display) return $ appendPath (apply s tys) <$> fromType ty
 
 newtype PathFormationError = PathFromType IType
   deriving (Eq, Show)
@@ -462,7 +463,7 @@ lookupInsts vs ty1 ty2 = fst $ foldr f ([], ty2) vs
   where
     f :: Variable -> ([IType], SemanticType) -> ([IType], SemanticType)
     f v (tys, ty) = (res : tys, apply [(v, res)] ty)
-      where res = coerce $ fromMaybe (error "not explicit") $ lookupInst (fromVariable v) ty1 ty
+      where res = coerce $ fromMaybe (error $ "not explicit: " ++ display (WithName ty1) ++ " and " ++ display (WithName ty)) $ lookupInst (fromVariable v) ty1 ty
 
 translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e

@@ -1,4 +1,5 @@
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.Modules.Ros2018Spec where
@@ -41,10 +42,10 @@ spec = do
     it "look up instantiations" $ do
       lookupInsts [] (BaseType Int) (BaseType Int) `shouldBe` []
 
-      lookupInsts [variable 0] (BaseType Int) (SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Int]
+      lookupInsts [variable 0] (AbstractType $ fromBody $ BaseType Int) (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Int]
       lookupInsts [variable 0]
-        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ BaseType Char)
-        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Char]
+        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ BaseType Char)
+        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Char]
 
   describe "match" $
     it "performs signature matching" $ do
@@ -53,4 +54,4 @@ spec = do
       let ?env = emptyEnv :: Env
 
       run (runError $ match (BaseType Int) (fromBody $ BaseType Int)) `shouldBe` right (I.Abs (I.BaseType Int) $ var 0, [])
-      run (runError $ match (AbstractType $ fromBody $ BaseType Int) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.BaseType Int) $ var 0, [])
+      run (runError $ match (AbstractType $ fromBody $ BaseType Int) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.BaseType Int `I.TFun` I.TRecord []) $ I.Abs (I.BaseType Int) $ I.TmRecord [], [I.BaseType Int])
