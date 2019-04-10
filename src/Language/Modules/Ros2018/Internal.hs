@@ -26,6 +26,8 @@ module Language.Modules.Ros2018.Internal
   , toList
   , labels
   , foldMapIntersection
+  , iter
+  , projRecord
 
   -- * Syntax
   , Kind(..)
@@ -40,6 +42,8 @@ module Language.Modules.Ros2018.Internal
   , forall
   , tabs
   , var
+  , poly
+  , inst
   , pack
   , unpack
 
@@ -182,6 +186,12 @@ labels (Record m) = Map.keys m
 
 foldMapIntersection :: Monoid m => (a -> a -> m) -> Record a -> Record a -> m
 foldMapIntersection f (Record m1) (Record m2) = fold $ Map.intersectionWith f m1 m2
+
+iter :: Monad m => (Label -> a -> m b) -> Record a -> m (Record b)
+iter f (Record m) = coerce <$> Map.traverseWithKey f m
+
+projRecord :: Label -> Record a -> Maybe a
+projRecord l (Record m) = Map.lookup l m
 
 data Kind
   = Base
@@ -369,6 +379,12 @@ displayTypesRevWithName = appEndo . getDual . mconcat . coerce . intersperse (sh
 
 var :: Int -> Term
 var = Var . variable
+
+poly :: [Kind] -> Term -> Term
+poly ks t = foldl (flip Poly) t ks
+
+inst :: Term -> [Type] -> Term
+inst t tys = foldr (flip Inst) t tys
 
 pack :: Term -> [Type] -> [Kind] -> Type -> Term
 pack t [] []   _ = t

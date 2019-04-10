@@ -66,6 +66,7 @@ import Control.Monad.Freer.Error
 import Control.Monad.Freer.Fresh
 import Data.Coerce
 import Data.Foldable
+import Data.Functor
 import Data.List
 import qualified Data.Map.Lazy as Map
 import Data.Maybe
@@ -77,7 +78,7 @@ import GHC.Generics
 
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Internal as I
-import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..))
+import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..))
 import Language.Modules.Ros2018.Internal (Term)
 import Language.Modules.Ros2018.Position
 import Language.Modules.Ros2018.Shift
@@ -148,10 +149,18 @@ type Env = I.Env Positional SemanticType
 
 data ElaborateError
   = NotStructure SemanticType
+  | NotSubtype SemanticType SemanticType
+  | NotSubpurity
+  | PathMismatch Path Path
+  | MissingLabel I.Label
   deriving (Eq, Show)
 
 instance Display ElaborateError where
-  display (NotStructure lty) = "not structure type: " ++ display (WithName lty)
+  display (NotStructure lty)   = "not structure type: " ++ display (WithName lty)
+  display (NotSubtype ty1 ty2) = display (WithName ty1) ++ " is not subtype of " ++ display (WithName ty2)
+  display NotSubpurity         = "impure is not subtype of pure"
+  display (PathMismatch p1 p2) = "path mismatch: " ++ display (WithName p1) ++ " and " ++ display (WithName p2)
+  display (MissingLabel l)     = "missing label: " ++ display l
 
 data Path = Path Variable [IType]
   deriving (Eq, Show)
@@ -167,6 +176,15 @@ instance ToType Path where
 
 fromVariable :: Variable -> Path
 fromVariable v = Path v []
+
+equalPath :: Member (Error ElaborateError) r => Path -> Path -> Eff r ()
+equalPath p1 @ (Path v1 tys1) p2 @ (Path v2 tys2)
+  | v1 /= v2                   = throwError $ PathMismatch p1 p2
+  | length tys1 /= length tys2 = throwError $ PathMismatch p1 p2
+  | otherwise =
+    case mapM_ (uncurry equalType) $ zip tys1 tys2 of
+      Right () -> return ()
+      Left _ -> throwError $ PathMismatch p1 p2
 
 data Fun = Fun SemanticType Purity AbstractType
   deriving (Eq, Show)
@@ -254,6 +272,56 @@ appendPath tys' (Path v tys) = Path v $ tys ++ tys'
 getStructure :: Member (Error ElaborateError) r => SemanticType -> Eff r (Record SemanticType)
 getStructure (Structure r) = return r
 getStructure lty           = throwError $ NotStructure lty
+
+class Subtype a where
+  type Coercion a
+
+  (<:) :: (Member (Error ElaborateError) r, ?env :: Env) => a -> a -> Eff r (Coercion a)
+
+instance Subtype Purity where
+  type Coercion Purity = ()
+
+  _ <: Impure    = return ()
+  Pure <: Pure   = return ()
+  Impure <: Pure = throwError NotSubpurity
+
+instance Subtype SemanticType where
+  type Coercion SemanticType = Term
+
+  BaseType b1 <: BaseType b2
+    | b1 == b2  = return $ I.Abs (I.BaseType b1) $ var 0
+    | otherwise = throwError $ NotSubtype (BaseType b1) (BaseType b2)
+  SemanticPath p1 <: SemanticPath p2     = equalPath p1 p2 $> I.Abs (toType p1) (var 0)
+  AbstractType aty1 <: AbstractType aty2 = aty1 <: aty2 $> I.Abs (toType $ AbstractType aty1) (toTerm aty2)
+  Structure r1 <: Structure r2           = I.TmRecord <$> I.iter f r2
+    where
+      f :: Member (Error ElaborateError) r => I.Label -> SemanticType -> Eff r Term
+      f l ty2 = do
+        ty1 <- maybe (throwError $ MissingLabel l) return $ projRecord l r1
+        ty1 <: ty2
+  Function u1 <: Function u2 = do
+    let (Fun ty1 p1 aty1) = getBody u1
+    let (Fun ty2 p2 aty2) = getBody u2
+    let ?env = I.insertTypes $ reverse $ getAnnotatedKinds u2
+    p1 <: p2
+    (t1, tys) <- ty2 `match` quantify (getAnnotatedKinds u1) ty1
+    t2 <- aty1 <: aty2
+    return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
+  ty1 <: ty2 = throwError $ NotSubtype ty1 ty2
+
+instance Subtype AbstractType where
+  type Coercion AbstractType = Term
+
+  aty1 <: aty2 = do
+    let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
+    (t, tys) <- match (getBody aty1) aty2
+    return $ I.Abs (toType aty1) $ I.unpack Nothing (var 0) (qsLen aty1) $ I.pack (I.App t $ var 0) tys (getKinds aty2) $ toType aty2
+
+match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [IType])
+match ty aty = do
+  let tys = lookupInsts (enumVars aty) ty (getBody aty)
+  t <- ty <: getBody aty
+  return (t, tys)
 
 class Sized a where
   isSmall :: a -> Bool
