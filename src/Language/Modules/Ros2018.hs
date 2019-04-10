@@ -7,6 +7,7 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -48,6 +49,9 @@ module Language.Modules.Ros2018
   -- * Paths
   , Path
   , fromVariable
+
+  -- * Subtyping
+  , match
 
   -- * Instantiation
   , lookupInsts
@@ -438,8 +442,11 @@ instance ToType a => ToType (Record a) where
 toTerm :: AbstractType -> Term
 toTerm aty = I.Abs (toType aty) $ I.TmRecord $ record []
 
+pattern EmptyExistential :: SemanticType -> SemanticType
+pattern EmptyExistential x <- AbstractType (Existential (Quantified ([], x)))
+
 lookupInst :: Path -> SemanticType -> SemanticType -> Maybe (First IType)
-lookupInst p1 ty (SemanticPath p2)
+lookupInst p1 (EmptyExistential ty) (EmptyExistential (SemanticPath p2))
   | p1 == p2 && isSmall ty = Just $ First $ toType ty
   | otherwise              = Nothing
 lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p) r1 r2
