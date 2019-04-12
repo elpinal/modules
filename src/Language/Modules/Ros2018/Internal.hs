@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.Modules.Ros2018.Internal
   (
@@ -63,6 +65,7 @@ module Language.Modules.Ros2018.Internal
 
   -- * Type substitution
   , Subst
+  , SubstP
   , Substitution(..)
   , substTop
   , lookupSubst
@@ -572,8 +575,11 @@ reduce' :: Type -> Type -> Type
 reduce' (TAbs _ ty1) ty2 = reduce $ substTop ty2 ty1
 reduce' ty1 ty2          = TApp ty1 ty2
 
-newtype Subst = Subst (Map.Map Variable Type)
+-- Polymorphic substitution.
+newtype SubstP a = Subst (Map.Map Variable a)
   deriving (Eq, Show)
+
+type Subst = SubstP Type
 
 instance IsList Subst where
   type Item Subst = (Variable, Type)
