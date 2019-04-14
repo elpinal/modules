@@ -578,21 +578,22 @@ reduce' ty1 ty2          = TApp ty1 ty2
 -- Polymorphic substitution.
 newtype SubstP a = Subst (Map.Map Variable a)
   deriving (Eq, Show)
+  deriving Functor
 
 type Subst = SubstP Type
 
-instance IsList Subst where
-  type Item Subst = (Variable, Type)
+instance IsList (SubstP a) where
+  type Item (SubstP a) = (Variable, a)
 
   fromList = coerce . Map.fromList
   toList (Subst m) = Map.toList m
 
-instance Shift Subst where
+instance Shift a => Shift (SubstP a) where
   shiftAbove c d (Subst m) = Subst $ fromList $ f <$> toList m
     where
       f (v, ty) = (shiftAbove c d v, shiftAbove c d ty)
 
-lookupSubst :: Variable -> Subst -> Maybe Type
+lookupSubst :: Variable -> SubstP a -> Maybe a
 lookupSubst v (Subst m) = Map.lookup v m
 
 class Substitution a where

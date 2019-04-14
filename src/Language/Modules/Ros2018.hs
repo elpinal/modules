@@ -50,6 +50,10 @@ module Language.Modules.Ros2018
   , Path(..)
   , fromVariable
 
+  -- * Parameterized semantic types
+  , Parameterized(..)
+  , parameterized
+
   -- * Subtyping
   , match
 
@@ -63,6 +67,9 @@ module Language.Modules.Ros2018
   , Existential
   , Universal
   , Quantification(..)
+
+  -- * Substitution with small types
+  , SubstitutionSmall(..)
   ) where
 
 import Control.Monad.Freer hiding (translate)
@@ -82,7 +89,7 @@ import GHC.Generics
 
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Internal as I
-import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..))
+import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..), tabs)
 import Language.Modules.Ros2018.Internal (Term)
 import Language.Modules.Ros2018.Position
 import Language.Modules.Ros2018.Shift
@@ -170,7 +177,7 @@ instance Display ElaborateError where
   display (MissingLabel l)     = "missing label: " ++ display l
   display NotPure              = "not pure"
 
-data Path = Path Variable [IType]
+data Path = Path Variable [SemanticType]
   deriving (Eq, Show)
   deriving Generic
 
@@ -180,7 +187,7 @@ instance DisplayName Path where
   displaysWithName n p = displaysWithName n $ toType p
 
 instance ToType Path where
-  toType (Path v tys) = foldl I.TApp (I.TVar v) tys
+  toType (Path v tys) = foldl I.TApp (I.TVar v) $ map toType tys
 
 fromVariable :: Variable -> Path
 fromVariable v = Path v []
@@ -190,7 +197,8 @@ equalPath p1 @ (Path v1 tys1) p2 @ (Path v2 tys2)
   | v1 /= v2                   = throwError $ PathMismatch p1 p2
   | length tys1 /= length tys2 = throwError $ PathMismatch p1 p2
   | otherwise =
-    case mapM_ (uncurry equalType) $ zip tys1 tys2 of
+    let f (ty1, ty2) = toType ty1 `equalType` toType ty2 in
+    case mapM_ f $ zip tys1 tys2 of
       Right () -> return ()
       Left _ -> throwError $ PathMismatch p1 p2
 
@@ -234,35 +242,39 @@ instance DisplayName SemanticType where
     let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] $ getKinds u in
     showParen (4 <= n) $ (\x -> showChar '∀' . appEndo f . showString ". " . displaysWithName 0 x) $ getBody u
 
-instance Substitution SemanticType where
-  apply _ ty @ (BaseType _)  = ty
-  apply s (Structure r)      = Structure $ apply s <$> r
-  apply s (AbstractType aty) = AbstractType $ apply s aty
-  apply s (SemanticPath p)   = either BaseType SemanticPath $ applyPath s p
-  apply s (Function u)       = Function $ apply s u
+class SubstitutionSmall a where
+  applySmall :: SubstP Parameterized -> a -> a
 
-instance Substitution a => Substitution (Existential a) where
-  apply s e =
+instance SubstitutionSmall SemanticType where
+  applySmall _ ty @ (BaseType _)  = ty
+  applySmall s (Structure r)      = Structure $ applySmall s <$> r
+  applySmall s (AbstractType aty) = AbstractType $ applySmall s aty
+  applySmall s (SemanticPath p)   = applyPath s p
+  applySmall s (Function u)       = Function $ applySmall s u
+
+instance SubstitutionSmall a => SubstitutionSmall (Existential a) where
+  applySmall s e =
     let s1 = shift (qsLen e) s in
-    qmap (apply s1) e
+    qmap (applySmall s1) e
 
-instance Substitution a => Substitution (Universal a) where
-  apply s u =
+instance SubstitutionSmall a => SubstitutionSmall (Universal a) where
+  applySmall s u =
     let s1 = shift (qsLen u) s in
-    qmap (apply s1) u
+    qmap (applySmall s1) u
 
-instance Substitution Fun where
-  apply s (Fun ty p aty) = Fun (apply s ty) p (apply s aty)
+instance SubstitutionSmall Fun where
+  applySmall s (Fun ty p aty) = Fun (applySmall s ty) p (applySmall s aty)
 
-instance Substitution a => Substitution [a] where
-  apply s xs = apply s <$> xs
+instance SubstitutionSmall a => SubstitutionSmall [a] where
+  applySmall s xs = applySmall s <$> xs
 
-applyPath :: Subst -> Path -> Either BaseType Path
+applyPath :: SubstP Parameterized -> Path -> SemanticType
 applyPath s (Path v tys) =
-  case (\ty -> I.reduce $ foldl I.TApp ty $ apply s tys) <$> lookupSubst v s of
-    Nothing -> return $ Path v $ apply s tys
-    Just (I.BaseType b) -> Left b
-    Just ty -> either (error . display) return $ fromType ty
+  case lookupSubst v s of
+    Nothing -> SemanticPath $ Path v $ applySmall s tys
+    Just (Parameterized ks ty)
+      | length ks == length tys -> applySmall (fromList $ zip (map variable [0..length ks-1]) $ map parameterized $ reverse tys) ty
+      | otherwise               -> error "ill-formed semantic path"
 
 newtype PathFormationError = PathFromType IType
   deriving (Eq, Show)
@@ -270,12 +282,7 @@ newtype PathFormationError = PathFromType IType
 instance Display PathFormationError where
   display (PathFromType ty) = "cannot create well-formed semantic path from: " ++ display ty
 
-fromType :: IType -> Either PathFormationError Path
-fromType (I.TVar v)       = return $ fromVariable v
-fromType (I.TApp ty1 ty2) = appendPath [ty2] <$> fromType ty1
-fromType ty               = Left $ PathFromType ty
-
-appendPath :: [IType] -> Path -> Path
+appendPath :: [SemanticType] -> Path -> Path
 appendPath tys' (Path v tys) = Path v $ tys ++ tys'
 
 getStructure :: Member (Error ElaborateError) r => SemanticType -> Eff r (Record SemanticType)
@@ -329,8 +336,8 @@ instance Subtype AbstractType where
 match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [IType])
 match ty aty = do
   let tys = lookupInsts (enumVars aty) ty (getBody aty)
-  t <- ty <: shift (-qsLen aty) (apply (fromList $ zip (enumVars aty) tys) $ getBody aty)
-  return (t, tys)
+  t <- ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) tys) $ getBody aty)
+  return (t, map toType tys)
 
 class Sized a where
   isSmall :: a -> Bool
@@ -437,33 +444,50 @@ instance ToType SemanticType where
   toType (SemanticPath p)   = toType p
   toType (Function f)       = toType f
 
+instance ToType Parameterized where
+  toType (Parameterized ks ty) = I.tabs (reverse ks) $ toType ty
+
 instance ToType a => ToType (Record a) where
   toType r = I.TRecord $ toType <$> r
 
 toTerm :: AbstractType -> Term
 toTerm aty = I.Abs (toType aty) $ I.TmRecord $ record []
 
+data Parameterized = Parameterized [IKind] SemanticType
+  deriving (Eq, Show)
+
+instance Shift Parameterized where
+  shiftAbove c d (Parameterized ks ty) = Parameterized ks $ shiftAbove (c + length ks) d ty
+
+parameterized :: SemanticType -> Parameterized
+parameterized = Parameterized []
+
+tabs :: [IKind] -> Parameterized -> Parameterized
+tabs ks1 (Parameterized ks ty) = Parameterized (reverse ks1 ++ ks) ty
+
 pattern EmptyExistential :: SemanticType -> SemanticType
 pattern EmptyExistential x <- AbstractType (Existential (Quantified ([], x)))
 
-lookupInst :: Path -> SemanticType -> SemanticType -> Maybe (First IType)
+lookupInst :: Path -> SemanticType -> SemanticType -> Maybe (First Parameterized)
 lookupInst p1 (EmptyExistential ty) (EmptyExistential (SemanticPath p2))
-  | p1 == p2 && isSmall ty = Just $ First $ toType ty
+  | p1 == p2 && isSmall ty = Just $ First $ Parameterized [] ty
   | otherwise              = Nothing
 lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p) r1 r2
 lookupInst p (Function u1) (Function u2)
   | isPure (getBody u1) && isPure (getBody u2) =
     let s = fromList $ zip (map variable [0..]) $ lookupInsts (enumVars u1) (domain $ getBody u2) (domain $ getBody u1) in
-    let mfty = lookupInst (appendPath (map I.TVar $ enumVars u2) p) (apply s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2) in
-    fmap (I.tabs $ getKinds u2) <$> mfty
+    let mfty = lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) p) (applySmall s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2) in
+    fmap (tabs $ getKinds u2) <$> mfty
 lookupInst _ _ _ = Nothing
 
-lookupInsts :: [Variable] -> SemanticType -> SemanticType -> [IType]
+lookupInsts :: [Variable] -> SemanticType -> SemanticType -> [Parameterized]
 lookupInsts vs ty1 ty2 = fst $ foldr f ([], ty2) vs
   where
-    f :: Variable -> ([IType], SemanticType) -> ([IType], SemanticType)
-    f v (tys, ty) = (res : tys, apply [(v, res)] ty)
-      where res = coerce $ fromMaybe (error $ "not explicit: " ++ display (WithName ty1) ++ " and " ++ display (WithName ty)) $ lookupInst (fromVariable v) ty1 ty
+    f :: Variable -> ([Parameterized], SemanticType) -> ([Parameterized], SemanticType)
+    f v (tys, ty) = (res : tys, applySmall [(v, res)] ty)
+      where
+        res :: Parameterized
+        res = coerce $ fromMaybe (error $ "not explicit: " ++ display (WithName ty1) ++ " and " ++ display (WithName ty)) $ lookupInst (fromVariable v) ty1 ty
 
 translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e

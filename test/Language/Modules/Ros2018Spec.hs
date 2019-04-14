@@ -11,7 +11,7 @@ import Control.Monad.Freer.Error
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Position
-import Language.Modules.Ros2018.Internal (emptyEnv, var, tvar, variable, label, record, Literal(..), BaseType(..), Failure(..), Substitution(..))
+import Language.Modules.Ros2018.Internal (emptyEnv, var, variable, label, record, Literal(..), BaseType(..), Failure(..))
 import qualified Language.Modules.Ros2018.Internal as I
 
 shouldBeRight :: (HasCallStack, Eq a, Show a) => Either Failure a -> a -> Expectation
@@ -42,10 +42,10 @@ spec = do
     it "look up instantiations" $ do
       lookupInsts [] (BaseType Int) (BaseType Int) `shouldBe` []
 
-      lookupInsts [variable 0] (AbstractType $ fromBody $ BaseType Int) (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Int]
+      lookupInsts [variable 0] (AbstractType $ fromBody $ BaseType Int) (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [parameterized $ BaseType Int]
       lookupInsts [variable 0]
         (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ BaseType Char)
-        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [I.BaseType Char]
+        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [parameterized $ BaseType Char]
 
   describe "match" $
     it "performs signature matching" $ do
@@ -56,6 +56,6 @@ spec = do
       run (runError $ match (BaseType Int) (fromBody $ BaseType Int)) `shouldBe` right (I.Abs (I.BaseType Int) $ var 0, [])
       run (runError $ match (AbstractType $ fromBody $ BaseType Int) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.BaseType Int `I.TFun` I.TRecord []) $ I.Abs (I.BaseType Int) $ I.TmRecord [], [I.BaseType Int])
 
-  describe "apply" $
+  describe "applySmall" $
     it "performs parallel substitution" $ do
-      apply [(variable 0, I.TAbs I.Base $ tvar 0)] (SemanticPath $ Path (variable 0) [I.BaseType Int]) `shouldBe` BaseType Int
+      applySmall [(variable 0, Parameterized [I.Base] $ SemanticPath $ fromVariable $ variable 0)] (SemanticPath $ Path (variable 0) [BaseType Int]) `shouldBe` BaseType Int
