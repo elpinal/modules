@@ -149,14 +149,16 @@ data Expr
   | Struct [Positional Binding]
   | Type (Positional Type)
   | Seal (Positional Ident) (Positional Type)
+  | Abs (Positional Ident) (Positional Type) (Positional Expr)
   deriving (Eq, Show)
 
 instance Display Expr where
-  displaysPrec _ (Lit l)      = displays l
-  displaysPrec _ (Id id)      = displays id
-  displaysPrec _ (Struct bs)  = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
-  displaysPrec n (Type ty)    = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
-  displaysPrec n (Seal id ty) = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
+  displaysPrec _ (Lit l)       = displays l
+  displaysPrec _ (Id id)       = displays id
+  displaysPrec _ (Struct bs)   = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
+  displaysPrec n (Type ty)     = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
+  displaysPrec n (Seal id ty)  = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
+  displaysPrec n (Abs id ty e) = showParen (4 <= n) $ showString "fun (" . displays (fromPositional id) . showString " : " . displaysPrec 0 (fromPositional ty) . showString ") => " . displaysPrec 3 (fromPositional e)
 
 type Env = I.Env Positional SemanticType
 
@@ -567,6 +569,12 @@ instance Elaboration Expr where
     aty2 <- elaborate ty
     (t2, tys) <- match (getBody aty1) aty2
     return (I.pack (I.App t2 t1) tys (getKinds aty2) (toType $ getBody aty2), aty2, strongSealing aty2)
+  elaborate (Positional _ (Abs id ty e)) = do
+    aty1 <- elaborate ty
+    let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
+    let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
+    (t, aty2, p) <- elaborate e
+    return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls

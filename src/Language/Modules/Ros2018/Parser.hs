@@ -109,6 +109,7 @@ reservedWords =
   , "int"
   , "char"
   , "type"
+  , "fun"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -140,6 +141,7 @@ expression = foldl (<|>) empty
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser
+  , (\p (id, ty) e -> positional (connect p $ getPosition e) $ Abs id ty e) <$> reserved "fun" <*> parens ((,) <$> identifier <*> (symbol ":" >> typeParser)) <*> (symbol "=>" >> expression)
   ]
 
 binding :: Parser (Positional Binding)
