@@ -338,7 +338,7 @@ instance Subtype AbstractType where
 match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [IType])
 match ty aty = do
   let tys = lookupInsts (enumVars aty) ty (getBody aty)
-  t <- ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) tys) $ getBody aty)
+  t <- ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)
   return (t, map toType tys)
 
 class Sized a where
