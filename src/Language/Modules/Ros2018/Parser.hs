@@ -85,6 +85,7 @@ typeAtom = foldl (<|>) empty
   [ fmap Base <$> baseType
   , (`positional` TypeType) <$> reserved "type"
   , parens typeParser
+  , fmap Expr <$> expression
   ]
 
 typeOpTable :: [[Operator Parser (Positional Type)]]

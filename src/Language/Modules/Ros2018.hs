@@ -110,6 +110,7 @@ data Type
   = Base BaseType
   | TypeType
   | Arrow (Maybe Ident) (Positional Type) Purity (Positional Type)
+  | Expr Expr
   deriving (Eq, Show)
 
 instance Display Type where
@@ -123,6 +124,7 @@ instance Display Type where
             Just id -> showParen True $ displays id . showString " : " . displays ty1
     in
     showParen (4 <= n) $ dom (fromPositional ty1) . showChar ' ' . showString arr . showChar ' ' . displaysPrec 3 (fromPositional ty2)
+  displaysPrec n (Expr e) = displaysPrec n e
 
 displayArrow :: Purity -> String
 displayArrow Pure   = "->"
@@ -169,15 +171,21 @@ data ElaborateError
   | PathMismatch Path Path
   | MissingLabel I.Label
   | NotPure
+  | ImpureType Expr
+  | NotReifiedType SemanticType
+  | NotEmptyExistential AbstractType
   deriving (Eq, Show)
 
 instance Display ElaborateError where
-  display (NotStructure lty)   = "not structure type: " ++ display (WithName lty)
-  display (NotSubtype ty1 ty2) = display (WithName ty1) ++ " is not subtype of " ++ display (WithName ty2)
-  display NotSubpurity         = "impure is not subtype of pure"
-  display (PathMismatch p1 p2) = "path mismatch: " ++ display (WithName p1) ++ " and " ++ display (WithName p2)
-  display (MissingLabel l)     = "missing label: " ++ display l
-  display NotPure              = "not pure"
+  display (NotStructure lty)        = "not structure type: " ++ display (WithName lty)
+  display (NotSubtype ty1 ty2)      = display (WithName ty1) ++ " is not subtype of " ++ display (WithName ty2)
+  display NotSubpurity              = "impure is not subtype of pure"
+  display (PathMismatch p1 p2)      = "path mismatch: " ++ display (WithName p1) ++ " and " ++ display (WithName p2)
+  display (MissingLabel l)          = "missing label: " ++ display l
+  display NotPure                   = "not pure"
+  display (ImpureType e)            = "unexpected impure type: " ++ display e
+  display (NotReifiedType ty)       = "not reified type: " ++ display (WithName ty)
+  display (NotEmptyExistential aty) = "existentially quantified: " ++ display (WithName aty)
 
 data Path = Path Variable [SemanticType]
   deriving (Eq, Show)
@@ -508,6 +516,9 @@ freshName = do
   n <- fresh
   return $ name $ "?d" <> T.pack (show n)
 
+pattern EmptyExistential1 :: a -> Existential a
+pattern EmptyExistential1 x <- Existential (Quantified ([], x))
+
 instance Elaboration Type where
   type Output Type = AbstractType
   type Effs Type = '[Error I.Failure, Error ElaborateError, Fresh]
@@ -527,6 +538,13 @@ instance Elaboration Type where
         let f ty = Fun ty Impure aty2
         return $ fromBody $ Function $ qmap f $ toUniversal aty1
       Pure -> error "not yet implented: pure function type"
+  elaborate (Positional p (Expr e)) = do
+    z <- elaborate $ positional p e
+    case z of
+      (_, _, Impure)                               -> throwError $ ImpureType e
+      (_, EmptyExistential1 (AbstractType aty), _) -> return aty
+      (_, EmptyExistential1 ty, _)                 -> throwError $ NotReifiedType ty
+      (_, aty, _)                                  -> throwError $ NotEmptyExistential aty
 
 instance Elaboration Literal where
   type Output Literal = BaseType
