@@ -56,6 +56,12 @@ spec = do
 
         integration "n = 97; s = n :> int"                  `shouldBeRight` ()
         integration "t = type (int ~> char); u = t :> type" `shouldBeRight` ()
+        integration "f = fun (t : type) => t"               `shouldBeRight` ()
+        integration "f = fun (t : type) => t :> type;"      `shouldBeRight` ()
+        integration "f = fun (n : int) => n"                `shouldBeRight` ()
+        integration "f = fun (n : int) => n :> int"         `shouldBeRight` ()
+
+        integration "f = fun (n : int) => fun (s : type) => fun (ch : char) => n" `shouldBeRight` ()
 
         integration "1"        `shouldThrow` anyException
         integration "x = t"    `shouldThrow` anyException
