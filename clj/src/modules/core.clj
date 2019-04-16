@@ -47,8 +47,12 @@
   (with-open [w (clojure.java.io/writer fname)]
     (.write w x)))
 
+(defn prepend-comma [n] (str ", " n))
+
+(defn paren [s] (str "(" s ")"))
+
 (defn render
-  [{:keys [key title author date location url tr-url slides appendix]}]
+  [{:keys [key title author date location url tr-url tr-with tr-date slides appendix]}]
   [:div
    [:h4 title]
    [:p author]
@@ -62,7 +66,9 @@
                 [:a {:href url} url]]
                (if tr-url ; Technical Report URL
                  [[:br]
-                  "Technical Report: "
+                  (if tr-with
+                    (str "Technical Report (with " tr-with (if tr-date (prepend-comma tr-date)) "): ")
+                    (str "Technical Report" (if tr-date (str " " (paren tr-date))) ": "))
                   [:a {:href tr-url} tr-url]]))))
    (if slides
      [:p "Slides: "
@@ -647,6 +653,17 @@
     :date     2003
     :location (journal-location "Electronic Notes in Theoretical Computer Science" :volume 60)
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1998/03/Types-for-Modules.pdf"}
+
+   :dre2004
+   {:key      "Dre2004"
+    :title    "A type system for well-founded recursion"
+    :author   dreyer
+    :date     2004
+    :location (proceedings-location popl :pages '(293 305))
+    :url      "https://people.mpi-sws.org/~dreyer/papers/recursion/popl.pdf"
+    :tr-url   "https://people.mpi-sws.org/~dreyer/papers/recursion/tr/main.pdf"
+    :tr-with  (authors harper crary)
+    :tr-date  2003}
 
    :dre2005a
    {:key      "Dre2005a"
