@@ -116,7 +116,7 @@ reservedWords =
 identifier :: Parser (Positional Ident)
 identifier = lexeme $ try $ p >>= check
   where
-    p = fmap T.pack $ (:) <$> letterChar <*> many alphaNumChar
+    p = fmap T.pack $ (:) <$> letterChar <*> many (alphaNumChar <|> char '_')
     check x =
       if x `elem` reservedWords
         then fail $ "keyword " ++ show x ++ " is not an identifier"
