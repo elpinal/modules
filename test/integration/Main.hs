@@ -85,3 +85,11 @@ spec = do
           include M1;
           q9 = 2;
           |] `shouldBeRight` ()
+
+        integration [r|
+          id = fun (a : type) => fun (v : a) => v;
+          i = type int;
+          id_int = id i;
+          m = 128;
+          n = id_int m;
+          |] `shouldBeRight` ()

@@ -55,7 +55,7 @@ module Language.Modules.Ros2018
   , parameterized
 
   -- * Subtyping
-  , match
+  , match'
 
   -- * Instantiation
   , lookupInsts
@@ -152,6 +152,7 @@ data Expr
   | Type (Positional Type)
   | Seal (Positional Ident) (Positional Type)
   | Abs (Positional Ident) (Positional Type) (Positional Expr)
+  | App (Positional Ident) (Positional Ident)
   deriving (Eq, Show)
 
 instance Display Expr where
@@ -161,6 +162,7 @@ instance Display Expr where
   displaysPrec n (Type ty)     = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
   displaysPrec n (Seal id ty)  = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
   displaysPrec n (Abs id ty e) = showParen (4 <= n) $ showString "fun (" . displays (fromPositional id) . showString " : " . displaysPrec 0 (fromPositional ty) . showString ") => " . displaysPrec 3 (fromPositional e)
+  displaysPrec _ (App id1 id2) = displays (fromPositional id1) . showChar ' ' . displays (fromPositional id2)
 
 type Env = I.Env Positional SemanticType
 
@@ -172,8 +174,9 @@ data ElaborateError
   | MissingLabel I.Label
   | NotPure
   | ImpureType Expr
-  | NotReifiedType SemanticType
+  | NotReifiedType Position SemanticType Expr
   | NotEmptyExistential AbstractType
+  | NotFunction SemanticType
   deriving (Eq, Show)
 
 instance Display ElaborateError where
@@ -184,8 +187,9 @@ instance Display ElaborateError where
   display (MissingLabel l)          = "missing label: " ++ display l
   display NotPure                   = "not pure"
   display (ImpureType e)            = "unexpected impure type: " ++ display e
-  display (NotReifiedType ty)       = "not reified type: " ++ display (WithName ty)
+  display (NotReifiedType p ty e)   = display p ++ ": not reified type: " ++ display (WithName ty) ++ ", which is type of " ++ display e
   display (NotEmptyExistential aty) = "existentially quantified: " ++ display (WithName aty)
+  display (NotFunction ty)          = "not function type: " ++ display (WithName ty)
 
 data Path = Path Variable [SemanticType]
   deriving (Eq, Show)
@@ -230,6 +234,9 @@ codomain (Fun _ _ aty) = aty
 
 domain :: Fun -> SemanticType
 domain (Fun ty _ _) = ty
+
+getPurity :: Fun -> Purity
+getPurity (Fun _ p _) = p
 
 data SemanticType
   = BaseType BaseType
@@ -330,7 +337,7 @@ instance Subtype SemanticType where
     let (Fun ty2 p2 aty2) = getBody u2
     let ?env = I.insertTypes $ reverse $ getAnnotatedKinds u2
     p1 <: p2
-    (t1, tys) <- ty2 `match` quantify (getAnnotatedKinds u1) ty1
+    (t1, tys) <- ty2 `match'` quantify (getAnnotatedKinds u1) ty1
     t2 <- aty1 <: aty2
     return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
   ty1 <: ty2 = throwError $ NotSubtype ty1 ty2
@@ -340,14 +347,19 @@ instance Subtype AbstractType where
 
   aty1 <: aty2 = do
     let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
-    (t, tys) <- match (getBody aty1) aty2
+    (t, tys) <- match' (getBody aty1) aty2
     return $ I.Abs (toType aty1) $ I.unpack Nothing (var 0) (qsLen aty1) $ I.pack (I.App t $ var 0) tys (getKinds aty2) $ toType aty2
 
-match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [IType])
+match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [Parameterized])
 match ty aty = do
   let tys = lookupInsts (enumVars aty) ty (getBody aty)
   t <- ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)
-  return (t, map toType tys)
+  return (t, tys)
+
+match' :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [IType])
+match' ty aty = do
+  (t, tys) <- match ty aty
+  return (t, toType <$> tys)
 
 class Sized a where
   isSmall :: a -> Bool
@@ -417,6 +429,9 @@ newtype Universal a = Universal (Quantified a)
 
 toUniversal :: Existential a -> Universal a
 toUniversal = coerce
+
+toExistential :: Universal a -> Existential a
+toExistential = coerce
 
 type AbstractType = Existential SemanticType
 
@@ -543,7 +558,7 @@ instance Elaboration Type where
     case z of
       (_, _, Impure)                               -> throwError $ ImpureType e
       (_, EmptyExistential1 (AbstractType aty), _) -> return aty
-      (_, EmptyExistential1 ty, _)                 -> throwError $ NotReifiedType ty
+      (_, EmptyExistential1 ty, _)                 -> throwError $ NotReifiedType p ty e
       (_, aty, _)                                  -> throwError $ NotEmptyExistential aty
 
 instance Elaboration Literal where
@@ -585,7 +600,7 @@ instance Elaboration Expr where
     (t1, aty1, p) <- elaborate $ Id <$> id
     mustBePure p
     aty2 <- elaborate ty
-    (t2, tys) <- match (getBody aty1) aty2
+    (t2, tys) <- match' (getBody aty1) aty2
     return (I.pack (I.App t2 t1) tys (getKinds aty2) (toType $ getBody aty2), aty2, strongSealing aty2)
   elaborate (Positional _ (Abs id ty e)) = do
     aty1 <- elaborate ty
@@ -593,6 +608,14 @@ instance Elaboration Expr where
     let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
     (t, aty2, p) <- elaborate e
     return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
+  elaborate (Positional _ (App id1 id2)) = do
+    (t1, aty1, _) <- elaborate $ Id <$> id1
+    (t2, aty2, _) <- elaborate $ Id <$> id2
+    case getBody aty1 of
+      Function u -> do
+        (t3, tys) <- match (getBody aty2) $ toExistential $ qmap domain u
+        return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, applySmall (fromList $ zip (enumVars u) tys) $ codomain $ getBody u, getPurity $ getBody u)
+      ty1 -> throwError $ NotFunction ty1
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls

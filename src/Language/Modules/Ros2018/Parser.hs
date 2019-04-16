@@ -139,6 +139,7 @@ expression :: Parser (Positional Expr)
 expression = foldl (<|>) empty
   [ fmap Lit <$> literal
   , try $ (\id ty -> connecting id ty $ Seal id ty) <$> identifier <*> (seal >> typeParser)
+  , try $ (\id1 id2 -> connecting id1 id2 $ App id1 id2) <$> identifier <*> identifier
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser
