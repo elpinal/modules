@@ -106,6 +106,15 @@ ident = Ident . name
 instance Display Ident where
   display (Ident name) = display name
 
+data Decl
+  = Spec Ident (Positional Type)
+  | DInclude (Positional Type)
+  deriving (Eq, Show)
+
+instance Display Decl where
+  displaysPrec _ (Spec id ty)  = displays id . showString " : " . displays (fromPositional ty)
+  displaysPrec _ (DInclude ty) = showString "include " . displaysPrec 5 (fromPositional ty)
+
 data Type
   = Base BaseType
   | TypeType
@@ -409,6 +418,9 @@ instance Quantification Quantified where
   quantify ks x = Quantified (ks, x)
   qmap f q = quantify (getAnnotatedKinds q) $ f $ getBody q
 
+qfmap :: (Quantification q, Functor f) => (a -> f b) -> q a -> f (q b)
+qfmap f q = quantify (getAnnotatedKinds q) <$> f (getBody q)
+
 instance Shift a => Shift (Quantified a) where
   shiftAbove c d q = qmap (shiftAbove (c + qsLen q) d) q
 
@@ -577,6 +589,13 @@ instance Elaboration Type where
       (_, _, Impure)               -> throwError $ ImpureType $ fromPositional e
       (_, EmptyExistential1 ty, _) -> return $ fromBody ty
       (_, _, _)                    -> error "in the absence of weak sealing, a pure expression must not be given an existential type"
+
+instance Elaboration Decl where
+  type Output Decl = Existential (Record SemanticType)
+  type Effs Decl = '[Error I.Failure, Error ElaborateError, Fresh]
+
+  elaborate (Positional _ (Spec id ty))  = qmap (\ty -> [(toLabel $ coerce id, ty)]) <$> elaborate ty
+  elaborate (Positional _ (DInclude ty)) = elaborate ty >>= qfmap getStructure
 
 withExplicitType :: Member (Error ElaborateError) r => Positional Expr -> Eff r ()
 withExplicitType (Positional p e) =
