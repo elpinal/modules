@@ -156,17 +156,19 @@ data Expr
   | Abs (Positional Ident) (Positional Type) (Positional Expr)
   | App (Positional Ident) (Positional Ident)
   | Proj (Positional Expr) Ident
+  | If (Positional Ident) (Positional Expr) (Positional Expr) (Positional Type)
   deriving (Eq, Show)
 
 instance Display Expr where
-  displaysPrec _ (Lit l)       = displays l
-  displaysPrec _ (Id id)       = displays id
-  displaysPrec _ (Struct bs)   = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
-  displaysPrec n (Type ty)     = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
-  displaysPrec n (Seal id ty)  = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
-  displaysPrec n (Abs id ty e) = showParen (4 <= n) $ showString "fun (" . displays (fromPositional id) . showString " : " . displaysPrec 0 (fromPositional ty) . showString ") => " . displaysPrec 3 (fromPositional e)
-  displaysPrec n (App id1 id2) = showParen (4 <= n) $ displays (fromPositional id1) . showChar ' ' . displays (fromPositional id2)
-  displaysPrec _ (Proj e id)   = displaysPrec 4 (fromPositional e) . showChar '.' . displays id
+  displaysPrec _ (Lit l)          = displays l
+  displaysPrec _ (Id id)          = displays id
+  displaysPrec _ (Struct bs)      = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
+  displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
+  displaysPrec n (Seal id ty)     = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
+  displaysPrec n (Abs id ty e)    = showParen (4 <= n) $ showString "fun (" . displays (fromPositional id) . showString " : " . displaysPrec 0 (fromPositional ty) . showString ") => " . displaysPrec 3 (fromPositional e)
+  displaysPrec n (App id1 id2)    = showParen (4 <= n) $ displays (fromPositional id1) . showChar ' ' . displays (fromPositional id2)
+  displaysPrec _ (Proj e id)      = displaysPrec 4 (fromPositional e) . showChar '.' . displays id
+  displaysPrec n (If id e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays (fromPositional id) . showString " then " . displays (fromPositional e1) . showString " else " . displays (fromPositional e2) . showString " end : " . displays (fromPositional ty)
 
 type Env = I.Env Positional SemanticType
 
@@ -181,6 +183,7 @@ data ElaborateError
   | NotReifiedType Position SemanticType Expr
   | NotEmptyExistential AbstractType
   | NotFunction Position SemanticType
+  | NotBool Position SemanticType
   | MissingExplicitType Position Expr
   deriving (Eq, Show)
 
@@ -195,6 +198,7 @@ instance Display ElaborateError where
   display (NotReifiedType p ty e)   = display p ++ ": not reified type: " ++ display (WithName ty) ++ ", which is type of " ++ display e
   display (NotEmptyExistential aty) = "existentially quantified: " ++ display (WithName aty)
   display (NotFunction p ty)        = display p ++ ": not function type: " ++ display (WithName ty)
+  display (NotBool p ty)            = display p ++ ": not bool type: " ++ display (WithName ty)
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
 
 data Path = Path Variable [SemanticType]
@@ -643,6 +647,17 @@ instance Elaboration Expr where
     ty <- maybe (throwError $ MissingLabel l) return $ projRecord l r
     let aty1 = qmap (const ty) aty
     return (I.unpack Nothing t (qsLen aty) $ I.pack (I.Proj (var 0) l) (I.TVar <$> enumVars aty) (getKinds aty) $ toType aty1, aty1, p)
+  elaborate (Positional _ (If id e2 e3 ty)) = do
+    (t1, aty1, _) <- elaborate $ Id <$> id
+    case getBody aty1 of
+      BaseType I.Bool -> do
+        aty <- elaborate ty
+        (t2, aty2, p2) <- elaborate e2
+        (t3, aty3, p3) <- elaborate e3
+        f2 <- aty2 <: aty
+        f3 <- aty3 <: aty
+        return (I.If t1 (I.App f2 t2) $ I.App f3 t3, aty, p2 <> p3 <> strongSealing aty)
+      ty -> throwError $ NotBool (getPosition id) ty
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls

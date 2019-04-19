@@ -118,3 +118,12 @@ spec = do
           x = M.x;
           f = fun (y : type) => M.y;
           |] `shouldBeRight` ()
+
+        integration [r|
+          x = true;
+          y =
+            if x
+              then 'w'
+              else 'h'
+            end : char
+          |] `shouldBeRight` ()

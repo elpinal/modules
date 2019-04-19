@@ -135,6 +135,9 @@ reservedWords =
   , "char"
   , "type"
   , "fun"
+  , "if"
+  , "then"
+  , "else"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -174,6 +177,7 @@ expression' = foldl (<|>) empty
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser
   , (\p (id, ty) e -> positional (connect p $ getPosition e) $ Abs id ty e) <$> reserved "fun" <*> parens ((,) <$> identifier <*> (symbol ":" >> typeParser)) <*> (symbol "=>" >> expression)
+  , (\p id e1 e2 ty -> positional (connect p $ getPosition ty) $ If id e1 e2 ty) <$> reserved "if" <*> identifier <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
   ]
 
 binding :: Parser (Positional Binding)
