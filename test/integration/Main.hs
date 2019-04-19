@@ -149,3 +149,16 @@ spec = do
             y : char;
           end;
           |] `shouldBeRight` ()
+
+        integration [r|
+          S = type sig
+            t : type ~> bool;
+          end;
+
+          M = struct
+            t = fun (X : type) => true;
+            k = 4;
+          end;
+
+          M = M :> S;
+          |] `shouldBeRight` ()

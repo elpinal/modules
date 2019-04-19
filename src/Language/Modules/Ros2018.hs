@@ -355,12 +355,13 @@ instance Subtype SemanticType where
     | otherwise = throwError $ NotSubtype (BaseType b1) (BaseType b2)
   SemanticPath p1 <: SemanticPath p2     = equalPath p1 p2 $> I.Abs (toType p1) (var 0)
   AbstractType aty1 <: AbstractType aty2 = aty1 <: aty2 $> I.Abs (toType $ AbstractType aty1) (toTerm aty2)
-  Structure r1 <: Structure r2           = I.TmRecord <$> I.iter f r2
+  Structure r1 <: Structure r2           = I.Abs (toType r1) . I.TmRecord <$> I.iter f r2
     where
       f :: Member (Error ElaborateError) r => I.Label -> SemanticType -> Eff r Term
       f l ty2 = do
         ty1 <- maybe (throwError $ MissingLabel l) return $ projRecord l r1
-        ty1 <: ty2
+        t <- ty1 <: ty2
+        return $ I.App t $ var 0 `I.Proj` l
   Function u1 <: Function u2 = do
     let (Fun ty1 p1 aty1) = getBody u1
     let (Fun ty2 p2 aty2) = getBody u2
