@@ -111,6 +111,7 @@ data Type
   | TypeType
   | Arrow (Maybe Ident) (Positional Type) Purity (Positional Type)
   | Expr Expr
+  | Singleton (Positional Expr)
   deriving (Eq, Show)
 
 instance Display Type where
@@ -124,7 +125,8 @@ instance Display Type where
             Just id -> showParen True $ displays id . showString " : " . displays ty1
     in
     showParen (4 <= n) $ dom (fromPositional ty1) . showChar ' ' . showString arr . showChar ' ' . displaysPrec 3 (fromPositional ty2)
-  displaysPrec n (Expr e) = displaysPrec n e
+  displaysPrec n (Expr e)      = displaysPrec n e
+  displaysPrec _ (Singleton e) = showParen True $ showString "= " . displays (fromPositional e)
 
 displayArrow :: Purity -> String
 displayArrow Pure   = "->"
@@ -177,6 +179,7 @@ data ElaborateError
   | NotReifiedType Position SemanticType Expr
   | NotEmptyExistential AbstractType
   | NotFunction SemanticType
+  | MissingExplicitType Position Expr
   deriving (Eq, Show)
 
 instance Display ElaborateError where
@@ -190,6 +193,7 @@ instance Display ElaborateError where
   display (NotReifiedType p ty e)   = display p ++ ": not reified type: " ++ display (WithName ty) ++ ", which is type of " ++ display e
   display (NotEmptyExistential aty) = "existentially quantified: " ++ display (WithName aty)
   display (NotFunction ty)          = "not function type: " ++ display (WithName ty)
+  display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
 
 data Path = Path Variable [SemanticType]
   deriving (Eq, Show)
@@ -560,6 +564,20 @@ instance Elaboration Type where
       (_, EmptyExistential1 (AbstractType aty), _) -> return aty
       (_, EmptyExistential1 ty, _)                 -> throwError $ NotReifiedType p ty e
       (_, aty, _)                                  -> throwError $ NotEmptyExistential aty
+  elaborate (Positional _ (Singleton e)) = do
+    withExplicitType e
+    z <- elaborate e
+    case z of
+      (_, _, Impure)               -> throwError $ ImpureType $ fromPositional e
+      (_, EmptyExistential1 ty, _) -> return $ fromBody ty
+      (_, _, _)                    -> error "in the absence of weak sealing, a pure expression must not be given an existential type"
+
+withExplicitType :: Member (Error ElaborateError) r => Positional Expr -> Eff r ()
+withExplicitType (Positional p e) =
+  case e of
+    Seal _ _ -> return ()
+    Type _   -> return ()
+    _        -> throwError $ MissingExplicitType p e
 
 instance Elaboration Literal where
   type Output Literal = BaseType

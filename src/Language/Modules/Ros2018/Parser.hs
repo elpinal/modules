@@ -84,6 +84,7 @@ typeAtom :: Parser (Positional Type)
 typeAtom = foldl (<|>) empty
   [ fmap Base <$> baseType
   , (`positional` TypeType) <$> reserved "type"
+  , try $ parens $ (\eq e -> connecting eq e $ Singleton e) <$> symbol "=" <*> expression
   , parens typeParser
   , fmap Expr <$> expression
   ]

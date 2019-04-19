@@ -93,3 +93,10 @@ spec = do
           m = 128;
           n = id_int m;
           |] `shouldBeRight` ()
+
+        integration [r|
+          i = type (= type int);
+          f = fun (t : i) => t;
+          x = type int;
+          n = f x;
+          |] `shouldBeRight` ()
