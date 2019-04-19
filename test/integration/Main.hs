@@ -127,3 +127,13 @@ spec = do
               else 'h'
             end : char
           |] `shouldBeRight` ()
+
+        integration [r|
+          x = true;
+          y =
+            if x
+              then type int
+              else type bool
+            end : type
+          |] `shouldBeRight` ()
+

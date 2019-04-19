@@ -358,7 +358,7 @@ instance Subtype AbstractType where
   aty1 <: aty2 = do
     let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
     (t, tys) <- match' (getBody aty1) aty2
-    return $ I.Abs (toType aty1) $ I.unpack Nothing (var 0) (qsLen aty1) $ I.pack (I.App t $ var 0) tys (getKinds aty2) $ toType aty2
+    return $ I.Abs (toType aty1) $ I.unpack Nothing (var 0) (qsLen aty1) $ I.pack (I.App t $ var 0) tys (getKinds aty2) $ toType (getBody aty2)
 
 match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [Parameterized])
 match ty aty = do
@@ -646,7 +646,7 @@ instance Elaboration Expr where
     let l = toLabel $ coerce id
     ty <- maybe (throwError $ MissingLabel l) return $ projRecord l r
     let aty1 = qmap (const ty) aty
-    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.Proj (var 0) l) (I.TVar <$> enumVars aty) (getKinds aty) $ toType aty1, aty1, p)
+    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.Proj (var 0) l) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty1, aty1, p)
   elaborate (Positional _ (If id e2 e3 ty)) = do
     (t1, aty1, _) <- elaborate $ Id <$> id
     case getBody aty1 of
