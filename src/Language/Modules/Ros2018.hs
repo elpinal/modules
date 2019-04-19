@@ -20,6 +20,7 @@ module Language.Modules.Ros2018
 
   -- * Syntax
   , Type(..)
+  , Decl(..)
   , Expr(..)
   , Binding(..)
 
@@ -83,6 +84,7 @@ import qualified Data.Map.Lazy as Map
 import Data.Maybe
 import Data.Monoid hiding (First)
 import Data.Semigroup (First(..))
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Exts
 import GHC.Generics
@@ -121,6 +123,7 @@ data Type
   | Arrow (Maybe Ident) (Positional Type) Purity (Positional Type)
   | Expr Expr
   | Singleton (Positional Expr)
+  | Sig [Positional Decl]
   deriving (Eq, Show)
 
 instance Display Type where
@@ -136,6 +139,11 @@ instance Display Type where
     showParen (4 <= n) $ dom (fromPositional ty1) . showChar ' ' . showString arr . showChar ' ' . displaysPrec 3 (fromPositional ty2)
   displaysPrec n (Expr e)      = displaysPrec n e
   displaysPrec _ (Singleton e) = showParen True $ showString "= " . displays (fromPositional e)
+  displaysPrec _ (Sig ds)      = showString "sig " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) ds) . showSpace (not $ null ds) . showString "end"
+
+showSpace :: Bool -> ShowS
+showSpace True  = showChar ' '
+showSpace False = id
 
 displayArrow :: Purity -> String
 displayArrow Pure   = "->"
@@ -171,7 +179,7 @@ data Expr
 instance Display Expr where
   displaysPrec _ (Lit l)          = displays l
   displaysPrec _ (Id id)          = displays id
-  displaysPrec _ (Struct bs)      = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showString " end"
+  displaysPrec _ (Struct bs)      = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showSpace (not $ null bs) . showString "end"
   displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
   displaysPrec n (Seal id ty)     = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
   displaysPrec n (Abs id ty e)    = showParen (4 <= n) $ showString "fun (" . displays (fromPositional id) . showString " : " . displaysPrec 0 (fromPositional ty) . showString ") => " . displaysPrec 3 (fromPositional e)
@@ -194,6 +202,7 @@ data ElaborateError
   | NotFunction Position SemanticType
   | NotBool Position SemanticType
   | MissingExplicitType Position Expr
+  | DuplicateSpec (Set.Set I.Label)
   deriving (Eq, Show)
 
 instance Display ElaborateError where
@@ -209,6 +218,7 @@ instance Display ElaborateError where
   display (NotFunction p ty)        = display p ++ ": not function type: " ++ display (WithName ty)
   display (NotBool p ty)            = display p ++ ": not bool type: " ++ display (WithName ty)
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
+  display (DuplicateSpec s)         = "duplicate specifications"
 
 data Path = Path Variable [SemanticType]
   deriving (Eq, Show)
@@ -589,6 +599,25 @@ instance Elaboration Type where
       (_, _, Impure)               -> throwError $ ImpureType $ fromPositional e
       (_, EmptyExistential1 ty, _) -> return $ fromBody ty
       (_, _, _)                    -> error "in the absence of weak sealing, a pure expression must not be given an existential type"
+  elaborate (Positional _ (Sig ds)) = do
+    (aty, _) <- foldlM elaborateDecls (fromBody [], ?env) ds
+    return $ Structure <$> aty
+
+elaborateDecls :: Members '[Error I.Failure, Error ElaborateError, Fresh] r => (Existential (Record SemanticType), Env) -> Positional Decl -> Eff r (Existential (Record SemanticType), Env)
+elaborateDecls (acc, env) d = do
+  let ?env = env
+  aty <- elaborate d
+  let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty
+  let ?env = foldl (\env (l, ty) -> let ?env = env in insertValue (toName l) ty) ?env $ I.toList $ getBody aty
+  mustBeDisjoint acc aty
+  return (merge acc aty, ?env)
+
+mustBeDisjoint :: Member (Error ElaborateError) r => Existential (Record SemanticType) -> Existential (Record SemanticType) -> Eff r ()
+mustBeDisjoint e1 e2 =
+  let s = I.intersection (getBody e1) $ getBody e2 in
+  if Set.null s
+    then return ()
+    else throwError $ DuplicateSpec s
 
 instance Elaboration Decl where
   type Output Decl = Existential (Record SemanticType)

@@ -25,6 +25,7 @@ module Language.Modules.Ros2018.Internal
   -- * Records
   , Record(..)
   , record
+  , intersection
   , toList
   , labels
   , foldMapIntersection
@@ -104,6 +105,7 @@ import qualified Data.Map.Lazy as Map
 import Data.Maybe
 import Data.Map.Merge.Lazy
 import Data.Monoid
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Exts
 import GHC.Generics
@@ -177,6 +179,9 @@ instance Shift a => Shift (Record a) where
 
 record :: [(Label, a)] -> Record a
 record = Record . Map.fromList
+
+intersection :: Record a -> Record b -> Set.Set Label
+intersection (Record m1) (Record m2) = Map.keysSet m1 `Set.intersection` Map.keysSet m2
 
 instance IsList (Record a) where
   type Item (Record a) = (Label, a)

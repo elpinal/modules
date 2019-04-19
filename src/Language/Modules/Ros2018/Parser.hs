@@ -103,6 +103,7 @@ typeAtom = foldl (<|>) empty
   , try $ parens $ (\eq e -> connecting eq e $ Singleton e) <$> symbol "=" <*> expression
   , parens typeParser
   , fmap Expr <$> expression
+  , signature
   ]
 
 arrow :: Purity -> PType -> PType -> PType
@@ -128,6 +129,7 @@ reservedWords =
   [ "true"
   , "false"
   , "struct"
+  , "sig"
   , "end"
   , "include"
   , "bool"
@@ -148,6 +150,22 @@ identifier = lexeme $ try $ p >>= check
       if x `elem` reservedWords
         then fail $ "keyword " ++ show x ++ " is not an identifier"
         else return $ ident x
+
+decl :: Parser (Positional Decl)
+decl = foldl (<|>) empty
+  [ (\id ty -> connecting id ty $ Spec (fromPositional id) ty) <$> identifier <*> (symbol ":" >> typeParser)
+  , (\pos ty -> positional pos $ DInclude ty) <$> reserved "include" <*> typeParser
+  ]
+
+decls :: Parser [Positional Decl]
+decls = decl `sepEndBy` symbol ";"
+
+signature :: Parser (Positional Type)
+signature = do
+  start <- reserved "sig"
+  ds <- decls
+  end <- reserved "end"
+  return $ positional (connect start end) $ Sig ds
 
 bindings :: Parser [Positional Binding]
 bindings = binding `sepEndBy` symbol ";"

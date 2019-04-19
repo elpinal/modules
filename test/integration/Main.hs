@@ -137,3 +137,15 @@ spec = do
             end : type
           |] `shouldBeRight` ()
 
+        integration [r|
+          S = type sig
+            x : int;
+            t : type;
+            i : (= type int);
+          end;
+
+          T = type sig
+            x : int;
+            y : char;
+          end;
+          |] `shouldBeRight` ()
