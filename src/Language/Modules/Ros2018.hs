@@ -534,7 +534,7 @@ lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p
 lookupInst p (Function u1) (Function u2)
   | isPure (getBody u1) && isPure (getBody u2) =
     let s = fromList $ zip (map variable [0..]) $ lookupInsts (enumVars u1) (domain $ getBody u2) (domain $ getBody u1) in
-    let mfty = lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) p) (applySmall s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2) in
+    let mfty = lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) $ shift (qsLen u2) p) (applySmall s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2) in
     fmap (tabs $ getKinds u2) <$> mfty
 lookupInst _ _ _ = Nothing
 
@@ -545,7 +545,7 @@ lookupInsts vs ty1 ty2 = fst $ foldr f ([], ty2) vs
     f v (tys, ty) = (res : tys, applySmall [(v, res)] ty)
       where
         res :: Parameterized
-        res = coerce $ fromMaybe (error $ "not explicit: " ++ display (WithName ty1) ++ " and " ++ display (WithName ty)) $ lookupInst (fromVariable v) ty1 ty
+        res = coerce $ fromMaybe (error $ "not explicit: " ++ display v ++ ": " ++ display (WithName ty1) ++ " and " ++ display (WithName ty)) $ lookupInst (fromVariable v) ty1 ty
 
 translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e
