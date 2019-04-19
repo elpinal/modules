@@ -102,9 +102,19 @@ spec = do
           |] `shouldBeRight` ()
 
         integration [r|
-            t = type (X : type) ~> (= type X);
-            b = type bool;
-            z = fun (v : t) => v;
-            f = fun (t : type) => type t;
-            y = z f;
+          t = type (X : type) ~> (= type X);
+          b = type bool;
+          z = fun (v : t) => v;
+          f = fun (t : type) => type t;
+          y = z f;
+          |] `shouldBeRight` ()
+
+        integration [r|
+          x = true;
+          M = struct
+            x = 40;
+            y = 30;
+          end;
+          x = M.x;
+          f = fun (y : type) => M.y;
           |] `shouldBeRight` ()

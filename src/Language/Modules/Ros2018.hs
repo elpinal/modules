@@ -155,6 +155,7 @@ data Expr
   | Seal (Positional Ident) (Positional Type)
   | Abs (Positional Ident) (Positional Type) (Positional Expr)
   | App (Positional Ident) (Positional Ident)
+  | Proj (Positional Expr) Ident
   deriving (Eq, Show)
 
 instance Display Expr where
@@ -164,7 +165,8 @@ instance Display Expr where
   displaysPrec n (Type ty)     = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
   displaysPrec n (Seal id ty)  = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
   displaysPrec n (Abs id ty e) = showParen (4 <= n) $ showString "fun (" . displays (fromPositional id) . showString " : " . displaysPrec 0 (fromPositional ty) . showString ") => " . displaysPrec 3 (fromPositional e)
-  displaysPrec _ (App id1 id2) = displays (fromPositional id1) . showChar ' ' . displays (fromPositional id2)
+  displaysPrec n (App id1 id2) = showParen (4 <= n) $ displays (fromPositional id1) . showChar ' ' . displays (fromPositional id2)
+  displaysPrec _ (Proj e id)   = displaysPrec 4 (fromPositional e) . showChar '.' . displays id
 
 type Env = I.Env Positional SemanticType
 
@@ -634,6 +636,13 @@ instance Elaboration Expr where
         (t3, tys) <- match (getBody aty2) $ toExistential $ qmap domain u
         return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, applySmall (fromList $ zip (enumVars u) tys) $ codomain $ getBody u, getPurity $ getBody u)
       ty1 -> throwError $ NotFunction (getPosition id1) ty1
+  elaborate (Positional _ (Proj e id)) = do
+    (t, aty, p) <- elaborate e
+    r <- getStructure $ getBody aty
+    let l = toLabel $ coerce id
+    ty <- maybe (throwError $ MissingLabel l) return $ projRecord l r
+    let aty1 = qmap (const ty) aty
+    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.Proj (var 0) l) (I.TVar <$> enumVars aty) (getKinds aty) $ toType aty1, aty1, p)
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls

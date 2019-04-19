@@ -160,7 +160,13 @@ seal :: Parser ()
 seal = void $ symbol ":>"
 
 expression :: Parser (Positional Expr)
-expression = foldl (<|>) empty
+expression = do
+  e <- expression'
+  ids <- many $ char '.' >> identifier
+  return $ foldl (\e id -> connecting e id $ Proj e $ fromPositional id) e ids
+
+expression' :: Parser (Positional Expr)
+expression' = foldl (<|>) empty
   [ fmap Lit <$> literal
   , try $ (\id ty -> connecting id ty $ Seal id ty) <$> identifier <*> (seal >> typeParser)
   , try $ (\id1 id2 -> connecting id1 id2 $ App id1 id2) <$> identifier <*> identifier
