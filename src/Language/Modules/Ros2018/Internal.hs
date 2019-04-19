@@ -309,6 +309,7 @@ data Term
   | Inst Term Type
   | Pack Term [Type] [Kind] Type
   | Unpack (Maybe Generated) Term Int Term
+  | If Term Term Term
   -- To make debug easy.
   | Let [Term] Term
   deriving (Eq, Show)
@@ -362,6 +363,8 @@ instance DisplayName Term where
     let ?nctx = newValues $ length ts in
     let f = displaysWithName 0 t in
       showParen (4 <= n) $ showString "let " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ fst $ foldr (\f (fs, i) -> (displayVariable i . showString " = " . f : fs, i + 1)) ([], 0) fs) . showString " in " . f
+  displaysWithName n (If t1 t2 t3) =
+    showParen (4 <= n) $ showString "if " . displaysWithName 0 t1 . showString " then " . displaysWithName 0 t2 . showString " else " . displaysWithName 0 t3
 
 displayTypeVariables :: (?nctx :: NameContext) => Int -> ShowS
 displayTypeVariables 0 = id
@@ -688,6 +691,7 @@ data TypeError
   | NotRecord Type
   | NotForall Type
   | NotSome Type
+  | NotBool Type
   | TypeMismatch Type Type
   | MissingLabel Label (Record Type)
   | IllFormedPack [Type] [Kind]
@@ -698,6 +702,7 @@ instance Display TypeError where
   display (NotRecord ty)         = "not record type: " ++ display ty
   display (NotForall ty)         = "not universal type: " ++ display ty
   display (NotSome ty)           = "not existential type: " ++ display ty
+  display (NotBool ty)           = "not bool type: " ++ display ty
   display (TypeMismatch ty1 ty2) = "type mismatch: " ++ display ty1 ++ " and " ++ display ty2
   display (MissingLabel l r)     = "missing label (" ++ display l ++ ") in " ++ display r
   display (IllFormedPack tys ks) = "ill-formed 'pack': the number of witness types (" ++ show (length tys) ++ ") and that of existential quantifiers (" ++ show (length ks) ++ ")"
@@ -775,6 +780,15 @@ instance Typed Term where
     tys <- mapM typeOf ts
     let ?env = insertValuesWithoutName tys
     typeOf t
+  typeOf (If t1 t2 t3) = do
+    ty1 <- whTypeOf t1
+    case ty1 of
+      BaseType Bool -> do
+        ty2 <- typeOf t2
+        ty3 <- typeOf t3
+        equal ty2 ty3 Base
+        return ty2
+      _ -> throw $ NotBool ty1
 
 equalKind :: Member (Error Failure) r => Kind -> Kind -> Eff r ()
 equalKind k1 k2
