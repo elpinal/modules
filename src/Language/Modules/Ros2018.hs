@@ -178,7 +178,7 @@ data ElaborateError
   | ImpureType Expr
   | NotReifiedType Position SemanticType Expr
   | NotEmptyExistential AbstractType
-  | NotFunction SemanticType
+  | NotFunction Position SemanticType
   | MissingExplicitType Position Expr
   deriving (Eq, Show)
 
@@ -192,7 +192,7 @@ instance Display ElaborateError where
   display (ImpureType e)            = "unexpected impure type: " ++ display e
   display (NotReifiedType p ty e)   = display p ++ ": not reified type: " ++ display (WithName ty) ++ ", which is type of " ++ display e
   display (NotEmptyExistential aty) = "existentially quantified: " ++ display (WithName aty)
-  display (NotFunction ty)          = "not function type: " ++ display (WithName ty)
+  display (NotFunction p ty)        = display p ++ ": not function type: " ++ display (WithName ty)
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
 
 data Path = Path Variable [SemanticType]
@@ -633,7 +633,7 @@ instance Elaboration Expr where
       Function u -> do
         (t3, tys) <- match (getBody aty2) $ toExistential $ qmap domain u
         return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, applySmall (fromList $ zip (enumVars u) tys) $ codomain $ getBody u, getPurity $ getBody u)
-      ty1 -> throwError $ NotFunction ty1
+      ty1 -> throwError $ NotFunction (getPosition id1) ty1
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls
