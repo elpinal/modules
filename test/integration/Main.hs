@@ -100,3 +100,11 @@ spec = do
           x = type int;
           n = f x;
           |] `shouldBeRight` ()
+
+        integration [r|
+            t = type (X : type) ~> (= type X);
+            b = type bool;
+            z = fun (v : t) => v;
+            f = fun (t : type) => type t;
+            y = z f;
+          |] `shouldBeRight` ()

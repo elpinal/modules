@@ -9,6 +9,7 @@ import Data.Coerce
 import Data.Functor
 import qualified Data.Text as T
 import Data.Void
+import GHC.Exts
 
 import Control.Monad.Combinators.Expr
 import Text.Megaparsec
@@ -78,7 +79,22 @@ baseType = foldl (<|>) empty
   ]
 
 typeParser :: Parser (Positional Type)
-typeParser = makeExprParser typeAtom typeOpTable
+typeParser = makeExprParser withParam typeOpTable >>= f
+  where
+    f :: PType -> Parser (Positional Type)
+    f (Typ ty) = return ty
+    f _        = unexpected $ Label $ fromList "arrow-related parse error"
+
+data PType
+  = Typ (Positional Type)
+  | WithParam Ident (Positional Type)
+  | Fail
+
+withParam :: Parser PType
+withParam = foldl (<|>) empty
+  [ try $ parens $ WithParam <$> (fromPositional <$> identifier) <*> (symbol ":" >> typeAtom)
+  , Typ <$> typeAtom
+  ]
 
 typeAtom :: Parser (Positional Type)
 typeAtom = foldl (<|>) empty
@@ -89,10 +105,17 @@ typeAtom = foldl (<|>) empty
   , fmap Expr <$> expression
   ]
 
-typeOpTable :: [[Operator Parser (Positional Type)]]
+arrow :: Purity -> PType -> PType -> PType
+arrow _ Fail _                       = Fail
+arrow _ _ Fail                       = Fail
+arrow p (Typ ty1) (Typ ty2)          = Typ $ connecting ty1 ty2 $ Arrow Nothing ty1 p ty2
+arrow p (WithParam id ty1) (Typ ty2) = Typ $ connecting ty1 ty2 $ Arrow (Just id) ty1 p ty2
+arrow _ _ (WithParam _ _)            = Fail
+
+typeOpTable :: [[Operator Parser PType]]
 typeOpTable =
-  [ [ InfixR $ (\ty1 ty2 -> connecting ty1 ty2 $ arrowP Nothing ty1 ty2) <$ symbol "->"
-    , InfixR $ (\ty1 ty2 -> connecting ty1 ty2 $ arrowI Nothing ty1 ty2) <$ symbol "~>"
+  [ [ InfixR $ (\ty1 ty2 -> arrow Pure ty1 ty2) <$ symbol "->"
+    , InfixR $ (\ty1 ty2 -> arrow Impure ty1 ty2) <$ symbol "~>"
     ]
   ]
 
