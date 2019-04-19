@@ -231,14 +231,7 @@ data Type
   deriving Generic
 
 instance Display Type where
-  displaysPrec n (BaseType b)   = displaysPrec n b
-  displaysPrec n (TVar v)       = displaysPrec n v
-  displaysPrec n (TFun ty1 ty2) = showParen (4 <= n) $ displaysPrec 4 ty1 . showString " -> " . displaysPrec 3 ty2
-  displaysPrec n (TRecord r)    = displaysPrec n r
-  displaysPrec n (Forall k ty)  = showParen (4 <= n) $ showChar '∀' . displays k . showString ". " . displays ty
-  displaysPrec n (Some k ty)    = showParen (4 <= n) $ showChar '∃' . displays k . showString ". " . displays ty
-  displaysPrec n (TAbs k ty)    = showParen (4 <= n) $ showChar 'λ' . displays k . showString ". " . displays ty
-  displaysPrec n (TApp ty1 ty2) = showParen (5 <= n) $ displaysPrec 4 ty1 . showString " " . displaysPrec 5 ty2
+  display = display . WithName
 
 instance DisplayName Type where
   displaysWithName n (BaseType b)   = displaysPrec n b
@@ -314,23 +307,6 @@ data Term
   | Let [Term] Term
   deriving (Eq, Show)
 
-instance Display Term where
-  displaysPrec _ (Lit l)             = displays l
-  displaysPrec _ (Var v)             = displays v
-  displaysPrec _ (GVar g)            = displays g
-  displaysPrec n (Abs ty t)          = showParen (4 <= n) $ showChar 'λ' . displays ty . showString ". " . displays t
-  displaysPrec n (App t1 t2)         = showParen (5 <= n) $ displaysPrec 4 t1 . showString " " . displaysPrec 5 t2
-  displaysPrec n (TmRecord r)        = displaysPrec n r
-  displaysPrec _ (Proj t l)          = displaysPrec 5 t . showChar '.' . displays l
-  displaysPrec n (Poly k t)          = showParen (4 <= n) $ showChar 'Λ' . displays k . showString ". " . displays t
-  displaysPrec n (Inst t ty)         = showParen (5 <= n) $ displaysPrec 4 t . showString " [" . displays ty . showChar ']'
-  displaysPrec n (Pack t tys ks ty)  = showParen (2 <= n) $ showString "pack [" . displayTypesRev tys . showString "; " . displays t . showString "] as " . displays (some ks ty)
-  displaysPrec n (Unpack mg t1 m t2) =
-    case mg of
-      Nothing -> showParen (4 <= n) $ showString "unpack [" . shows m . showString "] = " . displays t1 . showString " in " . displays t2
-      Just g  -> showParen (4 <= n) $ showString "unpack [" . displays g . showString ", " . shows m . showString "] = " . displays t1 . showString " in " . displays t2
-  displaysPrec n (Let ts t)          = showParen (4 <= n) $ showString "let " . displaySemi ts . showString " in " . displays t
-
 instance DisplayName Term where
   displaysWithName _ (Lit l)      = displays l
   displaysWithName _ (Var v)      = displayVariable $ getVariable v
@@ -371,14 +347,8 @@ displayTypeVariables 0 = id
 displayTypeVariables 1 = displayTypeVariable 0
 displayTypeVariables n = displayTypeVariable (n - 1) . showString ".." . displayTypeVariable 0
 
-displaySemi :: Display a => [a] -> ShowS
-displaySemi = appEndo . mconcat . coerce . intersperse (showString "; ") . map displays
-
 displaySemiWithName :: (DisplayName a, ?nctx :: NameContext) => [a] -> [ShowS]
 displaySemiWithName = map $ displaysWithName 0
-
-displayTypesRev :: [Type] -> ShowS
-displayTypesRev = appEndo . getDual . mconcat . coerce . intersperse (showString ", ") . map displays
 
 displayTypesRevWithName :: (?nctx :: NameContext) => [Type] -> ShowS
 displayTypesRevWithName = appEndo . getDual . mconcat . coerce . intersperse (showString ", ") . map (displaysWithName 0)
@@ -567,7 +537,7 @@ strEquiv (TApp ty11 ty12) (TApp ty21 ty22) = do
     KFun k1 k2 -> do
       equal ty12 ty22 k1
       return k2
-    Base -> error $ "unexpected base kind, which is kind of " ++ display ty11
+    Base -> error $ "unexpected base kind, which is kind of " ++ display (WithName ty11)
 strEquiv ty1 ty2 = throw $ StructurallyInequivalent ty1 ty2
 
 reduce :: Type -> Type

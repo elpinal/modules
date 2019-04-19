@@ -117,7 +117,7 @@ spec = do
       display (tvar 44 `TFun` TFun (tvar 87) (tvar 3))                 `shouldBe` "v[44] -> v[87] -> v[3]"
       display (TFun (tvar 2) (tvar 44) `TFun` TFun (tvar 87) (tvar 3)) `shouldBe` "(v[2] -> v[44]) -> v[87] -> v[3]"
 
-      display (Forall Base $ tvar 0)                                  `shouldBe` "∀*. v[0]"
+      display (Forall Base $ tvar 0)                                  `shouldBe` "∀t0 : *. t0"
       display (TApp (tvar 0) (tvar 2))                                `shouldBe` "v[0] v[2]"
       display (TApp (tvar 0) (tvar 2) `TApp` tvar 1)                  `shouldBe` "v[0] v[2] v[1]"
       display (tvar 2 `TApp` TApp (tvar 99) (tvar 1))                 `shouldBe` "v[2] (v[99] v[1])"
@@ -126,43 +126,11 @@ spec = do
       display (TApp (tvar 0) (tvar 2) `TFun` TApp (tvar 99) (tvar 1)) `shouldBe` "v[0] v[2] -> v[99] v[1]"
       display (TFun (tvar 0) (tvar 2) `TApp` TFun (tvar 99) (tvar 1)) `shouldBe` "(v[0] -> v[2]) (v[99] -> v[1])"
 
-      display (Some Base (tvar 2) `TApp` TAbs (KFun Base Base) (TApp (tvar 33) $ BaseType Bool)) `shouldBe` "(∃*. v[2]) (λ* -> *. v[33] bool)"
+      display (Some Base (tvar 2) `TApp` TAbs (KFun Base Base) (TApp (tvar 33) $ BaseType Bool)) `shouldBe` "(∃t0 : *. v[2]) (λt0 : * -> *. v[33] bool)"
 
       display (record mempty :: Record Type)                                             `shouldBe` "{}"
       display (record [(label "a", BaseType Char)])                                      `shouldBe` "{a: char}"
       display (record [(label "a", BaseType Char), (label "abc", tvar 3 `TFun` tvar 1)]) `shouldBe` "{a: char, abc: v[3] -> v[1]}"
-
-      display (var 0)                                             `shouldBe` "v[0]"
-      display (gvar 0)                                            `shouldBe` "g0"
-      display (Abs (tvar 0) $ var 0)                              `shouldBe` "λv[0]. v[0]"
-      display (App (var 0) (var 1))                               `shouldBe` "v[0] v[1]"
-      display (App (var 0) (var 1) `App` App (var 2) (var 99))    `shouldBe` "v[0] v[1] (v[2] v[99])"
-      display (Proj (var 0) $ label "a")                          `shouldBe` "v[0].a"
-      display (Proj (var 0 `App` var 1) $ label "body")           `shouldBe` "(v[0] v[1]).body"
-      display (Proj (Abs (BaseType Bool) $ var 2) $ label "body") `shouldBe` "(λbool. v[2]).body"
-      display (Poly Base $ var 0)                                 `shouldBe` "Λ*. v[0]"
-      display (Poly (KFun Base Base) $ var 0)                     `shouldBe` "Λ* -> *. v[0]"
-      display (Inst (var 0) $ tvar 0)                             `shouldBe` "v[0] [v[0]]"
-      display ((Inst (var 0) $ tvar 0) `App` var 28)              `shouldBe` "v[0] [v[0]] v[28]"
-      display ((var 3 `App` var 28) `Inst` tvar 38)               `shouldBe` "v[3] v[28] [v[38]]"
-
-      display (Pack (var 0) [] [] $ tvar 1)                                                `shouldBe` "pack [; v[0]] as v[1]"
-      display (Pack (var 0) [BaseType Int] [Base] $ tvar 1)                                `shouldBe` "pack [int; v[0]] as ∃*. v[1]"
-      display (Pack (var 0) [BaseType Int, BaseType Bool] [KFun Base Base, Base] $ tvar 1) `shouldBe` "pack [bool, int; v[0]] as ∃*. ∃* -> *. v[1]"
-
-      display (Unpack Nothing (var 2) 0 $ var 1)   `shouldBe` "unpack [0] = v[2] in v[1]"
-      display (Unpack Nothing (var 2) 1 $ var 7)   `shouldBe` "unpack [1] = v[2] in v[7]"
-      display (Unpack Nothing (var 2) 136 $ var 7) `shouldBe` "unpack [136] = v[2] in v[7]"
-
-      display (Unpack (Just $ generated 71) (var 2) 0 $ var 1)     `shouldBe` "unpack [g71, 0] = v[2] in v[1]"
-      display (Unpack (Just $ generated 39) (var 2) 1 $ gvar 39)   `shouldBe` "unpack [g39, 1] = v[2] in g39"
-      display (Unpack (Just $ generated 42) (var 2) 136 $ gvar 5)  `shouldBe` "unpack [g42, 136] = v[2] in g5"
-
-      display (let1 (var 0) $ var 37)                `shouldBe` "let v[0] in v[37]"
-      display (App (let1 (var 0) $ var 37) $ var 3)  `shouldBe` "(let v[0] in v[37]) v[3]"
-      display (App (var 84) $ let1 (var 0) $ var 37) `shouldBe` "v[84] (let v[0] in v[37])"
-
-      display (Let [var 0, Poly Base $ var 44] $ var 37) `shouldBe` "let v[0]; Λ*. v[44] in v[37]"
 
       let ?nctx = nameContext
       displayWithName (tvar 0)                                         `shouldBe` "v[0]"
