@@ -38,6 +38,8 @@ spec = do
         , Pure
         )
 
+      runElaborate (elaborate $ dummyP $ arrowP Nothing (dummyP TypeType) (dummyP TypeType)) `shouldBeRight` return (quantify [dummyP $ I.KFun I.Base I.Base] $ Function $ quantify [dummyP I.Base] $ Fun (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) Pure $ fromBody $ AbstractType $ fromBody $ SemanticPath $ Path (variable 1) [SemanticPath $ fromVariable $ variable 0])
+
   describe "lookupInsts" $
     it "look up instantiations" $ do
       lookupInsts [] (BaseType Int) (BaseType Int) `shouldBe` []
