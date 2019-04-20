@@ -93,8 +93,8 @@ data PType
 
 withParam :: Parser PType
 withParam = foldl (<|>) empty
-  [ try $ parens $ WithParam <$> (fromPositional <$> identifier) <*> (symbol ":" >> typeAtom)
-  , try $ parens $ WhereR <$> (map fromPositional <$> identifier `sepBy` char '.') <*> (symbol ":" >> typeAtom)
+  [ try $ parens $ WithParam <$> (fromPositional <$> identifier) <*> (symbol ":" >> typeParser)
+  , try $ parens $ WhereR <$> (map fromPositional <$> identifier `sepBy` char '.') <*> (symbol ":" >> typeParser)
   , Typ <$> typeAtom
   ]
 
