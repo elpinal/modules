@@ -76,6 +76,7 @@ module Language.Modules.Ros2018
 import Control.Monad.Freer hiding (translate)
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.Fresh
+import Data.Bifunctor
 import Data.Coerce
 import Data.Foldable
 import Data.Functor
@@ -124,6 +125,7 @@ data Type
   | Expr Expr
   | Singleton (Positional Expr)
   | Sig [Positional Decl]
+  | Where (Positional Type) [Ident] (Positional Type)
   deriving (Eq, Show)
 
 instance Display Type where
@@ -137,9 +139,12 @@ instance Display Type where
             Just id -> showParen True $ displays id . showString " : " . displays ty1
     in
     showParen (4 <= n) $ dom (fromPositional ty1) . showChar ' ' . showString arr . showChar ' ' . displaysPrec 3 (fromPositional ty2)
-  displaysPrec n (Expr e)      = displaysPrec n e
-  displaysPrec _ (Singleton e) = showParen True $ showString "= " . displays (fromPositional e)
-  displaysPrec _ (Sig ds)      = showString "sig " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) ds) . showSpace (not $ null ds) . showString "end"
+  displaysPrec n (Expr e)            = displaysPrec n e
+  displaysPrec _ (Singleton e)       = showParen True $ showString "= " . displays (fromPositional e)
+  displaysPrec _ (Sig ds)            = showString "sig " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) ds) . showSpace (not $ null ds) . showString "end"
+  displaysPrec n (Where ty1 ids ty2) =
+    let f = appEndo $ mconcat $ coerce $ intersperse (showChar '.') $ map displays ids in
+    showParen (4 <= n) $ displaysPrec 4 (fromPositional ty1) . showString " where (" . f . showString " : " . displays (fromPositional ty2) . showChar ')'
 
 showSpace :: Bool -> ShowS
 showSpace True  = showChar ' '
@@ -609,6 +614,39 @@ instance Elaboration Type where
   elaborate (Positional _ (Sig ds)) = do
     (aty, _) <- foldlM elaborateDecls (fromBody [], ?env) ds
     return $ Structure <$> aty
+  elaborate (Positional _ (Where ty1 ids ty2)) = do
+    aty1 <- elaborate ty1
+    aty2 <- elaborate ty2
+    ty <- proj (getBody aty1) ids
+    vs <- ftv ty
+    let (vs12, vs11) = (`Set.member` vs) `Set.partition` (fromList $ enumVars aty1)
+    let a = zip (Set.toAscList vs12) [0..]
+    let b = zip (Set.toAscList vs11) [Set.size vs12..]
+    let s = fromList $ map (second $ parameterized . SemanticPath . fromVariable . variable) $ a ++ b
+    let ty' = shiftAbove (qsLen aty1) (qsLen aty2) $ applySmall s ty
+    let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty2
+    let z = restrict vs11 $ getAnnotatedKinds aty1
+    let ?env = I.insertTypes $ reverse z
+    (_, tys) <- getBody aty2 `match` quantify (restrict vs12 $ getAnnotatedKinds aty2) ty'
+    let r = [ (variable i, parameterized $ SemanticPath $ fromVariable $ variable $ i - Set.size vs12) | i <- [qsLen aty1..] ]
+    return $ quantify (z ++ getAnnotatedKinds aty2) $ replace (applySmall (fromList $ zip (Set.toAscList vs12) tys ++ zip (Set.toAscList vs11) (parameterized . SemanticPath . fromVariable . variable <$> [0..]) ++ r) $ shiftAbove (qsLen aty1) (qsLen aty2) $ getBody aty1) ids $ getBody aty2
+
+replace = undefined
+ftv = undefined
+
+restrict :: (?env :: Env) => Set.Set Variable -> [Positional IKind] -> [Positional IKind]
+restrict vs ks =
+  let m = Map.fromList $ zip (map variable [0..]) ks in
+  Map.elems $ Map.restrictKeys m vs
+
+proj :: Member (Error ElaborateError) r => SemanticType -> [Ident] -> Eff r SemanticType
+proj ty []                    = return ty
+proj (Structure r) (id : ids) =
+  let l = toLabel $ coerce id in
+  case projRecord l r of
+    Just ty -> proj ty ids
+    Nothing -> throwError $ MissingLabel l
+proj ty _ = throwError $ NotStructure ty
 
 elaborateDecls :: Members '[Error I.Failure, Error ElaborateError, Fresh] r => (Existential (Record SemanticType), Env) -> Positional Decl -> Eff r (Existential (Record SemanticType), Env)
 elaborateDecls (acc, env) d = do

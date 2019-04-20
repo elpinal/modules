@@ -83,16 +83,18 @@ typeParser = makeExprParser withParam typeOpTable >>= f
   where
     f :: PType -> Parser (Positional Type)
     f (Typ ty) = return ty
-    f _        = unexpected $ Label $ fromList "arrow-related parse error"
+    f _        = unexpected $ Label $ fromList "(arrow | where)-related parse error"
 
 data PType
   = Typ (Positional Type)
   | WithParam Ident (Positional Type)
+  | WhereR [Ident] (Positional Type)
   | Fail
 
 withParam :: Parser PType
 withParam = foldl (<|>) empty
   [ try $ parens $ WithParam <$> (fromPositional <$> identifier) <*> (symbol ":" >> typeAtom)
+  , try $ parens $ WhereR <$> (map fromPositional <$> identifier `sepBy` char '.') <*> (symbol ":" >> typeAtom)
   , Typ <$> typeAtom
   ]
 
@@ -107,15 +109,20 @@ typeAtom = foldl (<|>) empty
   ]
 
 arrow :: Purity -> PType -> PType -> PType
-arrow _ Fail _                       = Fail
-arrow _ _ Fail                       = Fail
 arrow p (Typ ty1) (Typ ty2)          = Typ $ connecting ty1 ty2 $ Arrow Nothing ty1 p ty2
 arrow p (WithParam id ty1) (Typ ty2) = Typ $ connecting ty1 ty2 $ Arrow (Just id) ty1 p ty2
-arrow _ _ (WithParam _ _)            = Fail
+arrow _ _ _                          = Fail
+
+where_ :: PType -> PType -> PType
+where_ (Typ ty1) (WithParam id ty2) = Typ $ connecting ty1 ty2 $ Where ty1 [id] ty2
+where_ (Typ ty1) (WhereR ids ty2)   = Typ $ connecting ty1 ty2 $ Where ty1 ids ty2
+where_ _ _                          = Fail
 
 typeOpTable :: [[Operator Parser PType]]
 typeOpTable =
-  [ [ InfixR $ (\ty1 ty2 -> arrow Pure ty1 ty2) <$ symbol "->"
+  [ [ InfixL $ (\ty1 ty2 -> where_ ty1 ty2) <$ reserved "where"
+    ]
+  , [ InfixR $ (\ty1 ty2 -> arrow Pure ty1 ty2) <$ symbol "->"
     , InfixR $ (\ty1 ty2 -> arrow Impure ty1 ty2) <$ symbol "~>"
     ]
   ]
@@ -132,6 +139,7 @@ reservedWords =
   , "sig"
   , "end"
   , "include"
+  , "where"
   , "bool"
   , "int"
   , "char"
