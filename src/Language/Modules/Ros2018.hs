@@ -648,10 +648,11 @@ instance Elaboration Type where
     let s = fromList $ map (second $ parameterized . SemanticPath . fromVariable . variable) $ a ++ b
     let ty' = shiftAbove (qsLen aty1) (qsLen aty2) $ applySmall s ty
     let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty2
+    let n = tenvLen
     let z = restrict vs11 $ getAnnotatedKinds aty1
     let ?env = I.insertTypes $ reverse z
     (_, tys) <- getBody aty2 `match` quantify (restrict vs12 $ getAnnotatedKinds aty1) ty'
-    let r = [ (variable i, parameterized $ SemanticPath $ fromVariable $ variable $ i - Set.size vs12) | i <- [qsLen aty1..] ]
+    let r = take n $ [ (variable i, parameterized $ SemanticPath $ fromVariable $ variable $ i - Set.size vs12) | i <- [qsLen aty1..] ]
     return $ quantify (z ++ getAnnotatedKinds aty2) $ replace (applySmall (fromList $ zip (Set.toAscList vs12) tys ++ zip (Set.toAscList vs11) (parameterized . SemanticPath . fromVariable . variable <$> [0..]) ++ r) $ shiftAbove (qsLen aty1) (qsLen aty2) $ getBody aty1) ids $ getBody aty2
 
 -- Assumes @proj ty1 ids@ succeeded before @replace ty1 ids ty2@.

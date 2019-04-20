@@ -77,6 +77,7 @@ module Language.Modules.Ros2018.Internal
   -- * Environments
   , Env
   , emptyEnv
+  , tenvLen
   , insertType
   , insertTypes
   , insertValue
@@ -412,6 +413,9 @@ emptyEnv = Env
   , nmap = mempty
   , tempVenv = mempty
   }
+
+tenvLen :: (?env :: Env f ty) => Int
+tenvLen = length $ tenv ?env
 
 class Annotated f where
   extract :: f a -> a

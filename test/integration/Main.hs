@@ -176,3 +176,23 @@ spec = do
 
           M = M :> S;
           |] `shouldBeRight` ()
+
+        integration [r|
+          S = type sig
+            t : type;
+            f : int -> t;
+            g : t -> int;
+          end;
+
+          M = struct
+            t = type int;
+            f = fun (n : int) => n;
+            g = fun (n : t) => n;
+          end;
+
+          N = M :> S;
+
+          T = type S where (t : (= type int));
+
+          O = M :> T;
+          |] `shouldBeRight` ()
