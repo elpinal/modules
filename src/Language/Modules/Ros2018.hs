@@ -636,8 +636,8 @@ instance Elaboration Type where
         return $ fromBody $ Function $ qmap f $ toUniversal aty1
       Pure -> do
         let aty1' = shift (qsLen aty2) aty1
-        let a = zip (enumVars aty2) (map (\v -> parameterized $ SemanticPath $ Path v $ SemanticPath . fromVariable <$> enumVars aty1) $ shift (qsLen aty1) $ enumVars aty2)
-        let b = zip (shift (qsLen aty2) $ enumVars aty1) (parameterized . SemanticPath . fromVariable <$> enumVars aty1)
+        let a = zip (enumVars aty2) $ map (\v -> parameterized $ SemanticPath $ Path v $ SemanticPath . fromVariable <$> enumVars aty1) $ shift (qsLen aty1) $ enumVars aty2
+        let b = zip (shift (qsLen aty2) $ enumVars aty1) $ parameterized . SemanticPath . fromVariable <$> enumVars aty1
         let s = fromList $ a ++ b
         let aty2' = quantify (fmap (\k -> foldr I.KFun k $ getKinds aty1) <$> getAnnotatedKinds aty2) $ applySmall s $ getBody aty2
         return $ qmap (\ty2 -> Function $ qmap (\ty1 -> Fun ty1 Pure $ fromBody ty2) $ toUniversal aty1') aty2'
@@ -783,7 +783,7 @@ instance Elaboration Expr where
     case getBody aty1 of
       Function u -> do
         (t3, tys) <- match (getBody aty2) $ toExistential $ qmap domain u
-        return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, applySmall (fromList $ zip (enumVars u) tys) $ codomain $ getBody u, getPurity $ getBody u)
+        return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, shift (-qsLen u) $ applySmall (fromList $ zip (enumVars u) $ shift (qsLen u) tys) $ codomain $ getBody u, getPurity $ getBody u)
       ty1 -> throwError $ NotFunction (getPosition id1) ty1
   elaborate (Positional _ (Proj e id)) = do
     (t, aty, p) <- elaborate e
