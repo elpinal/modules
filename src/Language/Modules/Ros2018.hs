@@ -128,6 +128,7 @@ data Type
   | Singleton (Positional Expr)
   | Sig [Positional Decl]
   | Where (Positional Type) [Ident] (Positional Type)
+  | WrapType (Positional Type)
   deriving (Eq, Show)
 
 instance Display Type where
@@ -147,6 +148,7 @@ instance Display Type where
   displaysPrec n (Where ty1 ids ty2) =
     let f = appEndo $ mconcat $ coerce $ intersperse (showChar '.') $ map displays ids in
     showParen (4 <= n) $ displaysPrec 4 (fromPositional ty1) . showString " where (" . f . showString " : " . displays (fromPositional ty2) . showChar ')'
+  displaysPrec n (WrapType ty) = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 (fromPositional ty)
 
 showSpace :: Bool -> ShowS
 showSpace True  = showChar ' '
@@ -181,6 +183,8 @@ data Expr
   | App (Positional Ident) (Positional Ident)
   | Proj (Positional Expr) Ident
   | If (Positional Ident) (Positional Expr) (Positional Expr) (Positional Type)
+  | Wrap (Positional Ident) (Positional Type)
+  | Unwrap (Positional Ident) (Positional Type)
   deriving (Eq, Show)
 
 instance Display Expr where
@@ -193,6 +197,8 @@ instance Display Expr where
   displaysPrec n (App id1 id2)    = showParen (4 <= n) $ displays (fromPositional id1) . showChar ' ' . displays (fromPositional id2)
   displaysPrec _ (Proj e id)      = displaysPrec 4 (fromPositional e) . showChar '.' . displays id
   displaysPrec n (If id e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays (fromPositional id) . showString " then " . displays (fromPositional e1) . showString " else " . displays (fromPositional e2) . showString " end : " . displays (fromPositional ty)
+  displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays (fromPositional id)  . showString " : " . displaysPrec 4 (fromPositional ty)
+  displaysPrec n (Unwrap id ty)   = showParen (4 <= n) $ showString "unwrap " . displays (fromPositional id)  . showString " : " . displaysPrec 4 (fromPositional ty)
 
 type Env = I.Env Positional SemanticType
 

@@ -102,9 +102,10 @@ typeAtom :: Parser (Positional Type)
 typeAtom = foldl (<|>) empty
   [ fmap Base <$> baseType
   , (`positional` TypeType) <$> reserved "type"
+  , try $ (\p ty -> positional p $ WrapType ty) <$> reserved "wrap" <*> typeParser
   , try $ parens $ (\eq e -> connecting eq e $ Singleton e) <$> symbol "=" <*> expression
   , parens typeParser
-  , fmap Expr <$> expression
+  , try $ fmap Expr <$> expression
   , signature
   ]
 
@@ -148,6 +149,8 @@ reservedWords =
   , "if"
   , "then"
   , "else"
+  , "wrap"
+  , "unwrap"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -197,6 +200,8 @@ expression = do
 expression' :: Parser (Positional Expr)
 expression' = foldl (<|>) empty
   [ fmap Lit <$> literal
+  , (\p id ty -> positional (connect p $ getPosition ty) $ Wrap id ty) <$> reserved "wrap" <*> identifier <*> (symbol ":" >> typeParser)
+  , (\p id ty -> positional (connect p $ getPosition ty) $ Unwrap id ty) <$> reserved "unwrap" <*> identifier <*> (symbol ":" >> typeParser)
   , try $ (\id ty -> connecting id ty $ Seal id ty) <$> identifier <*> (seal >> typeParser)
   , try $ (\id1 id2 -> connecting id1 id2 $ App id1 id2) <$> identifier <*> identifier
   , fmap Id <$> identifier
