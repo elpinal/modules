@@ -214,7 +214,7 @@ data ElaborateError
   deriving (Eq, Show)
 
 instance Display ElaborateError where
-  display (NotStructure lty)        = "not structure type: " ++ display (WithName lty)
+  display (NotStructure ty)         = "not structure type: " ++ display (WithName ty)
   display (NotSubtype ty1 ty2)      = display (WithName ty1) ++ " is not subtype of " ++ display (WithName ty2)
   display NotSubpurity              = "impure is not subtype of pure"
   display (PathMismatch p1 p2)      = "path mismatch: " ++ display (WithName p1) ++ " and " ++ display (WithName p2)
@@ -349,7 +349,7 @@ appendPath tys' (Path v tys) = Path v $ tys ++ tys'
 
 getStructure :: Member (Error ElaborateError) r => SemanticType -> Eff r (Record SemanticType)
 getStructure (Structure r) = return r
-getStructure lty           = throwError $ NotStructure lty
+getStructure ty            = throwError $ NotStructure ty
 
 class Subtype a where
   type Coercion a
@@ -497,7 +497,7 @@ toExistential = coerce
 type AbstractType = Existential SemanticType
 
 instance ToType AbstractType where
-  toType (Existential (Quantified (ks, lty))) = I.some (map fromPositional ks) $ toType lty
+  toType (Existential (Quantified (ks, ty))) = I.some (map fromPositional ks) $ toType ty
 
 instance ToType a => ToType (Universal a) where
   toType u = I.forall (getKinds u) $ toType $ getBody u
@@ -735,8 +735,8 @@ instance Elaboration Expr where
     b <- elaborate $ Positional pos l
     return (I.Lit l, fromBody $ BaseType b, Pure) -- Literals are always pure.
   elaborate (Positional _ (Id id)) = do
-    (lty, v) <- lookupValueByName $ coerce id
-    return (I.Var v, fromBody lty, Pure)
+    (ty, v) <- lookupValueByName $ coerce id
+    return (I.Var v, fromBody ty, Pure)
   elaborate (Positional _ (Struct bs)) = do
     (_, aty, zs, p) <- foldlM elaborateBindings (?env, fromBody mempty, [], Pure) bs
     let lls = map (\(_, _, ls) -> ls) zs
@@ -804,7 +804,7 @@ elaborateBindings (env, whole_aty, zs, p0) b = do
   (t, aty, p) <- elaborate b
   let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty
   let r = getBody aty
-  let ?env = foldl (\env (l, lty) -> let ?env = env in insertValue (toName l) lty) ?env $ I.toList r
+  let ?env = foldl (\env (l, ty) -> let ?env = env in insertValue (toName l) ty) ?env $ I.toList r
   return (?env, merge whole_aty $ quantify (getAnnotatedKinds aty) r, (t, qsLen aty, I.labels r) : zs, p0 <> p)
 
 merge :: Existential (Record SemanticType) -> Existential (Record SemanticType) -> Existential (Record SemanticType)
