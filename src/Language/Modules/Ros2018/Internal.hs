@@ -33,6 +33,7 @@ module Language.Modules.Ros2018.Internal
   , foldMapIntersection
   , iter
   , projRecord
+  , updateRecord
 
   -- * Syntax
   , Kind(..)
@@ -212,6 +213,9 @@ iter f (Record m) = coerce <$> Map.traverseWithKey f m
 
 projRecord :: Label -> Record a -> Maybe a
 projRecord l (Record m) = Map.lookup l m
+
+updateRecord :: Label -> (a -> a) -> Record a -> Record a
+updateRecord l f (Record m) = Record $ Map.adjust f l m
 
 data Kind
   = Base

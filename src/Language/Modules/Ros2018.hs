@@ -654,7 +654,11 @@ instance Elaboration Type where
     let r = [ (variable i, parameterized $ SemanticPath $ fromVariable $ variable $ i - Set.size vs12) | i <- [qsLen aty1..] ]
     return $ quantify (z ++ getAnnotatedKinds aty2) $ replace (applySmall (fromList $ zip (Set.toAscList vs12) tys ++ zip (Set.toAscList vs11) (parameterized . SemanticPath . fromVariable . variable <$> [0..]) ++ r) $ shiftAbove (qsLen aty1) (qsLen aty2) $ getBody aty1) ids $ getBody aty2
 
-replace = undefined
+-- Assumes @proj ty1 ids@ succeeded before @replace ty1 ids ty2@.
+replace :: SemanticType -> [Ident] -> SemanticType -> SemanticType
+replace _ [] ty                     = ty
+replace (Structure r) (id : ids) ty = Structure $ updateRecord (toLabel $ coerce id) (\x -> replace x ids ty) r
+replace ty _ _ = error $ "not structure: " ++ display (WithName ty)
 
 ftv :: SemanticType -> Set.Set Variable
 ftv = Ftv.ftv (Proxy :: Proxy VProxy)
