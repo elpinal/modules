@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -84,6 +85,7 @@ import Data.List
 import qualified Data.Map.Lazy as Map
 import Data.Maybe
 import Data.Monoid hiding (First)
+import Data.Proxy
 import Data.Semigroup (First(..))
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -91,6 +93,7 @@ import GHC.Exts
 import GHC.Generics
 
 import Language.Modules.Ros2018.Display
+import qualified Language.Modules.Ros2018.Ftv as Ftv
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..), tabs)
 import Language.Modules.Ros2018.Internal (Term)
@@ -237,6 +240,9 @@ instance DisplayName Path where
 instance ToType Path where
   toType (Path v tys) = foldl I.TApp (I.TVar v) $ map toType tys
 
+instance Ftv.Ftv VProxy Path where
+  ftv p (Path v tys) = Set.insert v $ foldMap (Ftv.ftv p) $ tys
+
 fromVariable :: Variable -> Path
 fromVariable v = Path v []
 
@@ -260,6 +266,8 @@ instance DisplayName Fun where
   displaysWithName n (Fun ty p aty) =
     showParen (4 <= n) $ displaysWithName 4 ty . showString (" " ++ displayArrow p ++ " ") . displaysWithName 3 aty
 
+instance Ftv.Ftv VProxy Fun
+
 isPure :: Fun -> Bool
 isPure (Fun _ p _) = p == Pure
 
@@ -282,6 +290,8 @@ data SemanticType
   deriving Generic
 
 instance Shift SemanticType
+
+instance Ftv.Ftv VProxy SemanticType
 
 instance DisplayName SemanticType where
   displaysWithName _ (BaseType b)       = displays b
@@ -414,6 +424,14 @@ newtype Quantified a = Quantified ([Positional IKind], a)
   deriving (Eq, Show)
   deriving Functor
 
+instance Ftv.Ftv VProxy a => Ftv.Ftv VProxy (Quantified a) where
+  ftv p (Quantified (ks, x)) = foldMap f $ Ftv.ftv p x
+    where
+      f :: Variable -> Set.Set Variable
+      f v
+        | v < variable (length ks) = mempty
+        | otherwise                = Set.singleton $ v -: variable (length ks)
+
 class Quantification f where
   getKinds :: f a -> [IKind]
   getAnnotatedKinds :: f a -> [Positional IKind]
@@ -458,12 +476,16 @@ instance DisplayName a => DisplayName (Existential a) where
     let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays (fromPositional k)) $ zip [0..] ks in
     showString "∃" . appEndo f . showString ". " . displaysWithName 0 x
 
+deriving instance Ftv.Ftv VProxy a => Ftv.Ftv VProxy (Existential a)
+
 newtype Universal a = Universal (Quantified a)
   deriving (Eq, Show)
   deriving Functor
   deriving Quantification
   deriving Shift
   deriving Sized
+
+deriving instance Ftv.Ftv VProxy a => Ftv.Ftv VProxy (Universal a)
 
 toUniversal :: Existential a -> Universal a
 toUniversal = coerce
@@ -484,6 +506,7 @@ data Purity
   | Impure
   deriving (Eq, Show)
   deriving Shift via Fixed Purity
+  deriving (Ftv.Ftv VProxy) via Ftv.Empty Purity
 
 instance Display Purity where
   display Pure   = "pure"
@@ -618,7 +641,7 @@ instance Elaboration Type where
     aty1 <- elaborate ty1
     aty2 <- elaborate ty2
     ty <- proj (getBody aty1) ids
-    vs <- ftv ty
+    let vs = ftv ty
     let (vs12, vs11) = (`Set.member` vs) `Set.partition` (fromList $ enumVars aty1)
     let a = zip (Set.toAscList vs12) [0..]
     let b = zip (Set.toAscList vs11) [Set.size vs12..]
@@ -632,7 +655,9 @@ instance Elaboration Type where
     return $ quantify (z ++ getAnnotatedKinds aty2) $ replace (applySmall (fromList $ zip (Set.toAscList vs12) tys ++ zip (Set.toAscList vs11) (parameterized . SemanticPath . fromVariable . variable <$> [0..]) ++ r) $ shiftAbove (qsLen aty1) (qsLen aty2) $ getBody aty1) ids $ getBody aty2
 
 replace = undefined
-ftv = undefined
+
+ftv :: SemanticType -> Set.Set Variable
+ftv = Ftv.ftv (Proxy :: Proxy VProxy)
 
 restrict :: (?env :: Env) => Set.Set Variable -> [Positional IKind] -> [Positional IKind]
 restrict vs ks =

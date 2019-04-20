@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -13,6 +14,7 @@ module Language.Modules.Ros2018.Internal
   -- * Objects
     Variable
   , variable
+  , (-:)
   , Generated
   , generated
   , Name
@@ -139,6 +141,9 @@ variable = coerce
 instance Display Variable where
   display (Variable n) = "v[" ++ show n ++ "]"
 
+(-:) :: Variable -> Variable -> Variable
+Variable m -: Variable n = Variable $ m - n
+
 newtype Generated = Generated Int
   deriving (Eq, Show)
 
@@ -180,6 +185,9 @@ instance DisplayName a => DisplayName (Record a) where
 
 instance Shift a => Shift (Record a) where
   shiftAbove c d = fmap $ shiftAbove c d
+
+instance Ftv.Ftv VProxy a => Ftv.Ftv VProxy (Record a) where
+  ftv p (Record m) = foldMap (Ftv.ftv p) m
 
 record :: [(Label, a)] -> Record a
 record = Record . Map.fromList
