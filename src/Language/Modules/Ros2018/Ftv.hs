@@ -9,6 +9,7 @@ module Language.Modules.Ros2018.Ftv
   ( Ftv(..)
   , GFtv(..)
   , Variable
+  , Empty(..)
   ) where
 
 import Data.Proxy
@@ -45,3 +46,8 @@ instance GFtv v a => GFtv v (M1 i c a) where
 
 instance Ftv v a => GFtv v (K1 i a) where
   gFtv p (K1 x) = ftv p x
+
+newtype Empty a = Empty a
+
+instance Ftv v (Empty a) where
+  ftv _ _ = Set.empty

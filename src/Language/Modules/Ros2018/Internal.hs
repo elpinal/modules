@@ -92,6 +92,9 @@ module Language.Modules.Ros2018.Internal
   -- * Failure
   , Failure(..)
   , Evidence(..)
+
+  -- * Proxy
+  , VProxy
   ) where
 
 import Control.Monad
@@ -111,6 +114,7 @@ import GHC.Exts
 import GHC.Generics
 
 import Language.Modules.Ros2018.Display
+import qualified Language.Modules.Ros2018.Ftv as Ftv
 import Language.Modules.Ros2018.Shift
 
 newtype Label = Label T.Text
@@ -211,12 +215,17 @@ instance Display Kind where
   displaysPrec _ Base         = showString "*"
   displaysPrec n (KFun k1 k2) = showParen (4 <= n) $ displaysPrec 4 k1 . showString " -> " . displaysPrec 3 k2
 
+data VProxy
+
+type instance Ftv.Variable VProxy = Variable
+
 data BaseType
   = Bool
   | Int
   | Char
   deriving (Eq, Show)
   deriving Shift via Fixed BaseType
+  deriving (Ftv.Ftv VProxy) via Ftv.Empty BaseType
 
 instance Display BaseType where
   display Bool = "bool"
