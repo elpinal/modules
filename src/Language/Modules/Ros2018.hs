@@ -200,6 +200,10 @@ instance Display Expr where
   displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays (fromPositional id)  . showString " : " . displaysPrec 4 (fromPositional ty)
   displaysPrec n (Unwrap id ty)   = showParen (4 <= n) $ showString "unwrap " . displays (fromPositional id)  . showString " : " . displaysPrec 4 (fromPositional ty)
 
+instance Annotated Positional where
+  extract (Positional _ x) = x
+  unannotated = positional dummyPos
+
 type Env = I.Env Positional SemanticType
 
 data ElaborateError
@@ -398,9 +402,9 @@ instance Subtype SemanticType where
     t2 <- aty1 <: aty2
     return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
   Wrapped aty1 <: Wrapped aty2 =
-    case equalType (toType aty1) (toType aty2) of
-      Right () -> return $ I.Abs (toType aty1) $ var 0
-      Left _   -> throwError $ NotSubtype (Wrapped aty1) (Wrapped aty2)
+    case run $ runError $ equal (toType aty1) (toType aty2) I.Base of
+      Right ()             -> return $ I.Abs (toType aty1) $ var 0
+      Left (Failure _ _ _) -> throwError $ NotSubtype (Wrapped aty1) (Wrapped aty2)
   ty1 <: ty2 = throwError $ NotSubtype ty1 ty2
 
 instance Subtype AbstractType where
