@@ -83,7 +83,6 @@ import Data.Foldable
 import Data.Functor
 import Data.List
 import qualified Data.Map.Lazy as Map
-import Data.Maybe
 import Data.Monoid hiding (First)
 import Data.Proxy
 import Data.Semigroup (First(..))
@@ -211,6 +210,7 @@ data ElaborateError
   | NotBool Position SemanticType
   | MissingExplicitType Position Expr
   | DuplicateSpec (Set.Set I.Label)
+  | NoRealization SemanticType AbstractType Variable
   deriving (Eq, Show)
 
 instance Display ElaborateError where
@@ -227,6 +227,7 @@ instance Display ElaborateError where
   display (NotBool p ty)            = display p ++ ": not bool type: " ++ display (WithName ty)
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
   display (DuplicateSpec s)         = "duplicate specifications"
+  display (NoRealization ty aty v)  = "could not find realization for " ++ display v ++ ": " ++ display (WithName ty) ++ " against " ++ display (WithName aty)
 
 data Path = Path Variable [SemanticType]
   deriving (Eq, Show)
@@ -397,7 +398,7 @@ instance Subtype AbstractType where
 
 match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [Parameterized])
 match ty aty = do
-  let tys = lookupInsts (enumVars aty) ty (getBody aty)
+  tys <- either (throwError . NoRealization ty aty) return $ lookupInsts (enumVars aty) ty (getBody aty)
   t <- ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)
   return (t, tys)
 
@@ -554,26 +555,29 @@ tabs ks1 (Parameterized ks ty) = Parameterized (reverse ks1 ++ ks) ty
 pattern EmptyExistential :: SemanticType -> SemanticType
 pattern EmptyExistential x <- AbstractType (Existential (Quantified ([], x)))
 
-lookupInst :: Path -> SemanticType -> SemanticType -> Maybe (First Parameterized)
+type LError = Either Variable
+
+lookupInst :: Path -> SemanticType -> SemanticType -> LError (Maybe (First Parameterized))
 lookupInst p1 (EmptyExistential ty) (EmptyExistential (SemanticPath p2))
-  | p1 == p2 && isSmall ty = Just $ First $ Parameterized [] ty
-  | otherwise              = Nothing
+  | p1 == p2 && isSmall ty = return $ Just $ First $ Parameterized [] ty
+  | otherwise              = return $ Nothing
 lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p) r1 r2
 lookupInst p (Function u1) (Function u2)
-  | isPure (getBody u1) && isPure (getBody u2) =
-    let s = fromList $ zip (map variable [0..]) $ lookupInsts (enumVars u1) (domain $ getBody u2) (domain $ getBody u1) in
-    let mfty = lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) $ shift (qsLen u2) p) (applySmall s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2) in
-    fmap (tabs $ getKinds u2) <$> mfty
-lookupInst _ _ _ = Nothing
+  | isPure (getBody u1) && isPure (getBody u2) = do
+    ps <- lookupInsts (enumVars u1) (domain $ getBody u2) (domain $ getBody u1)
+    let s = fromList $ zip (map variable [0..]) ps
+    mfty <- lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) $ shift (qsLen u2) p) (applySmall s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2)
+    return $ fmap (tabs $ getKinds u2) <$> mfty
+lookupInst _ _ _ = return Nothing
 
-lookupInsts :: [Variable] -> SemanticType -> SemanticType -> [Parameterized]
-lookupInsts vs ty1 ty2 = fst $ foldr f ([], ty2) vs
+lookupInsts :: [Variable] -> SemanticType -> SemanticType -> LError [Parameterized]
+lookupInsts vs ty1 ty2 = fst <$> foldrM f ([], ty2) vs
   where
-    f :: Variable -> ([Parameterized], SemanticType) -> ([Parameterized], SemanticType)
-    f v (tys, ty) = (res : tys, applySmall [(v, res)] ty)
+    f :: Variable -> ([Parameterized], SemanticType) -> LError ([Parameterized], SemanticType)
+    f v (tys, ty) = (\r -> (r : tys, applySmall [(v, r)] ty)) <$> res
       where
-        res :: Parameterized
-        res = coerce $ fromMaybe (error $ "not explicit: " ++ display v ++ ": " ++ display (WithName ty1) ++ " and " ++ display (WithName ty)) $ lookupInst (fromVariable v) ty1 ty
+        res :: LError Parameterized
+        res = lookupInst (fromVariable v) ty1 ty >>= (coerce . maybe (Left v) Right)
 
 translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e

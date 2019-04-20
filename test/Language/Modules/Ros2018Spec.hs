@@ -42,12 +42,12 @@ spec = do
 
   describe "lookupInsts" $
     it "look up instantiations" $ do
-      lookupInsts [] (BaseType Int) (BaseType Int) `shouldBe` []
+      lookupInsts [] (BaseType Int) (BaseType Int) `shouldBe` return []
 
-      lookupInsts [variable 0] (AbstractType $ fromBody $ BaseType Int) (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [parameterized $ BaseType Int]
+      lookupInsts [variable 0] (AbstractType $ fromBody $ BaseType Int) (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` return [parameterized $ BaseType Int]
       lookupInsts [variable 0]
         (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ BaseType Char)
-        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` [parameterized $ BaseType Char]
+        (Function $ fromBody $ Fun (BaseType Bool) Pure $ fromBody $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) `shouldBe` return [parameterized $ BaseType Char]
 
   describe "match" $
     it "performs signature matching" $ do

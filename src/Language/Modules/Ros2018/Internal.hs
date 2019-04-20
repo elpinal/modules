@@ -206,8 +206,8 @@ instance IsList (Record a) where
 labels :: Record a -> [Label]
 labels (Record m) = Map.keys m
 
-foldMapIntersection :: Monoid m => (a -> a -> m) -> Record a -> Record a -> m
-foldMapIntersection f (Record m1) (Record m2) = fold $ Map.intersectionWith f m1 m2
+foldMapIntersection :: (Applicative f, Monoid m) => (a -> a -> f m) -> Record a -> Record a -> f m
+foldMapIntersection f (Record m1) (Record m2) = fmap fold $ sequenceA $ Map.intersectionWith f m1 m2
 
 iter :: Monad m => (Label -> a -> m b) -> Record a -> m (Record b)
 iter f (Record m) = coerce <$> Map.traverseWithKey f m
