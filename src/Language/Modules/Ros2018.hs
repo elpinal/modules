@@ -287,6 +287,7 @@ data SemanticType
   | AbstractType AbstractType
   | SemanticPath Path
   | Function (Universal Fun)
+  | Wrapped SemanticType
   deriving (Eq, Show)
   deriving Generic
 
@@ -303,6 +304,7 @@ instance DisplayName SemanticType where
     let ?nctx = newTypes $ qsLen u in
     let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] $ getKinds u in
     showParen (4 <= n) $ (\x -> showChar '∀' . appEndo f . showString ". " . displaysWithName 0 x) $ getBody u
+  displaysWithName _ (Wrapped ty) = showString "[" . displaysWithName 0 ty . showString "]"
 
 class SubstitutionSmall a where
   applySmall :: SubstP Parameterized -> a -> a
@@ -313,6 +315,7 @@ instance SubstitutionSmall SemanticType where
   applySmall s (AbstractType aty) = AbstractType $ applySmall s aty
   applySmall s (SemanticPath p)   = applyPath s p
   applySmall s (Function u)       = Function $ applySmall s u
+  applySmall s (Wrapped ty)       = Wrapped $ applySmall s ty
 
 instance SubstitutionSmall a => SubstitutionSmall (Existential a) where
   applySmall s e =
@@ -386,6 +389,10 @@ instance Subtype SemanticType where
     (t1, tys) <- ty2 `match'` quantify (getAnnotatedKinds u1) ty1
     t2 <- aty1 <: aty2
     return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
+  Wrapped ty1 <: Wrapped ty2 =
+    case equalType (toType ty1) (toType ty2) of
+      Right () -> return $ I.Abs (toType ty1) $ var 0
+      Left _   -> throwError $ NotSubtype ty1 ty2
   ty1 <: ty2 = throwError $ NotSubtype ty1 ty2
 
 instance Subtype AbstractType where
@@ -416,6 +423,7 @@ instance Sized SemanticType where
   isSmall (AbstractType aty) = isSmall aty
   isSmall (SemanticPath _)   = True -- maybe
   isSmall (Function u)       = isSmall u
+  isSmall (Wrapped _)        = True
 
 instance Sized Fun where
   isSmall (Fun _ Pure _)      = False
@@ -530,6 +538,7 @@ instance ToType SemanticType where
   toType (AbstractType aty) = toType aty `I.TFun` I.TRecord (record [])
   toType (SemanticPath p)   = toType p
   toType (Function f)       = toType f
+  toType (Wrapped ty)       = toType ty
 
 instance ToType Parameterized where
   toType (Parameterized ks ty) = I.tabs (reverse ks) $ toType ty
