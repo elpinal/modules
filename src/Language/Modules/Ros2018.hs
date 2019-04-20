@@ -214,6 +214,7 @@ data ElaborateError
   | NotEmptyExistential AbstractType
   | NotFunction Position SemanticType
   | NotBool Position SemanticType
+  | NotWrappedType Position SemanticType
   | MissingExplicitType Position Expr
   | DuplicateSpec (Set.Set I.Label)
   | NoRealization SemanticType AbstractType Variable
@@ -231,6 +232,7 @@ instance Display ElaborateError where
   display (NotEmptyExistential aty) = "existentially quantified: " ++ display (WithName aty)
   display (NotFunction p ty)        = display p ++ ": not function type: " ++ display (WithName ty)
   display (NotBool p ty)            = display p ++ ": not bool type: " ++ display (WithName ty)
+  display (NotWrappedType p ty)     = display p ++ ": not wrapped type: " ++ display (WithName ty)
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
   display (DuplicateSpec s)         = "duplicate specifications"
   display (NoRealization ty aty v)  = "could not find realization for " ++ display v ++ ": " ++ display (WithName ty) ++ " against " ++ display (WithName aty)
@@ -293,7 +295,7 @@ data SemanticType
   | AbstractType AbstractType
   | SemanticPath Path
   | Function (Universal Fun)
-  | Wrapped SemanticType
+  | Wrapped AbstractType
   deriving (Eq, Show)
   deriving Generic
 
@@ -310,7 +312,7 @@ instance DisplayName SemanticType where
     let ?nctx = newTypes $ qsLen u in
     let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] $ getKinds u in
     showParen (4 <= n) $ (\x -> showChar '∀' . appEndo f . showString ". " . displaysWithName 0 x) $ getBody u
-  displaysWithName _ (Wrapped ty) = showString "[" . displaysWithName 0 ty . showString "]"
+  displaysWithName _ (Wrapped aty) = showString "[" . displaysWithName 0 aty . showString "]"
 
 class SubstitutionSmall a where
   applySmall :: SubstP Parameterized -> a -> a
@@ -321,7 +323,7 @@ instance SubstitutionSmall SemanticType where
   applySmall s (AbstractType aty) = AbstractType $ applySmall s aty
   applySmall s (SemanticPath p)   = applyPath s p
   applySmall s (Function u)       = Function $ applySmall s u
-  applySmall s (Wrapped ty)       = Wrapped $ applySmall s ty
+  applySmall s (Wrapped aty)      = Wrapped $ applySmall s aty
 
 instance SubstitutionSmall a => SubstitutionSmall (Existential a) where
   applySmall s e =
@@ -395,10 +397,10 @@ instance Subtype SemanticType where
     (t1, tys) <- ty2 `match'` quantify (getAnnotatedKinds u1) ty1
     t2 <- aty1 <: aty2
     return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
-  Wrapped ty1 <: Wrapped ty2 =
-    case equalType (toType ty1) (toType ty2) of
-      Right () -> return $ I.Abs (toType ty1) $ var 0
-      Left _   -> throwError $ NotSubtype ty1 ty2
+  Wrapped aty1 <: Wrapped aty2 =
+    case equalType (toType aty1) (toType aty2) of
+      Right () -> return $ I.Abs (toType aty1) $ var 0
+      Left _   -> throwError $ NotSubtype (Wrapped aty1) (Wrapped aty2)
   ty1 <: ty2 = throwError $ NotSubtype ty1 ty2
 
 instance Subtype AbstractType where
@@ -544,7 +546,7 @@ instance ToType SemanticType where
   toType (AbstractType aty) = toType aty `I.TFun` I.TRecord (record [])
   toType (SemanticPath p)   = toType p
   toType (Function f)       = toType f
-  toType (Wrapped ty)       = toType ty
+  toType (Wrapped aty)      = toType aty
 
 instance ToType Parameterized where
   toType (Parameterized ks ty) = I.tabs (reverse ks) $ toType ty
@@ -673,6 +675,7 @@ instance Elaboration Type where
     (_, tys) <- getBody aty2 `match` quantify (restrict vs12 $ getAnnotatedKinds aty1) ty'
     let r = take n $ [ (variable i, parameterized $ SemanticPath $ fromVariable $ variable $ i - Set.size vs12) | i <- [qsLen aty1..] ]
     return $ quantify (z ++ getAnnotatedKinds aty2) $ replace (applySmall (fromList $ zip (Set.toAscList vs12) tys ++ zip (Set.toAscList vs11) (parameterized . SemanticPath . fromVariable . variable <$> [0..]) ++ r) $ shiftAbove (qsLen aty1) (qsLen aty2) $ getBody aty1) ids $ getBody aty2
+  elaborate (Positional _ (WrapType ty)) = fromBody . Wrapped <$> elaborate ty
 
 -- Assumes @proj ty1 ids@ succeeded before @replace ty1 ids ty2@.
 replace :: SemanticType -> [Ident] -> SemanticType -> SemanticType
@@ -800,6 +803,27 @@ instance Elaboration Expr where
         f3 <- aty3 <: aty
         return (I.If t1 (I.App f2 t2) $ I.App f3 t3, aty, p2 <> p3 <> strongSealing aty)
       ty -> throwError $ NotBool (getPosition id) ty
+  elaborate (Positional _ (Wrap id ty)) = do
+    (t1, aty1, _) <- elaborate $ Id <$> id
+    aty2 <- elaborate ty
+    case aty2 of
+      EmptyExistential1 (Wrapped aty2') -> do
+        t2 <- aty1 <: aty2'
+        return (I.App t2 t1, aty2, Pure)
+      EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
+      _ -> throwError $ NotEmptyExistential aty2
+  elaborate (Positional _ (Unwrap id ty)) = do
+    (t1, aty1, _) <- elaborate $ Id <$> id
+    aty1' <- case getBody aty1 of
+      Wrapped aty1' -> return aty1'
+      ty            -> throwError $ NotWrappedType (getPosition id) ty
+    aty2 <- elaborate ty
+    case aty2 of
+      EmptyExistential1 (Wrapped aty2') -> do
+        t2 <- aty1' <: aty2'
+        return (I.App t2 t1, aty2', strongSealing aty2')
+      EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
+      _ -> throwError $ NotEmptyExistential aty2
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls
