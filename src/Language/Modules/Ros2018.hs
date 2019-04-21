@@ -222,7 +222,7 @@ data ElaborateError
   | NotBool Position SemanticType
   | NotWrappedType Position SemanticType
   | MissingExplicitType Position Expr
-  | DuplicateSpec (Set.Set I.Label)
+  | DuplicateSpec Position (Set.Set I.Label)
   | NoRealization SemanticType AbstractType Variable
   deriving (Eq, Show)
 
@@ -240,8 +240,12 @@ instance Display ElaborateError where
   display (NotBool p ty)            = display p ++ ": not bool type: " ++ display (WithName ty)
   display (NotWrappedType p ty)     = display p ++ ": not wrapped type: " ++ display (WithName ty)
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
-  display (DuplicateSpec s)         = "duplicate specifications"
+  display (DuplicateSpec p s)       = display p ++ ": this declaration duplicates specification(s): " ++ displaySet s
   display (NoRealization ty aty v)  = "could not find realization for " ++ display v ++ ": " ++ display (WithName ty) ++ " against " ++ display (WithName aty)
+
+displaySet :: Display a => Set.Set a -> String
+displaySet s = f ""
+  where f = appEndo $ mconcat $ coerce $ intersperse (showString ", ") $ map displays $ Set.toList s
 
 data Path = Path Variable [SemanticType]
   deriving (Eq, Show)
@@ -713,15 +717,15 @@ elaborateDecls (acc, env) d = do
   aty <- elaborate d
   let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty
   let ?env = foldl (\env (l, ty) -> let ?env = env in insertValue (toName l) ty) ?env $ I.toList $ getBody aty
-  mustBeDisjoint acc aty
+  mustBeDisjoint (getPosition d) acc aty
   return (merge acc aty, ?env)
 
-mustBeDisjoint :: Member (Error ElaborateError) r => Existential (Record SemanticType) -> Existential (Record SemanticType) -> Eff r ()
-mustBeDisjoint e1 e2 =
+mustBeDisjoint :: Member (Error ElaborateError) r => Position -> Existential (Record SemanticType) -> Existential (Record SemanticType) -> Eff r ()
+mustBeDisjoint p e1 e2 =
   let s = I.intersection (getBody e1) $ getBody e2 in
   if Set.null s
     then return ()
-    else throwError $ DuplicateSpec s
+    else throwError $ DuplicateSpec p s
 
 instance Elaboration Decl where
   type Output Decl = Existential (Record SemanticType)

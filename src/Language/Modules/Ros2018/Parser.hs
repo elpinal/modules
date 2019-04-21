@@ -165,7 +165,7 @@ identifier = lexeme $ try $ p >>= check
 decl :: Parser (Positional Decl)
 decl = foldl (<|>) empty
   [ (\id ty -> connecting id ty $ Spec (fromPositional id) ty) <$> identifier <*> (symbol ":" >> typeParser)
-  , (\pos ty -> positional pos $ DInclude ty) <$> reserved "include" <*> typeParser
+  , (\pos ty -> positional (connect pos $ getPosition ty) $ DInclude ty) <$> reserved "include" <*> typeParser
   ]
 
 decls :: Parser [Positional Decl]
@@ -214,7 +214,7 @@ expression' = foldl (<|>) empty
 binding :: Parser (Positional Binding)
 binding = foldl (<|>) empty
   [ (\id e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) e) <$> identifier <*> (symbol "=" >> expression)
-  , (\pos e -> positional pos $ Include e) <$> reserved "include" <*> expression
+  , (\pos e -> positional (connect pos $ getPosition e) $ Include e) <$> reserved "include" <*> expression
   ]
 
 whileParser :: Parser (Positional Expr)
