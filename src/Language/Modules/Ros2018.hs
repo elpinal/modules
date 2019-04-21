@@ -119,8 +119,8 @@ data Decl
   deriving (Eq, Show)
 
 instance Display Decl where
-  displaysPrec _ (Spec id ty)  = displays id . showString " : " . displays (fromPositional ty)
-  displaysPrec _ (DInclude ty) = showString "include " . displaysPrec 5 (fromPositional ty)
+  displaysPrec _ (Spec id ty)  = displays id . showString " : " . displays ty
+  displaysPrec _ (DInclude ty) = showString "include " . displaysPrec 5 ty
 
 data Type
   = Base BaseType
@@ -143,14 +143,14 @@ instance Display Type where
             Nothing -> displaysPrec 4 ty1
             Just id -> showParen True $ displays id . showString " : " . displays ty1
     in
-    showParen (4 <= n) $ dom (fromPositional ty1) . showChar ' ' . showString arr . showChar ' ' . displaysPrec 3 (fromPositional ty2)
+    showParen (4 <= n) $ dom ty1 . showChar ' ' . showString arr . showChar ' ' . displaysPrec 3 ty2
   displaysPrec n (Expr e)            = displaysPrec n e
-  displaysPrec _ (Singleton e)       = showParen True $ showString "= " . displays (fromPositional e)
+  displaysPrec _ (Singleton e)       = showParen True $ showString "= " . displays e
   displaysPrec _ (Sig ds)            = showString "sig " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) ds) . showSpace (not $ null ds) . showString "end"
   displaysPrec n (Where ty1 ids ty2) =
     let f = appEndo $ mconcat $ coerce $ intersperse (showChar '.') $ map displays ids in
-    showParen (4 <= n) $ displaysPrec 4 (fromPositional ty1) . showString " where (" . f . showString " : " . displays (fromPositional ty2) . showChar ')'
-  displaysPrec n (WrapType ty) = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 (fromPositional ty)
+    showParen (4 <= n) $ displaysPrec 4 ty1 . showString " where (" . f . showString " : " . displays ty2 . showChar ')'
+  displaysPrec n (WrapType ty) = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 ty
 
 showSpace :: Bool -> ShowS
 showSpace True  = showChar ' '
@@ -172,8 +172,8 @@ data Binding
   deriving (Eq, Show)
 
 instance Display Binding where
-  displaysPrec _ (Val id e)  = displays id . showString " = " . displays (fromPositional e)
-  displaysPrec _ (Include e) = showString "include " . displaysPrec 5 (fromPositional e)
+  displaysPrec _ (Val id e)  = displays id . showString " = " . displays e
+  displaysPrec _ (Include e) = showString "include " . displaysPrec 5 e
 
 data Expr
   = Lit Literal
@@ -193,14 +193,14 @@ instance Display Expr where
   displaysPrec _ (Lit l)          = displays l
   displaysPrec _ (Id id)          = displays id
   displaysPrec _ (Struct bs)      = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showSpace (not $ null bs) . showString "end"
-  displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 (fromPositional ty)
-  displaysPrec n (Seal id ty)     = showParen (4 <= n) $ displays (fromPositional id) . showString " :> " . displaysPrec 4 (fromPositional ty)
-  displaysPrec n (Abs id ty e)    = showParen (4 <= n) $ showString "fun (" . displays (fromPositional id) . showString " : " . displaysPrec 0 (fromPositional ty) . showString ") => " . displaysPrec 3 (fromPositional e)
-  displaysPrec n (App id1 id2)    = showParen (4 <= n) $ displays (fromPositional id1) . showChar ' ' . displays (fromPositional id2)
-  displaysPrec _ (Proj e id)      = displaysPrec 4 (fromPositional e) . showChar '.' . displays id
-  displaysPrec n (If id e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays (fromPositional id) . showString " then " . displays (fromPositional e1) . showString " else " . displays (fromPositional e2) . showString " end : " . displays (fromPositional ty)
-  displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays (fromPositional id)  . showString " : " . displaysPrec 4 (fromPositional ty)
-  displaysPrec n (Unwrap id ty)   = showParen (4 <= n) $ showString "unwrap " . displays (fromPositional id)  . showString " : " . displaysPrec 4 (fromPositional ty)
+  displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
+  displaysPrec n (Seal id ty)     = showParen (4 <= n) $ displays id . showString " :> " . displaysPrec 4 ty
+  displaysPrec n (Abs id ty e)    = showParen (4 <= n) $ showString "fun (" . displays id . showString " : " . displaysPrec 0 ty . showString ") => " . displaysPrec 3 e
+  displaysPrec n (App id1 id2)    = showParen (4 <= n) $ displays id1 . showChar ' ' . displays id2
+  displaysPrec _ (Proj e id)      = displaysPrec 4 e . showChar '.' . displays id
+  displaysPrec n (If id e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays id . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
+  displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays id  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Unwrap id ty)   = showParen (4 <= n) $ showString "unwrap " . displays id  . showString " : " . displaysPrec 4 ty
 
 instance Annotated Positional where
   extract (Positional _ x) = x
@@ -501,7 +501,7 @@ newtype Existential a = Existential (Quantified a)
 instance DisplayName a => DisplayName (Existential a) where
   displaysWithName _ (Existential (Quantified (ks, x))) =
     let ?nctx = newTypes $ length ks in
-    let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays (fromPositional k)) $ zip [0..] ks in
+    let f = mconcat $ coerce $ intersperse (showString ", ") $ map (\(i, k) -> displayTypeVariable i . showString " : " . displays k) $ zip [0..] ks in
     showString "∃" . appEndo f . showString ". " . displaysWithName 0 x
 
 deriving instance Ftv.Ftv VProxy a => Ftv.Ftv VProxy (Existential a)

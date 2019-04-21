@@ -40,8 +40,9 @@ connect p1 p2 = Position
 data Positional a = Positional Position a
   deriving (Eq, Show, Functor)
 
+-- Ignore a position.
 instance Display a => Display (Positional a) where
-  display (Positional pos x) = display pos ++ ": " ++ display x
+  display (Positional _ x) = display x
 
 positional :: Position -> a -> Positional a
 positional pos x = Positional pos x
