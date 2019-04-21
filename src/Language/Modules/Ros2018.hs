@@ -187,12 +187,13 @@ data Expr
   | If (Positional Ident) (Positional Expr) (Positional Expr) (Positional Type)
   | Wrap (Positional Ident) (Positional Type)
   | Unwrap (Positional Ident) (Positional Type)
+  | Let [Positional Binding] (Positional Expr)
   deriving (Eq, Show)
 
 instance Display Expr where
   displaysPrec _ (Lit l)          = displays l
   displaysPrec _ (Id id)          = displays id
-  displaysPrec _ (Struct bs)      = showString "struct " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showSpace (not $ null bs) . showString "end"
+  displaysPrec _ (Struct bs)      = showString "struct " . displaysBindings bs . showString "end"
   displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
   displaysPrec n (Seal id ty)     = showParen (4 <= n) $ displays id . showString " :> " . displaysPrec 4 ty
   displaysPrec n (Abs id ty e)    = showParen (4 <= n) $ showString "fun (" . displays id . showString " : " . displaysPrec 0 ty . showString ") => " . displaysPrec 3 e
@@ -201,6 +202,10 @@ instance Display Expr where
   displaysPrec n (If id e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays id . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
   displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays id  . showString " : " . displaysPrec 4 ty
   displaysPrec n (Unwrap id ty)   = showParen (4 <= n) $ showString "unwrap " . displays id  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Let bs e)       = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
+
+displaysBindings :: [Positional Binding] -> ShowS
+displaysBindings bs = appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showSpace (not $ null bs)
 
 instance Annotated Positional where
   extract (Positional _ x) = x
@@ -835,6 +840,10 @@ instance Elaboration Expr where
         return (I.App t2 t1, aty2', strongSealing aty2')
       EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
       _ -> throwError $ NotEmptyExistential aty2
+  elaborate (Positional p (Let bs e)) = do
+    id <- coerce <$> freshName
+    -- TODO: Handle positions correctly.
+    elaborate $ positional p $ Proj (positional p $ Struct $ bs ++ [positional p $ Val id e]) id
 
 buildRecord :: [[I.Label]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls
