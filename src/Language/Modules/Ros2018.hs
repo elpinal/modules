@@ -24,6 +24,7 @@ module Language.Modules.Ros2018
   -- * Syntax
   , Type(..)
   , Decl(..)
+  , Param(..)
   , Expr(..)
   , Binding(..)
 
@@ -175,13 +176,22 @@ instance Display Binding where
   displaysPrec _ (Val id e)  = displays id . showString " = " . displays e
   displaysPrec _ (Include e) = showString "include " . displaysPrec 5 e
 
+data Param
+  = Param (Positional Ident) (Positional Type)
+  | Omit (Positional Ident)
+  deriving (Eq, Show)
+
+instance Display Param where
+  displaysPrec _ (Param id ty) = showParen True $ displays id . showString " : " . displays ty
+  displaysPrec _ (Omit id)     = displays id
+
 data Expr
   = Lit Literal
   | Id Ident
   | Struct [Positional Binding]
   | Type (Positional Type)
   | Seal (Positional Ident) (Positional Type)
-  | Abs (Positional Ident) (Positional Type) (Positional Expr)
+  | Abs Param (Positional Expr)
   | App (Positional Ident) (Positional Ident)
   | Proj (Positional Expr) Ident
   | If (Positional Ident) (Positional Expr) (Positional Expr) (Positional Type)
@@ -196,7 +206,7 @@ instance Display Expr where
   displaysPrec _ (Struct bs)      = showString "struct " . displaysBindings bs . showString "end"
   displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
   displaysPrec n (Seal id ty)     = showParen (4 <= n) $ displays id . showString " :> " . displaysPrec 4 ty
-  displaysPrec n (Abs id ty e)    = showParen (4 <= n) $ showString "fun (" . displays id . showString " : " . displaysPrec 0 ty . showString ") => " . displaysPrec 3 e
+  displaysPrec n (Abs param e)    = showParen (4 <= n) $ showString "fun " . displays param . showString " => " . displaysPrec 3 e
   displaysPrec n (App id1 id2)    = showParen (4 <= n) $ displays id1 . showChar ' ' . displays id2
   displaysPrec _ (Proj e id)      = displaysPrec 4 e . showChar '.' . displays id
   displaysPrec n (If id e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays id . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
@@ -787,12 +797,21 @@ instance Elaboration Expr where
     aty2 <- elaborate ty
     (t2, tys) <- match' (getBody aty1) aty2
     return (I.pack (I.App t2 t1) tys (getKinds aty2) (toType $ getBody aty2), aty2, strongSealing aty2)
-  elaborate (Positional _ (Abs id ty e)) = do
-    aty1 <- elaborate ty
-    let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
-    let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
-    (t, aty2, p) <- elaborate e
-    return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
+  elaborate (Positional _ (Abs param e)) = do
+    case param of
+      Omit id -> do
+        -- Assumes the `type` type is omitted.
+        aty1 <- elaborate $ positional (getPosition id) TypeType
+        let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
+        let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
+        (t, aty2, p) <- elaborate e
+        return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
+      Param id ty -> do
+        aty1 <- elaborate ty
+        let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
+        let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
+        (t, aty2, p) <- elaborate e
+        return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
   elaborate (Positional _ (App id1 id2)) = do
     (t1, aty1, _) <- elaborate $ Id <$> id1
     (t2, aty2, _) <- elaborate $ Id <$> id2

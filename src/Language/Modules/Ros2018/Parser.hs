@@ -209,9 +209,15 @@ expression' = foldl (<|>) empty
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser
-  , (\p (id, ty) e -> positional (connect p $ getPosition e) $ Abs id ty e) <$> reserved "fun" <*> parens ((,) <$> identifier <*> (symbol ":" >> typeParser)) <*> (symbol "=>" >> expression)
+  , (\p param e -> positional (connect p $ getPosition e) $ Abs param e) <$> reserved "fun" <*> params <*> (symbol "=>" >> expression)
   , (\p id e1 e2 ty -> positional (connect p $ getPosition ty) $ If id e1 e2 ty) <$> reserved "if" <*> identifier <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
   , (\p bs e -> positional (connect p $ getPosition e) $ Let bs e) <$> reserved "let" <*> bindings <*> (reserved "in" >> expression)
+  ]
+
+params :: Parser Param
+params = foldl (<|>) empty
+  [ parens (Param <$> identifier <*> (symbol ":" >> typeParser))
+  , Omit <$> identifier
   ]
 
 binding :: Parser (Positional Binding)
