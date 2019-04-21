@@ -13,6 +13,8 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Language.Modules.Ros2018
   (
   -- * Objects
@@ -259,15 +261,16 @@ instance Ftv.Ftv VProxy Path where
 fromVariable :: Variable -> Path
 fromVariable v = Path v []
 
-equalPath :: Member (Error ElaborateError) r => Path -> Path -> Eff r ()
+equalPath :: (Member (Error ElaborateError) r, ?env :: Env) => Path -> Path -> Eff r ()
 equalPath p1 @ (Path v1 tys1) p2 @ (Path v2 tys2)
   | v1 /= v2                   = throwError $ PathMismatch p1 p2
   | length tys1 /= length tys2 = throwError $ PathMismatch p1 p2
   | otherwise =
-    let f (ty1, ty2) = toType ty1 `equalType` toType ty2 in
+    -- TODO: It is perhaps wrong to assume the base kind.
+    let f (ty1, ty2) = run $ runError $ equal (toType ty1) (toType ty2) I.Base in
     case mapM_ f $ zip tys1 tys2 of
-      Right () -> return ()
-      Left _ -> throwError $ PathMismatch p1 p2
+      Right ()             -> return ()
+      Left (Failure _ _ _) -> throwError $ PathMismatch p1 p2
 
 data Fun = Fun SemanticType Purity AbstractType
   deriving (Eq, Show)
