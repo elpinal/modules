@@ -247,6 +247,7 @@ data ElaborateError
   | MissingExplicitType Position Expr
   | DuplicateSpec Position (Set.Set I.Label)
   | NoRealization SemanticType AbstractType Variable
+  | NotMatch SemanticType AbstractType ElaborateError
   deriving (Eq, Show)
 
 instance Display ElaborateError where
@@ -265,6 +266,7 @@ instance Display ElaborateError where
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
   display (DuplicateSpec p s)       = display p ++ ": this declaration duplicates specification(s): " ++ displaySet s
   display (NoRealization ty aty v)  = "could not find realization for " ++ display v ++ ": " ++ display (WithName ty) ++ " against " ++ display (WithName aty)
+  display (NotMatch ty aty e)       = display (WithName ty) ++ " does not macth against " ++ display (WithName aty) ++ ": " ++ display e
 
 displaySet :: Display a => Set.Set a -> String
 displaySet s = f ""
@@ -448,7 +450,7 @@ instance Subtype AbstractType where
 match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [Parameterized])
 match ty aty = do
   tys <- either (throwError . NoRealization ty aty) return $ lookupInsts (enumVars aty) ty (getBody aty)
-  t <- ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)
+  t <- (ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)) `catchError` (throwError . NotMatch ty aty)
   return (t, tys)
 
 match' :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [IType])
