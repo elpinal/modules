@@ -85,6 +85,8 @@ import Data.Coerce
 import Data.Foldable
 import Data.Functor
 import Data.List
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Lazy as Map
 import Data.Monoid hiding (First)
 import Data.Proxy
@@ -193,13 +195,16 @@ instance Display Param where
   displaysPrec _ (Param id ty) = showParen True $ displays id . showString " : " . displays ty
   displaysPrec _ (Omit id)     = displays id
 
+displaysParams :: Display a => NonEmpty a -> ShowS
+displaysParams params = appEndo $ (fold :: NonEmpty (Endo String) -> Endo String) $ coerce $ NonEmpty.intersperse (showChar ' ') $ displays <$> params
+
 data Expr
   = Lit Literal
   | Id Ident
   | Struct [Positional Binding]
   | Type (Positional Type)
   | Seal (Positional Expr) (Positional Type)
-  | Abs Param (Positional Expr)
+  | Abs (NonEmpty Param) (Positional Expr)
   | App (Positional Expr) (Positional Expr)
   | Proj (Positional Expr) Ident
   | If (Positional Expr) (Positional Expr) (Positional Expr) (Positional Type)
@@ -214,7 +219,7 @@ instance Display Expr where
   displaysPrec _ (Struct bs)      = showString "struct " . displaysBindings bs . showString "end"
   displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
   displaysPrec n (Seal e ty)      = showParen (4 <= n) $ displaysPrec 9 e . showString " :> " . displaysPrec 4 ty
-  displaysPrec n (Abs param e)    = showParen (4 <= n) $ showString "fun " . displays param . showString " => " . displaysPrec 3 e
+  displaysPrec n (Abs params e)   = showParen (4 <= n) $ showString "fun " . displaysParams params . showString " => " . displaysPrec 3 e
   displaysPrec n (App e1 e2)      = showParen (4 <= n) $ displaysPrec 4 e1 . showChar ' ' . displaysPrec 5 e2
   displaysPrec _ (Proj e id)      = displaysPrec 4 e . showChar '.' . displays id
   displaysPrec n (If e0 e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
@@ -813,21 +818,25 @@ instance Elaboration Expr where
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
         elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Seal (positional (getPosition e) $ Id id) ty
-  elaborate (Positional _ (Abs param e)) = do
-    case param of
-      Omit id -> do
-        -- Assumes the `type` type is omitted.
-        aty1 <- elaborate $ positional (getPosition id) TypeType
-        let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
-        let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
-        (t, aty2, p) <- elaborate e
-        return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
-      Param id ty -> do
-        aty1 <- elaborate ty
-        let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
-        let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
-        (t, aty2, p) <- elaborate e
-        return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
+  elaborate (Positional p (Abs (param :| params) e)) = do
+    case params of
+      -- TODO: Handle positions correctly.
+      param1 : ps -> elaborate $ positional p $ Abs (param :| []) $ positional p $ Abs (param1 :| ps) e
+      [] ->
+        case param of
+          Omit id -> do
+            -- Assumes the `type` type is omitted.
+            aty1 <- elaborate $ positional (getPosition id) TypeType
+            let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
+            let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
+            (t, aty2, p) <- elaborate e
+            return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
+          Param id ty -> do
+            aty1 <- elaborate ty
+            let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
+            let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
+            (t, aty2, p) <- elaborate e
+            return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
   elaborate (Positional p (App e1 e2)) = do
     case (fromPositional e1, fromPositional e2) of
       (Id _, Id _) -> do

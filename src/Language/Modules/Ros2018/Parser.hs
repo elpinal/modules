@@ -7,12 +7,14 @@ module Language.Modules.Ros2018.Parser
 
 import Data.Coerce
 import Data.Functor
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Monoid
 import qualified Data.Text as T
 import Data.Void
 import GHC.Exts
 
 import Control.Monad.Combinators.Expr
+import qualified Control.Monad.Combinators.NonEmpty as Comb
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char as C
@@ -214,14 +216,14 @@ expression' = choice
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser
-  , (\p param e -> positional (connect p $ getPosition e) $ Abs param e) <$> reserved "fun" <*> params <*> (symbol "=>" >> expression)
+  , (\p ps e -> positional (connect p $ getPosition e) $ Abs ps e) <$> reserved "fun" <*> params <*> (symbol "=>" >> expression)
   , (\p e0 e1 e2 ty -> positional (connect p $ getPosition ty) $ If e0 e1 e2 ty) <$> reserved "if" <*> expression <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
   , (\p bs e -> positional (connect p $ getPosition e) $ Let bs e) <$> reserved "let" <*> bindings <*> (reserved "in" >> expression)
   , parens expression
   ]
 
-params :: Parser Param
-params = choice
+params :: Parser (NonEmpty Param)
+params = Comb.some $ choice
   [ parens (Param <$> identifier <*> (symbol ":" >> typeParser))
   , Omit <$> identifier
   ]
