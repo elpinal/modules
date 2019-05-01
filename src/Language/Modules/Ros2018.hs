@@ -198,9 +198,9 @@ data Expr
   | Id Ident
   | Struct [Positional Binding]
   | Type (Positional Type)
-  | Seal (Positional Ident) (Positional Type)
+  | Seal (Positional Expr) (Positional Type)
   | Abs Param (Positional Expr)
-  | App (Positional Ident) (Positional Ident)
+  | App (Positional Expr) (Positional Expr)
   | Proj (Positional Expr) Ident
   | If (Positional Expr) (Positional Expr) (Positional Expr) (Positional Type)
   | Wrap (Positional Ident) (Positional Type)
@@ -213,9 +213,9 @@ instance Display Expr where
   displaysPrec _ (Id id)          = displays id
   displaysPrec _ (Struct bs)      = showString "struct " . displaysBindings bs . showString "end"
   displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
-  displaysPrec n (Seal id ty)     = showParen (4 <= n) $ displays id . showString " :> " . displaysPrec 4 ty
+  displaysPrec n (Seal e ty)      = showParen (4 <= n) $ displaysPrec 9 e . showString " :> " . displaysPrec 4 ty
   displaysPrec n (Abs param e)    = showParen (4 <= n) $ showString "fun " . displays param . showString " => " . displaysPrec 3 e
-  displaysPrec n (App id1 id2)    = showParen (4 <= n) $ displays id1 . showChar ' ' . displays id2
+  displaysPrec n (App e1 e2)      = showParen (4 <= n) $ displaysPrec 4 e1 . showChar ' ' . displaysPrec 5 e2
   displaysPrec _ (Proj e id)      = displaysPrec 4 e . showChar '.' . displays id
   displaysPrec n (If e0 e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
   displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays id  . showString " : " . displaysPrec 4 ty
@@ -799,12 +799,18 @@ instance Elaboration Expr where
   elaborate (Positional _ (Type ty)) = do
     aty <- elaborate ty
     return (toTerm aty, fromBody $ AbstractType aty, Pure)
-  elaborate (Positional _ (Seal id ty)) = do
-    (t1, aty1, p) <- elaborate $ Id <$> id
-    mustBePure p
-    aty2 <- elaborate ty
-    (t2, tys) <- match' (getBody aty1) aty2
-    return (I.pack (I.App t2 t1) tys (getKinds aty2) (toType $ getBody aty2), aty2, strongSealing aty2)
+  elaborate (Positional p (Seal e ty)) = do
+    case fromPositional e of
+      Id _ -> do
+        (t1, aty1, p) <- elaborate e
+        mustBePure p
+        aty2 <- elaborate ty
+        (t2, tys) <- match' (getBody aty1) aty2
+        return (I.pack (I.App t2 t1) tys (getKinds aty2) (toType $ getBody aty2), aty2, strongSealing aty2)
+      _ -> do
+        id <- coerce <$> freshName
+        -- TODO: Handle positions correctly.
+        elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Seal (positional (getPosition e) $ Id id) ty
   elaborate (Positional _ (Abs param e)) = do
     case param of
       Omit id -> do
@@ -820,14 +826,21 @@ instance Elaboration Expr where
         let ?env = insertValue (coerce $ fromPositional id) $ getBody aty1
         (t, aty2, p) <- elaborate e
         return (I.poly (getKinds aty1) $ I.Abs (toType $ getBody aty1) $ t, fromBody $ Function $ qmap (\ty -> Fun ty p aty2) $ toUniversal aty1, Pure)
-  elaborate (Positional _ (App id1 id2)) = do
-    (t1, aty1, _) <- elaborate $ Id <$> id1
-    (t2, aty2, _) <- elaborate $ Id <$> id2
-    case getBody aty1 of
-      Function u -> do
-        (t3, tys) <- match (getBody aty2) $ toExistential $ qmap domain u
-        return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, shift (-qsLen u) $ applySmall (fromList $ zip (enumVars u) $ shift (qsLen u) tys) $ codomain $ getBody u, getPurity $ getBody u)
-      ty1 -> throwError $ NotFunction (getPosition id1) ty1
+  elaborate (Positional p (App e1 e2)) = do
+    case (fromPositional e1, fromPositional e2) of
+      (Id _, Id _) -> do
+        (t1, aty1, _) <- elaborate e1
+        (t2, aty2, _) <- elaborate e2
+        case getBody aty1 of
+          Function u -> do
+            (t3, tys) <- match (getBody aty2) $ toExistential $ qmap domain u
+            return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, shift (-qsLen u) $ applySmall (fromList $ zip (enumVars u) $ shift (qsLen u) tys) $ codomain $ getBody u, getPurity $ getBody u)
+          ty1 -> throwError $ NotFunction (getPosition e1) ty1
+      _ -> do
+        id1 <- coerce <$> freshName
+        id2 <- coerce <$> freshName
+        -- TODO: Handle positions correctly.
+        elaborate $ positional p $ Let [positional (getPosition e1) $ Val id1 e1, positional (getPosition e2) $ Val id2 e2] $ positional p $ App (positional (getPosition e1) $ Id id1) (positional (getPosition e2) $ Id id2)
   elaborate (Positional _ (Proj e id)) = do
     (t, aty, p) <- elaborate e
     r <- getStructure $ getBody aty

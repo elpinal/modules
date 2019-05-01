@@ -7,6 +7,7 @@ module Language.Modules.Ros2018.Parser
 
 import Data.Coerce
 import Data.Functor
+import Data.Monoid
 import qualified Data.Text as T
 import Data.Void
 import GHC.Exts
@@ -198,16 +199,18 @@ seal = void $ symbol ":>"
 expression :: Parser (Positional Expr)
 expression = do
   e <- expression'
-  ids <- many $ char '.' >> identifier
-  return $ foldl (\e id -> connecting e id $ Proj e $ fromPositional id) e ids
+  fs <- many $ choice
+          [ char '.' >> ((\id e -> connecting e id $ Proj e $ fromPositional id) <$> identifier)
+          , seal >> ((\ty e -> connecting e ty $ Seal e ty) <$> typeParser)
+          , (\e2 e1 -> connecting e1 e2 $ App e1 e2) <$> expression'
+          ]
+  return $ appEndo (getDual $ mconcat $ coerce fs) e
 
 expression' :: Parser (Positional Expr)
 expression' = choice
   [ fmap Lit <$> literal
   , (\p id ty -> positional (connect p $ getPosition ty) $ Wrap id ty) <$> reserved "wrap" <*> identifier <*> (symbol ":" >> typeParser)
   , (\p id ty -> positional (connect p $ getPosition ty) $ Unwrap id ty) <$> reserved "unwrap" <*> identifier <*> (symbol ":" >> typeParser)
-  , try $ (\id ty -> connecting id ty $ Seal id ty) <$> identifier <*> (seal >> typeParser)
-  , try $ (\id1 id2 -> connecting id1 id2 $ App id1 id2) <$> identifier <*> identifier
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser

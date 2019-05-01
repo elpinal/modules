@@ -245,3 +245,9 @@ spec = do
 
           x = if (f k).b then (f k).n else 2 end : int;
           |] `shouldBeRight` ()
+
+        integration [r|
+          f = fun (x : bool) => fun (y : int) => fun t => fun (v : t) => fun (w : t -> int -> t) => w v y;
+
+          z = f false 128 (type char) 'd' (fun (ch : char) => fun (n : int) => 'r');
+          |] `shouldBeRight` ()
