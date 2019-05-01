@@ -521,8 +521,8 @@ data TypeEquivError
 instance Display TypeEquivError where
   display (StructurallyInequivalent ty1 ty2) = "structurally inequivalent types: " ++ display ty1 ++ " and " ++ display ty2
   display (KindMismatch k1 k2)               = "kind mismatch: " ++ display k1 ++ " and " ++ display k2
-  display (MissingLabelL l r1 r2)            = "comparing " ++ display r1 ++ " and " ++ display r2 ++ ": missing label " ++ display l ++ "in left"
-  display (MissingLabelR l r1 r2)            = "comparing " ++ display r1 ++ " and " ++ display r2 ++ ": missing label " ++ display l ++ "in right"
+  display (MissingLabelL l r1 r2)            = "comparing " ++ display r1 ++ " and " ++ display r2 ++ ": missing label " ++ display l ++ " in left"
+  display (MissingLabelR l r1 r2)            = "comparing " ++ display r1 ++ " and " ++ display r2 ++ ": missing label " ++ display l ++ " in right"
 
 instance SpecificError TypeEquivError where
   evidence = EvidTypeEquiv
