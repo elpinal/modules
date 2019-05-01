@@ -218,3 +218,19 @@ spec = do
 
           y = 'o';
           |] `shouldBeRight` ()
+
+        integration [r|
+          K = struct
+            M = struct
+              t = type int;
+              u = type char
+            end;
+
+            open M;
+
+            v = t;
+            w = u;
+          end;
+
+          z = K.v
+          |] `shouldBeRight` ()

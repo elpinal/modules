@@ -170,13 +170,19 @@ arrowI mid ty1 ty2 = Arrow mid ty1 Impure ty2
 data Binding
   = Val Ident (Positional Expr)
   | Include (Positional Expr)
+  | Open (Positional Expr)
   | Local [Positional Binding] [Positional Binding]
   deriving (Eq, Show)
 
 instance Display Binding where
   displaysPrec _ (Val id e)      = displays id . showString " = " . displays e
   displaysPrec _ (Include e)     = showString "include " . displaysPrec 5 e
+  displaysPrec _ (Open e)        = showString "open " . displaysPrec 5 e
   displaysPrec n (Local bs1 bs2) = showParen (4 <= n) $ showString "local " . displaysBindings bs1 . showString "in " . displaysBindings bs2 . showString "end"
+
+noReexport :: Binding -> Bool
+noReexport (Open _) = True
+noReexport _        = False
 
 data Param
   = Param (Positional Ident) (Positional Type)
@@ -866,17 +872,19 @@ instance Elaboration Expr where
     -- TODO: Handle positions correctly.
     elaborate $ positional p $ Proj (positional p $ Struct $ bs ++ [positional p $ Val id e]) id
 
-buildRecord :: [[I.Label]] -> Map.Map I.Label Term
+buildRecord :: [[(Bool, I.Label)]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls
   where
-    f = foldr (\l (m', n') -> (Map.insertWith (\_ x -> x) l (var n') m', n' + 1))
+    f = foldr (\(b, l) (m', n') -> (if b then Map.insertWith (\_ x -> x) l (var n') m' else m', n' + 1))
 
-joinBindings :: Member Fresh r => Term -> (Term, Int, [I.Label]) -> Eff r Term
+joinBindings :: Member Fresh r => Term -> (Term, Int, [(Bool, I.Label)]) -> Eff r Term
 joinBindings acc (t, n, ls) = do
   g <- I.generated <$> fresh
-  return $ I.unpack (Just g) t n $ I.Let (map (I.Proj $ I.GVar g) ls) acc
+  return $ I.unpack (Just g) t n $ I.Let (map (I.Proj (I.GVar g) . snd) ls) acc
 
-type Acc = (Env, Existential (Record SemanticType), [(Term, Int, [I.Label])], Purity)
+type IsExport = Bool
+
+type Acc = (Env, Existential (Record SemanticType), [(Term, Int, [(IsExport, I.Label)])], Purity)
 
 elaborateBindings :: (Members (Effs Expr) r, ?env :: Env) => Acc -> Positional Binding -> Eff r Acc
 elaborateBindings (env, whole_aty, zs, p0) b = do
@@ -885,7 +893,8 @@ elaborateBindings (env, whole_aty, zs, p0) b = do
   let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty
   let r = getBody aty
   let ?env = foldl (\env (l, ty) -> let ?env = env in insertValue (toName l) ty) ?env $ I.toList r
-  return (?env, merge whole_aty $ quantify (getAnnotatedKinds aty) r, (t, qsLen aty, I.labels r) : zs, p0 <> p)
+  let (exports, ls) = if noReexport $ fromPositional b then (mempty, (,) False <$> I.labels r) else (r, (,) True <$> I.labels r)
+  return (?env, merge whole_aty $ quantify (getAnnotatedKinds aty) exports, (t, qsLen aty, ls) : zs, p0 <> p)
 
 merge :: Existential (Record SemanticType) -> Existential (Record SemanticType) -> Existential (Record SemanticType)
 merge aty1 aty2 =
@@ -902,6 +911,11 @@ instance Elaboration Binding where
     return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ I.TRecord $ (\x -> [(l, x)]) $ toType $ getBody aty, (\x -> record [(l, x)]) <$> aty, p)
 
   elaborate (Positional _ (Include e)) = do
+    (t, aty, p) <- elaborate e
+    r <- getStructure $ getBody aty
+    return (t, quantify (getAnnotatedKinds aty) r, p)
+
+  elaborate (Positional _ (Open e)) = do
     (t, aty, p) <- elaborate e
     r <- getStructure $ getBody aty
     return (t, quantify (getAnnotatedKinds aty) r, p)
