@@ -234,3 +234,14 @@ spec = do
 
           z = K.v
           |] `shouldBeRight` ()
+
+        integration [r|
+          f = fun (n : int) => struct
+            b = true;
+            n = 90;
+          end;
+
+          k = 4;
+
+          x = if (f k).b then (f k).n else 2 end : int;
+          |] `shouldBeRight` ()

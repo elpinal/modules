@@ -202,7 +202,7 @@ data Expr
   | Abs Param (Positional Expr)
   | App (Positional Ident) (Positional Ident)
   | Proj (Positional Expr) Ident
-  | If (Positional Ident) (Positional Expr) (Positional Expr) (Positional Type)
+  | If (Positional Expr) (Positional Expr) (Positional Expr) (Positional Type)
   | Wrap (Positional Ident) (Positional Type)
   | Unwrap (Positional Ident) (Positional Type)
   | Let [Positional Binding] (Positional Expr)
@@ -217,7 +217,7 @@ instance Display Expr where
   displaysPrec n (Abs param e)    = showParen (4 <= n) $ showString "fun " . displays param . showString " => " . displaysPrec 3 e
   displaysPrec n (App id1 id2)    = showParen (4 <= n) $ displays id1 . showChar ' ' . displays id2
   displaysPrec _ (Proj e id)      = displaysPrec 4 e . showChar '.' . displays id
-  displaysPrec n (If id e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays id . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
+  displaysPrec n (If e0 e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
   displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays id  . showString " : " . displaysPrec 4 ty
   displaysPrec n (Unwrap id ty)   = showParen (4 <= n) $ showString "unwrap " . displays id  . showString " : " . displaysPrec 4 ty
   displaysPrec n (Let bs e)       = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
@@ -835,17 +835,13 @@ instance Elaboration Expr where
     ty <- maybe (throwError $ MissingLabel l) return $ projRecord l r
     let aty1 = qmap (const ty) aty
     return (I.unpack Nothing t (qsLen aty) $ I.pack (I.Proj (var 0) l) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty1, aty1, p)
-  elaborate (Positional _ (If id e2 e3 ty)) = do
-    (t1, aty1, _) <- elaborate $ Id <$> id
-    case getBody aty1 of
-      BaseType I.Bool -> do
-        aty <- elaborate ty
-        (t2, aty2, p2) <- elaborate e2
-        (t3, aty3, p3) <- elaborate e3
-        f2 <- aty2 <: aty
-        f3 <- aty3 <: aty
-        return (I.If t1 (I.App f2 t2) $ I.App f3 t3, aty, p2 <> p3 <> strongSealing aty)
-      ty -> throwError $ NotBool (getPosition id) ty
+  elaborate (Positional p (If e1 e2 e3 ty)) = do
+    case fromPositional e1 of
+      Id id -> elaborateIf (positional (getPosition e1) id) e2 e3 ty
+      _     -> do
+        id <- coerce <$> freshName
+        -- TODO: Handle positions correctly.
+        elaborate $ positional p $ Let [positional (getPosition e1) $ Val id e1] $ positional p $ If (positional (getPosition e1) $ Id id) e2 e3 ty
   elaborate (Positional _ (Wrap id ty)) = do
     (t1, aty1, _) <- elaborate $ Id <$> id
     aty2 <- elaborate ty
@@ -871,6 +867,19 @@ instance Elaboration Expr where
     id <- coerce <$> freshName
     -- TODO: Handle positions correctly.
     elaborate $ positional p $ Proj (positional p $ Struct $ bs ++ [positional p $ Val id e]) id
+
+elaborateIf :: (Members (Effs Expr) r, ?env :: Env) => Positional Ident -> Positional Expr -> Positional Expr -> Positional Type -> Eff r (Output Expr)
+elaborateIf id e2 e3 ty = do
+  (t1, aty1, _) <- elaborate $ Id <$> id
+  case getBody aty1 of
+    BaseType I.Bool -> do
+      aty <- elaborate ty
+      (t2, aty2, p2) <- elaborate e2
+      (t3, aty3, p3) <- elaborate e3
+      f2 <- aty2 <: aty
+      f3 <- aty3 <: aty
+      return (I.If t1 (I.App f2 t2) $ I.App f3 t3, aty, p2 <> p3 <> strongSealing aty)
+    ty -> throwError $ NotBool (getPosition id) ty
 
 buildRecord :: [[(Bool, I.Label)]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls
