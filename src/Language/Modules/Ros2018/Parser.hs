@@ -65,14 +65,14 @@ character :: Parser (Positional Char)
 character = lexeme $ between (char '\'') (char '\'') anySingle
 
 literal :: Parser (Positional Literal)
-literal = foldl (<|>) empty
+literal = choice
   [ fmap LInt <$> integer
   , fmap LBool <$> bool
   , fmap LChar <$> character
   ]
 
 baseType :: Parser (Positional I.BaseType)
-baseType = foldl (<|>) empty
+baseType = choice
   [ (`positional` I.Bool) <$> reserved "bool"
   , (`positional` I.Int) <$> reserved "int"
   , (`positional` I.Char) <$> reserved "char"
@@ -92,14 +92,14 @@ data PType
   | Fail
 
 withParam :: Parser PType
-withParam = foldl (<|>) empty
+withParam = choice
   [ try $ parens $ WithParam <$> (fromPositional <$> identifier) <*> (symbol ":" >> typeParser)
   , try $ parens $ WhereR <$> (map fromPositional <$> identifier `sepBy` char '.') <*> (symbol ":" >> typeParser)
   , Typ <$> typeAtom
   ]
 
 typeAtom :: Parser (Positional Type)
-typeAtom = foldl (<|>) empty
+typeAtom = choice
   [ fmap Base <$> baseType
   , (`positional` TypeType) <$> reserved "type"
   , try $ (\p ty -> positional p $ WrapType ty) <$> reserved "wrap" <*> typeParser
@@ -167,7 +167,7 @@ identifier = lexeme $ try $ p >>= check
         else return $ ident x
 
 decl :: Parser (Positional Decl)
-decl = foldl (<|>) empty
+decl = choice
   [ (\id ty -> connecting id ty $ Spec (fromPositional id) ty) <$> identifier <*> (symbol ":" >> typeParser)
   , (\pos ty -> positional (connect pos $ getPosition ty) $ DInclude ty) <$> reserved "include" <*> typeParser
   ]
@@ -202,7 +202,7 @@ expression = do
   return $ foldl (\e id -> connecting e id $ Proj e $ fromPositional id) e ids
 
 expression' :: Parser (Positional Expr)
-expression' = foldl (<|>) empty
+expression' = choice
   [ fmap Lit <$> literal
   , (\p id ty -> positional (connect p $ getPosition ty) $ Wrap id ty) <$> reserved "wrap" <*> identifier <*> (symbol ":" >> typeParser)
   , (\p id ty -> positional (connect p $ getPosition ty) $ Unwrap id ty) <$> reserved "unwrap" <*> identifier <*> (symbol ":" >> typeParser)
@@ -218,13 +218,13 @@ expression' = foldl (<|>) empty
   ]
 
 params :: Parser Param
-params = foldl (<|>) empty
+params = choice
   [ parens (Param <$> identifier <*> (symbol ":" >> typeParser))
   , Omit <$> identifier
   ]
 
 binding :: Parser (Positional Binding)
-binding = foldl (<|>) empty
+binding = choice
   [ (\id e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) e) <$> identifier <*> (symbol "=" >> expression)
   , (\pos e -> positional (connect pos $ getPosition e) $ Include e) <$> reserved "include" <*> expression
   , (\pos e -> positional (connect pos $ getPosition e) $ Open e) <$> reserved "open" <*> expression
