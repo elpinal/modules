@@ -196,3 +196,25 @@ spec = do
 
           O = M :> T;
           |] `shouldBeRight` ()
+
+        integration [r|
+          x = 1;
+
+          local
+            M = let
+              M = struct
+                t = type int;
+                v = x;
+              end;
+            in
+              M :> sig
+                t : type;
+                v : t;
+              end;
+          in
+            v = M.v;
+            w = v;
+          end;
+
+          y = 'o';
+          |] `shouldBeRight` ()

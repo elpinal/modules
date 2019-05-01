@@ -153,6 +153,7 @@ reservedWords =
   , "unwrap"
   , "let"
   , "in"
+  , "local"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -224,6 +225,7 @@ binding :: Parser (Positional Binding)
 binding = foldl (<|>) empty
   [ (\id e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) e) <$> identifier <*> (symbol "=" >> expression)
   , (\pos e -> positional (connect pos $ getPosition e) $ Include e) <$> reserved "include" <*> expression
+  , (\p1 bs1 bs2 p2 -> positional (connect p1 p2) $ Local bs1 bs2) <$> reserved "local" <*> bindings <*> (reserved "in" >> bindings) <*> reserved "end"
   ]
 
 whileParser :: Parser (Positional Expr)
