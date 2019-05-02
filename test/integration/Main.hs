@@ -251,3 +251,15 @@ spec = do
 
           z = f false 128 (type char) 'd' (fun (ch : char) => fun (n : int) => 'r');
           |] `shouldBeRight` ()
+
+        integration [r|
+          type t = int;
+          type t a = a -> a;
+          type t a b c = a -> t b -> c;
+
+          f = (fun (n : int) => struct
+            type t = char
+          end) :> int -> sig t : type end;
+
+          type u (n : int) = (f n).t;
+          |] `shouldBeRight` ()
