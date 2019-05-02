@@ -107,8 +107,8 @@ typeAtom = choice
   , (`positional` TypeType) <$> reserved "type"
   , try $ (\p ty -> positional p $ WrapType ty) <$> reserved "wrap" <*> typeParser
   , try $ parens $ (\eq e -> connecting eq e $ Singleton e) <$> symbol "=" <*> expression
-  , parens typeParser
   , try $ fmap Expr <$> expression
+  , parens typeParser
   , signature
   ]
 
