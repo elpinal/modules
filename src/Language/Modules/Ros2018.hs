@@ -77,7 +77,7 @@ module Language.Modules.Ros2018
   , SubstitutionSmall(..)
   ) where
 
-import Control.Monad.Freer hiding (translate)
+import Control.Monad.Freer hiding (translate, interpose)
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.Fresh
 import Data.Bifunctor
@@ -171,16 +171,18 @@ arrowI mid ty1 ty2 = Arrow mid ty1 Impure ty2
 
 data Binding
   = Val Ident (Positional Expr)
+  | TypeBinding Ident [Param] (Positional Type)
   | Include (Positional Expr)
   | Open (Positional Expr)
   | Local [Positional Binding] [Positional Binding]
   deriving (Eq, Show)
 
 instance Display Binding where
-  displaysPrec _ (Val id e)      = displays id . showString " = " . displays e
-  displaysPrec _ (Include e)     = showString "include " . displaysPrec 5 e
-  displaysPrec _ (Open e)        = showString "open " . displaysPrec 5 e
-  displaysPrec n (Local bs1 bs2) = showParen (4 <= n) $ showString "local " . displaysBindings bs1 . showString "in " . displaysBindings bs2 . showString "end"
+  displaysPrec _ (Val id e)             = displays id . showString " = " . displays e
+  displaysPrec _ (TypeBinding id ps ty) = showString "type " . displays id . displaysParams ps . showString " = " . displays ty
+  displaysPrec _ (Include e)            = showString "include " . displaysPrec 5 e
+  displaysPrec _ (Open e)               = showString "open " . displaysPrec 5 e
+  displaysPrec n (Local bs1 bs2)        = showParen (4 <= n) $ showString "local " . displaysBindings bs1 . showString "in " . displaysBindings bs2 . showString "end"
 
 noReexport :: Binding -> Bool
 noReexport (Open _) = True
@@ -195,8 +197,17 @@ instance Display Param where
   displaysPrec _ (Param id ty) = showParen True $ displays id . showString " : " . displays ty
   displaysPrec _ (Omit id)     = displays id
 
-displaysParams :: Display a => NonEmpty a -> ShowS
-displaysParams params = appEndo $ (fold :: NonEmpty (Endo String) -> Endo String) $ coerce $ NonEmpty.intersperse (showChar ' ') $ displays <$> params
+class Interpose f where
+  interpose :: a -> f a -> f a
+
+instance Interpose [] where
+  interpose = intersperse
+
+instance Interpose NonEmpty where
+  interpose = NonEmpty.intersperse
+
+displaysParams :: (Interpose f, Functor f, Foldable f, Display a) => f a -> ShowS
+displaysParams params = appEndo $ fold $ fmap coerce $ interpose (showChar ' ') $ displays <$> params
 
 data Expr
   = Lit Literal
@@ -954,6 +965,11 @@ instance Elaboration Binding where
     (t, aty, p) <- elaborate e
     let l = I.toLabel $ coerce id
     return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ I.TRecord $ (\x -> [(l, x)]) $ toType $ getBody aty, (\x -> record [(l, x)]) <$> aty, p)
+
+  elaborate (Positional p (TypeBinding id ps ty)) = do
+    case ps of
+      []           -> elaborate $ positional p $ Val id $ positional (getPosition ty) $ Type ty
+      (param : ps) -> elaborate $ positional p $ Val id $ positional (getPosition ty) $ Abs (param :| ps) $ positional (getPosition ty) $ Type ty
 
   elaborate (Positional _ (Include e)) = do
     (t, aty, p) <- elaborate e
