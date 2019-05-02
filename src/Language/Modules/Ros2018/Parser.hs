@@ -211,8 +211,8 @@ expression = do
 expression' :: Parser (Positional Expr)
 expression' = choice
   [ fmap Lit <$> literal
-  , (\p id ty -> positional (connect p $ getPosition ty) $ Wrap id ty) <$> reserved "wrap" <*> identifier <*> (symbol ":" >> typeParser)
-  , (\p id ty -> positional (connect p $ getPosition ty) $ Unwrap id ty) <$> reserved "unwrap" <*> identifier <*> (symbol ":" >> typeParser)
+  , (\p e ty -> positional (connect p $ getPosition ty) $ Wrap e ty) <$> reserved "wrap" <*> expression <*> (symbol ":" >> typeParser)
+  , (\p e ty -> positional (connect p $ getPosition ty) $ Unwrap e ty) <$> reserved "unwrap" <*> expression <*> (symbol ":" >> typeParser)
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser

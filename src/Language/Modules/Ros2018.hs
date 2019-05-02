@@ -208,8 +208,8 @@ data Expr
   | App (Positional Expr) (Positional Expr)
   | Proj (Positional Expr) Ident
   | If (Positional Expr) (Positional Expr) (Positional Expr) (Positional Type)
-  | Wrap (Positional Ident) (Positional Type)
-  | Unwrap (Positional Ident) (Positional Type)
+  | Wrap (Positional Expr) (Positional Type)
+  | Unwrap (Positional Expr) (Positional Type)
   | Let [Positional Binding] (Positional Expr)
   deriving (Eq, Show)
 
@@ -223,8 +223,8 @@ instance Display Expr where
   displaysPrec n (App e1 e2)      = showParen (4 <= n) $ displaysPrec 4 e1 . showChar ' ' . displaysPrec 5 e2
   displaysPrec _ (Proj e id)      = displaysPrec 4 e . showChar '.' . displays id
   displaysPrec n (If e0 e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
-  displaysPrec n (Wrap id ty)     = showParen (4 <= n) $ showString "wrap " . displays id  . showString " : " . displaysPrec 4 ty
-  displaysPrec n (Unwrap id ty)   = showParen (4 <= n) $ showString "unwrap " . displays id  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Wrap e ty)      = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Unwrap e ty)    = showParen (4 <= n) $ showString "unwrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
   displaysPrec n (Let bs e)       = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
 
 displaysBindings :: [Positional Binding] -> ShowS
@@ -866,27 +866,39 @@ instance Elaboration Expr where
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
         elaborate $ positional p $ Let [positional (getPosition e1) $ Val id e1] $ positional p $ If (positional (getPosition e1) $ Id id) e2 e3 ty
-  elaborate (Positional _ (Wrap id ty)) = do
-    (t1, aty1, _) <- elaborate $ Id <$> id
-    aty2 <- elaborate ty
-    case aty2 of
-      EmptyExistential1 (Wrapped aty2') -> do
-        t2 <- aty1 <: aty2'
-        return (I.App t2 t1, aty2, Pure)
-      EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
-      _ -> throwError $ NotEmptyExistential aty2
-  elaborate (Positional _ (Unwrap id ty)) = do
-    (t1, aty1, _) <- elaborate $ Id <$> id
-    aty1' <- case getBody aty1 of
-      Wrapped aty1' -> return aty1'
-      ty            -> throwError $ NotWrappedType (getPosition id) ty
-    aty2 <- elaborate ty
-    case aty2 of
-      EmptyExistential1 (Wrapped aty2') -> do
-        t2 <- aty1' <: aty2'
-        return (I.App t2 t1, aty2', strongSealing aty2')
-      EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
-      _ -> throwError $ NotEmptyExistential aty2
+  elaborate (Positional p (Wrap e ty)) = do
+    case fromPositional e of
+      Id _ -> do
+        (t1, aty1, _) <- elaborate e
+        aty2 <- elaborate ty
+        case aty2 of
+          EmptyExistential1 (Wrapped aty2') -> do
+            t2 <- aty1 <: aty2'
+            return (I.App t2 t1, aty2, Pure)
+          EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
+          _ -> throwError $ NotEmptyExistential aty2
+      _ -> do
+        id <- coerce <$> freshName
+        -- TODO: Handle positions correctly.
+        elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Wrap (positional (getPosition e) $ Id id) ty
+  elaborate (Positional p (Unwrap e ty)) = do
+    case fromPositional e of
+      Id _ -> do
+        (t1, aty1, _) <- elaborate e
+        aty1' <- case getBody aty1 of
+          Wrapped aty1' -> return aty1'
+          ty            -> throwError $ NotWrappedType (getPosition e) ty
+        aty2 <- elaborate ty
+        case aty2 of
+          EmptyExistential1 (Wrapped aty2') -> do
+            t2 <- aty1' <: aty2'
+            return (I.App t2 t1, aty2', strongSealing aty2')
+          EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
+          _ -> throwError $ NotEmptyExistential aty2
+      _ -> do
+        id <- coerce <$> freshName
+        -- TODO: Handle positions correctly.
+        elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Unwrap (positional (getPosition e) $ Id id) ty
   elaborate (Positional p (Let bs e)) = do
     id <- coerce <$> freshName
     -- TODO: Handle positions correctly.
