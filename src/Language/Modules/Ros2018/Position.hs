@@ -42,7 +42,7 @@ data Positional a = Positional Position a
 
 -- Ignore a position.
 instance Display a => Display (Positional a) where
-  display (Positional _ x) = display x
+  displaysPrec n (Positional _ x) = displaysPrec n x
 
 positional :: Position -> a -> Positional a
 positional pos x = Positional pos x

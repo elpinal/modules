@@ -179,6 +179,7 @@ data Binding
 
 instance Display Binding where
   displaysPrec _ (Val id e)             = displays id . showString " = " . displays e
+  -- FIXME: missing space after `id`
   displaysPrec _ (TypeBinding id ps ty) = showString "type " . displays id . displaysParams ps . showString " = " . displays ty
   displaysPrec _ (Include e)            = showString "include " . displaysPrec 5 e
   displaysPrec _ (Open e)               = showString "open " . displaysPrec 5 e
