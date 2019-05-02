@@ -415,12 +415,6 @@ applyPath s (Path v tys) =
     g n ks (SemanticPath p) = f (replicate n I.Base ++ ks) $ SemanticPath $ appendPath (map (SemanticPath . fromVariable . variable) $ reverse $ take n [length ks..]) $ shiftAbove (length ks) n p
     g _ _ _                 = error "ill-formed semantic path"
 
-newtype PathFormationError = PathFromType IType
-  deriving (Eq, Show)
-
-instance Display PathFormationError where
-  display (PathFromType ty) = "cannot create well-formed semantic path from: " ++ display ty
-
 appendPath :: [SemanticType] -> Path -> Path
 appendPath tys' (Path v tys) = Path v $ tys ++ tys'
 
