@@ -126,7 +126,7 @@ data Decl
 instance Display Decl where
   displaysPrec _ (Spec id ty)           = displays id . showString " : " . displays ty
   displaysPrec _ (AbsTypeSpec id ps)    = showString "type " . displays id . showSpace (not $ null ps) . displaysParams ps
-  displaysPrec _ (ManTypeSpec id ps ty) = showString "type " . displays id . showSpace (not $ null ps) . displaysParams ps . showSpace (not $ null ps) . showString "= " . displays ty
+  displaysPrec _ (ManTypeSpec id ps ty) = showString "type " . displays id . showSpace (not $ null ps) . displaysParams ps . showString " = " . displays ty
   displaysPrec _ (DInclude ty)          = showString "include " . displaysPrec 5 ty
 
 data Type
