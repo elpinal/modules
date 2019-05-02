@@ -8,7 +8,8 @@ module Language.Modules.Ros2018.Parser
 import Data.Coerce
 import Data.Functor
 import Data.List.NonEmpty (NonEmpty(..))
-import Data.Monoid
+import Data.Monoid hiding (Last(..))
+import Data.Semigroup (sconcat, Last(..))
 import qualified Data.Text as T
 import Data.Void
 import GHC.Exts
@@ -169,9 +170,15 @@ identifier = lexeme $ try $ p >>= check
         then fail $ "keyword " ++ show x ++ " is not an identifier"
         else return $ ident x
 
+getPos :: Param -> Position
+getPos (Param id ty) = connect (getPosition id) (getPosition ty) -- Perhaps `Param` data constructor should have its position including surrounding parentheses.
+getPos (Omit id)     = getPosition id
+
 decl :: Parser (Positional Decl)
 decl = choice
   [ (\id ty -> connecting id ty $ Spec (fromPositional id) ty) <$> identifier <*> (symbol ":" >> typeParser)
+  , try $ (\p id ps ty -> positional (connect p $ getPosition ty) $ ManTypeSpec (fromPositional id) ps ty) <$> reserved "type" <*> identifier <*> many param <*> (symbol "=" >> typeParser)
+  , (\p id ps -> positional (connect p $ getLast $ sconcat $ coerce $ (:|) (getPosition id) $ getPos <$> ps) $ AbsTypeSpec (fromPositional id) ps) <$> reserved "type" <*> identifier <*> many param
   , (\pos ty -> positional (connect pos $ getPosition ty) $ DInclude ty) <$> reserved "include" <*> typeParser
   ]
 

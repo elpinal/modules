@@ -118,12 +118,16 @@ instance Display Ident where
 
 data Decl
   = Spec Ident (Positional Type)
+  | AbsTypeSpec Ident [Param]
+  | ManTypeSpec Ident [Param] (Positional Type) -- Manifest type specification.
   | DInclude (Positional Type)
   deriving (Eq, Show)
 
 instance Display Decl where
-  displaysPrec _ (Spec id ty)  = displays id . showString " : " . displays ty
-  displaysPrec _ (DInclude ty) = showString "include " . displaysPrec 5 ty
+  displaysPrec _ (Spec id ty)           = displays id . showString " : " . displays ty
+  displaysPrec _ (AbsTypeSpec id ps)    = showString "type " . displays id . showSpace (not $ null ps) . displaysParams ps
+  displaysPrec _ (ManTypeSpec id ps ty) = showString "type " . displays id . showSpace (not $ null ps) . displaysParams ps . showSpace (not $ null ps) . showString "= " . displays ty
+  displaysPrec _ (DInclude ty)          = showString "include " . displaysPrec 5 ty
 
 data Type
   = Base BaseType
@@ -768,12 +772,21 @@ mustBeDisjoint p e1 e2 =
     then return ()
     else throwError $ DuplicateSpec p s
 
+arrowsP :: [Param] -> Positional Type -> Positional Type
+arrowsP ps ty = foldr f ty ps
+  where
+    f :: Param -> Positional Type -> Positional Type
+    f (Param id ty1) ty2 = connecting id ty2 $ arrowP (return $ fromPositional id) ty1 ty2 -- Perhaps `Param` data constructor should have its position including surrounding parentheses.
+    f (Omit id) ty       = connecting id ty $ arrowP (return $ fromPositional id) (positional (getPosition id) TypeType) ty
+
 instance Elaboration Decl where
   type Output Decl = Existential (Record SemanticType)
   type Effs Decl = '[Error I.Failure, Error ElaborateError, Fresh]
 
-  elaborate (Positional _ (Spec id ty))  = qmap (\ty -> [(toLabel $ coerce id, ty)]) <$> elaborate ty
-  elaborate (Positional _ (DInclude ty)) = elaborate ty >>= qfmap getStructure
+  elaborate (Positional _ (Spec id ty))           = qmap (\ty -> [(toLabel $ coerce id, ty)]) <$> elaborate ty
+  elaborate (Positional p (AbsTypeSpec id ps))    = elaborate $ positional p $ Spec id $ arrowsP ps $ positional p TypeType -- TODO: Handle positions correctly.
+  elaborate (Positional p (ManTypeSpec id ps ty)) = elaborate $ positional p $ Spec id $ arrowsP ps $ positional (getPosition ty) (Singleton $ positional (getPosition ty) $ Type ty) -- TODO: Handle positions correctly.
+  elaborate (Positional _ (DInclude ty))          = elaborate ty >>= qfmap getStructure
 
 withExplicitType :: Member (Error ElaborateError) r => Positional Expr -> Eff r ()
 withExplicitType (Positional p e) =
