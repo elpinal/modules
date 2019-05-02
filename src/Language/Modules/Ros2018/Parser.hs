@@ -215,7 +215,7 @@ expression' = choice
   , (\p e ty -> positional (connect p $ getPosition ty) $ Unwrap e ty) <$> reserved "unwrap" <*> expression <*> (symbol ":" >> typeParser)
   , fmap Id <$> identifier
   , structure
-  , (\p ty -> positional p $ Type ty) <$> reserved "type" <*> typeParser -- FIXME: position
+  , (\p ty -> positional (p `connect` getPosition ty) $ Type ty) <$> reserved "type" <*> typeParser
   , (\p ps e -> positional (connect p $ getPosition e) $ Abs ps e) <$> reserved "fun" <*> params <*> (symbol "=>" >> expression)
   , (\p e0 e1 e2 ty -> positional (connect p $ getPosition ty) $ If e0 e1 e2 ty) <$> reserved "if" <*> expression <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
   , (\p bs e -> positional (connect p $ getPosition e) $ Let bs e) <$> reserved "let" <*> bindings <*> (reserved "in" >> expression)
