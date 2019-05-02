@@ -64,3 +64,21 @@ spec = do
   describe "applySmall" $
     it "performs parallel substitution" $ do
       applySmall [(variable 0, Parameterized [I.Base] $ SemanticPath $ fromVariable $ variable 0)] (SemanticPath $ Path (variable 0) [BaseType Int]) `shouldBe` BaseType Int
+
+  describe "applyPath" $
+    it "performs parallel substitution on paths" $ do
+      let path n xs = Path (variable n) xs
+      applyPath [] (path 0 [])                                                                     `shouldBe` SemanticPath (path 0 [])
+      applyPath [(variable 0, parameterized $ BaseType Char)] (path 0 [])                          `shouldBe` BaseType Char
+      applyPath [(variable 0, parameterized $ BaseType Char)] (path 1 [])                          `shouldBe` SemanticPath (path 1 [])
+      applyPath [(variable 0, parameterized $ SemanticPath $ path 10 [])] (path 0 [])              `shouldBe` SemanticPath (path 10 [])
+      applyPath [(variable 0, parameterized $ SemanticPath $ path 12 [BaseType Bool])] (path 0 []) `shouldBe` SemanticPath (path 12 [BaseType Bool])
+
+      applyPath [(variable 0, Parameterized [I.Base] $ SemanticPath $ path 0 [])] (path 0 [BaseType Int])               `shouldBe` BaseType Int
+      applyPath [(variable 0, Parameterized [I.Base] $ SemanticPath $ path 12 [BaseType Bool])] (path 0 [BaseType Int]) `shouldBe` SemanticPath (path 11 [BaseType Bool])
+
+      -- Currently, the mismatch of kinds is ignored.
+      -- It's unclear whether this is correct.
+      applyPath [(variable 0, Parameterized [I.KFun I.Base I.Base] $ SemanticPath $ path 0 [])] (path 0 [BaseType Int]) `shouldBe` BaseType Int
+
+      applyPath [(variable 0, parameterized $ SemanticPath $ path 0 [])] (path 0 [BaseType Int]) `shouldBe` SemanticPath (path 0 [BaseType Int])

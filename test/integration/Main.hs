@@ -263,3 +263,22 @@ spec = do
 
           type u (n : int) = (f n).t;
           |] `shouldBeRight` ()
+
+        integration [r|
+          S = type sig
+            t : type -> type -> type;
+          end;
+          |] `shouldBeRight` ()
+
+        integration [r|
+          type S a = sig
+            type t a b;
+            type u a b c = t (t b c) (type char);
+            type v;
+            type w t (v : int) = t ~> u t a t;
+          end;
+
+          T = S (type int);
+
+          f = fun (M : T) => fun (x : M.w (type bool) 800) => x true;
+          |] `shouldBeRight` ()

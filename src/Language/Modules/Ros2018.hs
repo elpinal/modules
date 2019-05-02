@@ -75,6 +75,7 @@ module Language.Modules.Ros2018
 
   -- * Substitution with small types
   , SubstitutionSmall(..)
+  , applyPath
   ) where
 
 import Control.Monad.Freer hiding (translate, interpose)
@@ -402,8 +403,17 @@ applyPath s (Path v tys) =
   case lookupSubst v s of
     Nothing -> SemanticPath $ Path v $ applySmall s tys
     Just (Parameterized ks ty)
-      | length ks == length tys -> applySmall (fromList $ zip (map variable [0..length ks-1]) $ map parameterized $ reverse tys) ty
+      | length ks == length tys -> f ks ty
+      | length ks < length tys  -> g (length tys - length ks) ks ty
       | otherwise               -> error "ill-formed semantic path"
+  where
+    f :: [IKind] -> SemanticType -> SemanticType
+    f ks ty = shift (-length ks) $ applySmall (fromList $ zip (map variable [0..length ks-1]) $ map parameterized $ reverse $ shift (length ks) tys) ty
+
+    -- I.Base is used here because we ignore kinds for substitution, so we can choose an arbitrary kind.
+    g :: Int -> [IKind] -> SemanticType -> SemanticType
+    g n ks (SemanticPath p) = f (replicate n I.Base ++ ks) $ SemanticPath $ appendPath (map (SemanticPath . fromVariable . variable) $ reverse $ take n [length ks..]) $ shiftAbove (length ks) n p
+    g _ _ _                 = error "ill-formed semantic path"
 
 newtype PathFormationError = PathFromType IType
   deriving (Eq, Show)
