@@ -205,12 +205,16 @@ structure = do
 seal :: Parser ()
 seal = void $ symbol ":>"
 
+transparentAscription :: Parser ()
+transparentAscription = void $ symbol ":"
+
 expression :: Parser (Positional Expr)
 expression = do
   e <- expression'
   fs <- many $ choice
           [ char '.' >> ((\id e -> connecting e id $ Proj e $ fromPositional id) <$> identifier)
           , seal >> ((\ty e -> connecting e ty $ Seal e ty) <$> typeParser)
+          , transparentAscription >> ((\ty e -> connecting e ty $ TransparentAsc e ty) <$> typeParser)
           , (\e2 e1 -> connecting e1 e2 $ App e1 e2) <$> expression'
           ]
   return $ appEndo (getDual $ mconcat $ coerce fs) e

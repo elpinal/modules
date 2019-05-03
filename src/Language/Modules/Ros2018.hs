@@ -220,6 +220,7 @@ data Expr
   | Struct [Positional Binding]
   | Type (Positional Type)
   | Seal (Positional Expr) (Positional Type)
+  | TransparentAsc (Positional Expr) (Positional Type)
   | Abs (NonEmpty Param) (Positional Expr)
   | App (Positional Expr) (Positional Expr)
   | Proj (Positional Expr) Ident
@@ -230,18 +231,19 @@ data Expr
   deriving (Eq, Show)
 
 instance Display Expr where
-  displaysPrec _ (Lit l)          = displays l
-  displaysPrec _ (Id id)          = displays id
-  displaysPrec _ (Struct bs)      = showString "struct " . displaysBindings bs . showString "end"
-  displaysPrec n (Type ty)        = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
-  displaysPrec n (Seal e ty)      = showParen (4 <= n) $ displaysPrec 9 e . showString " :> " . displaysPrec 4 ty
-  displaysPrec n (Abs params e)   = showParen (4 <= n) $ showString "fun " . displaysParams params . showString " => " . displaysPrec 3 e
-  displaysPrec n (App e1 e2)      = showParen (4 <= n) $ displaysPrec 4 e1 . showChar ' ' . displaysPrec 5 e2
-  displaysPrec _ (Proj e id)      = displaysPrec 4 e . showChar '.' . displays id
-  displaysPrec n (If e0 e1 e2 ty) = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
-  displaysPrec n (Wrap e ty)      = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
-  displaysPrec n (Unwrap e ty)    = showParen (4 <= n) $ showString "unwrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
-  displaysPrec n (Let bs e)       = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
+  displaysPrec _ (Lit l)               = displays l
+  displaysPrec _ (Id id)               = displays id
+  displaysPrec _ (Struct bs)           = showString "struct " . displaysBindings bs . showString "end"
+  displaysPrec n (Type ty)             = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
+  displaysPrec n (Seal e ty)           = showParen (4 <= n) $ displaysPrec 9 e . showString " :> " . displaysPrec 4 ty
+  displaysPrec n (TransparentAsc e ty) = showParen (4 <= n) $ displaysPrec 9 e . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Abs params e)        = showParen (4 <= n) $ showString "fun " . displaysParams params . showString " => " . displaysPrec 3 e
+  displaysPrec n (App e1 e2)           = showParen (4 <= n) $ displaysPrec 4 e1 . showChar ' ' . displaysPrec 5 e2
+  displaysPrec _ (Proj e id)           = displaysPrec 4 e . showChar '.' . displays id
+  displaysPrec n (If e0 e1 e2 ty)      = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
+  displaysPrec n (Wrap e ty)           = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Unwrap e ty)         = showParen (4 <= n) $ showString "unwrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Let bs e)            = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
 
 displaysBindings :: [Positional Binding] -> ShowS
 displaysBindings bs = appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showSpace (not $ null bs)
@@ -795,9 +797,10 @@ instance Elaboration Decl where
 withExplicitType :: Member (Error ElaborateError) r => Positional Expr -> Eff r ()
 withExplicitType (Positional p e) =
   case e of
-    Seal _ _ -> return ()
-    Type _   -> return ()
-    _        -> throwError $ MissingExplicitType p e
+    Seal _ _           -> return ()
+    TransparentAsc _ _ -> return ()
+    Type _             -> return ()
+    _                  -> throwError $ MissingExplicitType p e
 
 instance Elaboration Literal where
   type Output Literal = BaseType
@@ -846,6 +849,11 @@ instance Elaboration Expr where
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
         elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Seal (positional (getPosition e) $ Id id) ty
+  elaborate (Positional p (TransparentAsc e ty)) = do
+    -- We choose an arbitrary identifier.
+    let id = positional (getPosition e) $ ident "X"
+    -- TODO: Handle positions correctly.
+    elaborate $ positional p $ App (positional (getPosition ty) $ Abs (Param id ty :| []) $ Id <$> id) e
   elaborate (Positional p (Abs (param :| params) e)) = do
     case params of
       -- TODO: Handle positions correctly.
