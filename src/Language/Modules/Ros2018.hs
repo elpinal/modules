@@ -27,10 +27,12 @@ module Language.Modules.Ros2018
   , Param(..)
   , Expr(..)
   , Binding(..)
+  , Asc(..)
 
   -- * Useful functions
   , arrowP
   , arrowI
+  , val
 
   -- * Environments
   , Env
@@ -174,8 +176,17 @@ arrowP mid ty1 ty2 = Arrow mid ty1 Pure ty2
 arrowI :: Maybe Ident -> Positional Type -> Positional Type -> Type
 arrowI mid ty1 ty2 = Arrow mid ty1 Impure ty2
 
+data Asc
+  = Trans
+  | Opaque
+  deriving (Eq, Show)
+
+instance Display Asc where
+  display Trans = ":"
+  display Opaque = ":>"
+
 data Binding
-  = Val Ident (Positional Expr)
+  = Val Ident [Param] (Maybe (Asc, Positional Type)) (Positional Expr)
   | TypeBinding Ident [Param] (Positional Type)
   | Include (Positional Expr)
   | Open (Positional Expr)
@@ -183,11 +194,14 @@ data Binding
   deriving (Eq, Show)
 
 instance Display Binding where
-  displaysPrec _ (Val id e)             = displays id . showString " = " . displays e
+  displaysPrec _ (Val id ps asc e)      = displays id . showSpace True . displaysParams ps . maybe (\s -> s) (\(x, ty) -> showSpace (not $ null ps) . displays x . showSpace True . displays ty) asc . showString "= " . displays e
   displaysPrec _ (TypeBinding id ps ty) = showString "type " . displays id . showSpace (not $ null ps) . displaysParams ps . showString " = " . displays ty
   displaysPrec _ (Include e)            = showString "include " . displaysPrec 5 e
   displaysPrec _ (Open e)               = showString "open " . displaysPrec 5 e
   displaysPrec n (Local bs1 bs2)        = showParen (4 <= n) $ showString "local " . displaysBindings bs1 . showString "in " . displaysBindings bs2 . showString "end"
+
+val :: Ident -> Positional Expr -> Binding
+val id = Val id [] Nothing
 
 noReexport :: Binding -> Bool
 noReexport (Open _) = True
@@ -848,7 +862,7 @@ instance Elaboration Expr where
       _ -> do
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
-        elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Seal (positional (getPosition e) $ Id id) ty
+        elaborate $ positional p $ Let [positional (getPosition e) $ val id e] $ positional p $ Seal (positional (getPosition e) $ Id id) ty
   elaborate (Positional p (TransparentAsc e ty)) = do
     -- We choose an arbitrary identifier.
     let id = positional (getPosition e) $ ident "X"
@@ -887,7 +901,7 @@ instance Elaboration Expr where
         id1 <- coerce <$> freshName
         id2 <- coerce <$> freshName
         -- TODO: Handle positions correctly.
-        elaborate $ positional p $ Let [positional (getPosition e1) $ Val id1 e1, positional (getPosition e2) $ Val id2 e2] $ positional p $ App (positional (getPosition e1) $ Id id1) (positional (getPosition e2) $ Id id2)
+        elaborate $ positional p $ Let [positional (getPosition e1) $ val id1 e1, positional (getPosition e2) $ val id2 e2] $ positional p $ App (positional (getPosition e1) $ Id id1) (positional (getPosition e2) $ Id id2)
   elaborate (Positional _ (Proj e id)) = do
     (t, aty, p) <- elaborate e
     r <- getStructure $ getBody aty
@@ -901,7 +915,7 @@ instance Elaboration Expr where
       _     -> do
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
-        elaborate $ positional p $ Let [positional (getPosition e1) $ Val id e1] $ positional p $ If (positional (getPosition e1) $ Id id) e2 e3 ty
+        elaborate $ positional p $ Let [positional (getPosition e1) $ val id e1] $ positional p $ If (positional (getPosition e1) $ Id id) e2 e3 ty
   elaborate (Positional p (Wrap e ty)) = do
     case fromPositional e of
       Id _ -> do
@@ -916,7 +930,7 @@ instance Elaboration Expr where
       _ -> do
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
-        elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Wrap (positional (getPosition e) $ Id id) ty
+        elaborate $ positional p $ Let [positional (getPosition e) $ val id e] $ positional p $ Wrap (positional (getPosition e) $ Id id) ty
   elaborate (Positional p (Unwrap e ty)) = do
     case fromPositional e of
       Id _ -> do
@@ -934,11 +948,11 @@ instance Elaboration Expr where
       _ -> do
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
-        elaborate $ positional p $ Let [positional (getPosition e) $ Val id e] $ positional p $ Unwrap (positional (getPosition e) $ Id id) ty
+        elaborate $ positional p $ Let [positional (getPosition e) $ val id e] $ positional p $ Unwrap (positional (getPosition e) $ Id id) ty
   elaborate (Positional p (Let bs e)) = do
     id <- coerce <$> freshName
     -- TODO: Handle positions correctly.
-    elaborate $ positional p $ Proj (positional p $ Struct $ bs ++ [positional p $ Val id e]) id
+    elaborate $ positional p $ Proj (positional p $ Struct $ bs ++ [positional p $ val id e]) id
 
 elaborateIf :: (Members (Effs Expr) r, ?env :: Env) => Positional Ident -> Positional Expr -> Positional Expr -> Positional Type -> Eff r (Output Expr)
 elaborateIf id e2 e3 ty = do
@@ -986,15 +1000,27 @@ instance Elaboration Binding where
   type Output Binding = (Term, Existential (Record SemanticType), Purity)
   type Effs Binding = '[Error I.Failure, Error ElaborateError, Fresh]
 
-  elaborate (Positional _ (Val id e)) = do
-    (t, aty, p) <- elaborate e
-    let l = I.toLabel $ coerce id
-    return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ I.TRecord $ (\x -> [(l, x)]) $ toType $ getBody aty, (\x -> record [(l, x)]) <$> aty, p)
+  elaborate (Positional p (Val id ps asc e)) =
+    case (ps, asc) of
+      ([], Nothing) -> do
+        (t, aty, p) <- elaborate e
+        let l = I.toLabel $ coerce id
+        return (I.unpack Nothing t (qsLen aty) $ I.pack (I.TmRecord $ record [(l, var 0)]) (I.TVar <$> enumVars aty) (getKinds aty) $ I.TRecord $ (\x -> [(l, x)]) $ toType $ getBody aty, (\x -> record [(l, x)]) <$> aty, p)
+      _ -> do
+        elaborate $ positional p $ val id $ abs ps $ ascribe asc e
+      where
+        ascribe Nothing e             = e
+        ascribe (Just (Trans, ty)) e  = positional p $ TransparentAsc e ty
+        ascribe (Just (Opaque, ty)) e = positional p $ Seal e ty
+
+        abs :: [Param] -> Positional Expr -> Positional Expr
+        abs []       e  = e
+        abs (p1 : ps) e = positional p $ Abs (p1 :| ps) e
 
   elaborate (Positional p (TypeBinding id ps ty)) = do
     case ps of
-      []           -> elaborate $ positional p $ Val id $ positional (getPosition ty) $ Type ty
-      (param : ps) -> elaborate $ positional p $ Val id $ positional (getPosition ty) $ Abs (param :| ps) $ positional (getPosition ty) $ Type ty
+      []           -> elaborate $ positional p $ val id $ positional (getPosition ty) $ Type ty
+      (param : ps) -> elaborate $ positional p $ val id $ positional (getPosition ty) $ Abs (param :| ps) $ positional (getPosition ty) $ Type ty
 
   elaborate (Positional _ (Include e)) = do
     (t, aty, p) <- elaborate e

@@ -32,7 +32,7 @@ spec = do
 
       runElaborate (elaborate $ dummyP $ Lit $ LChar 'o') `shouldBeRight` return (I.Lit (LChar 'o'), fromBody $ BaseType Char, Pure)
 
-      runElaborate (elaborate $ dummyP $ Val (ident "x") $ dummyP $ Lit $ LChar 'o') `shouldBeRight` return
+      runElaborate (elaborate $ dummyP $ val (ident "x") $ dummyP $ Lit $ LChar 'o') `shouldBeRight` return
         ( I.Let [I.Lit (LChar 'o')] $ I.TmRecord $ I.record [(label "x", var 0)]
         , fromBody $ record [(label "x", BaseType Char)]
         , Pure

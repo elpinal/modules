@@ -244,11 +244,17 @@ param = choice
 
 binding :: Parser (Positional Binding)
 binding = choice
-  [ (\id e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) e) <$> identifier <*> (symbol "=" >> expression)
+  [ (\id ps asc e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) ps asc e) <$> identifier <*> many param <*> optional ascription <*> (symbol "=" >> expression)
   , (\p id ps ty -> positional (p `connect` getPosition ty) $ TypeBinding (fromPositional id) ps ty) <$> reserved "type" <*> identifier <*> many param <*> (symbol "=" >> typeParser)
   , (\pos e -> positional (connect pos $ getPosition e) $ Include e) <$> reserved "include" <*> expression
   , (\pos e -> positional (connect pos $ getPosition e) $ Open e) <$> reserved "open" <*> expression
   , (\p1 bs1 bs2 p2 -> positional (connect p1 p2) $ Local bs1 bs2) <$> reserved "local" <*> bindings <*> (reserved "in" >> bindings) <*> reserved "end"
+  ]
+
+ascription :: Parser (Asc, Positional Type)
+ascription = choice
+  [ (,) Opaque <$> (seal >> typeParser)
+  , (,) Trans <$> (transparentAscription >> typeParser)
   ]
 
 whileParser :: Parser (Positional Expr)
