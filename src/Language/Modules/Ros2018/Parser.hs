@@ -209,21 +209,35 @@ transparentAscription :: Parser ()
 transparentAscription = void $ symbol ":"
 
 expression :: Parser (Positional Expr)
-expression = do
+expression = expressionScheme True
+
+expressionBeforeColon :: Parser (Positional Expr)
+expressionBeforeColon = expressionScheme False
+
+expressionScheme :: Bool -> Parser (Positional Expr)
+expressionScheme full = do
   e <- expression'
-  fs <- many $ choice
+  fs <- many $ choice $
           [ char '.' >> ((\id e -> connecting e id $ Proj e $ fromPositional id) <$> identifier)
           , seal >> ((\ty e -> connecting e ty $ Seal e ty) <$> typeParser)
-          , transparentAscription >> ((\ty e -> connecting e ty $ TransparentAsc e ty) <$> typeParser)
-          , (\e2 e1 -> connecting e1 e2 $ App e1 e2) <$> expression'
+          ]
+          ++
+          trans
+          ++
+          [ (\e2 e1 -> connecting e1 e2 $ App e1 e2) <$> expression'
           ]
   return $ appEndo (getDual $ mconcat $ coerce fs) e
+  where
+    trans =
+      if full
+        then [transparentAscription >> ((\ty e -> connecting e ty $ TransparentAsc e ty) <$> typeParser)]
+        else []
 
 expression' :: Parser (Positional Expr)
 expression' = choice
   [ fmap Lit <$> literal
-  , (\p e ty -> positional (connect p $ getPosition ty) $ Wrap e ty) <$> reserved "wrap" <*> expression <*> (symbol ":" >> typeParser)
-  , (\p e ty -> positional (connect p $ getPosition ty) $ Unwrap e ty) <$> reserved "unwrap" <*> expression <*> (symbol ":" >> typeParser)
+  , (\p e ty -> positional (connect p $ getPosition ty) $ Wrap e ty) <$> reserved "wrap" <*> expressionBeforeColon <*> (symbol ":" >> typeParser)
+  , (\p e ty -> positional (connect p $ getPosition ty) $ Unwrap e ty) <$> reserved "unwrap" <*> expressionBeforeColon <*> (symbol ":" >> typeParser)
   , fmap Id <$> identifier
   , structure
   , (\p ty -> positional (p `connect` getPosition ty) $ Type ty) <$> reserved "type" <*> typeParser
