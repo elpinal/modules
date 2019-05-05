@@ -119,6 +119,7 @@ import GHC.Generics
 
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Ftv as Ftv
+import Language.Modules.Ros2018.Position
 import Language.Modules.Ros2018.Shift
 
 newtype Label = Label T.Text
@@ -439,14 +440,14 @@ throw :: (Member (Error Failure) r, SpecificError a) => a -> Eff r b
 throw = throwError . fromSpecific
 
 data EnvError
-  = UnboundName Name
+  = UnboundName Position Name
   | UnboundVariable Variable
   | UnboundGeneratedVariable Generated
   | UnboundTypeVariable Variable
   deriving (Eq, Show)
 
 instance Display EnvError where
-  display (UnboundName name)           = "unbound name: " ++ display name
+  display (UnboundName p name)         = display p ++ ": unbound name: " ++ display name
   display (UnboundVariable v)          = "unbound variable: " ++ display v
   display (UnboundGeneratedVariable g) = "unbound generated variable: " ++ display g
   display (UnboundTypeVariable v)      = "unbound type variable: " ++ display v
@@ -492,9 +493,9 @@ lookupType (Variable n) = do
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundTypeVariable $ Variable n
 
-lookupValueByName :: (Member (Error Failure) r, ?env :: Env f ty) => Name -> Eff r (ty, Variable)
-lookupValueByName name = do
-  n <- maybe (throw $ UnboundName name) return $ Map.lookup name $ nmap ?env
+lookupValueByName :: (Member (Error Failure) r, ?env :: Env f ty) => Position -> Name -> Eff r (ty, Variable)
+lookupValueByName p name = do
+  n <- maybe (throw $ UnboundName p name) return $ Map.lookup name $ nmap ?env
   let v = Variable $ length (venv ?env) - n
   ty <- lookupValue v
   return (ty, v)

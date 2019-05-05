@@ -844,8 +844,8 @@ instance Elaboration Expr where
   elaborate (Positional pos (Lit l)) = do
     b <- elaborate $ Positional pos l
     return (I.Lit l, fromBody $ BaseType b, Pure) -- Literals are always pure.
-  elaborate (Positional _ (Id id)) = do
-    (ty, v) <- lookupValueByName $ coerce id
+  elaborate (Positional p (Id id)) = do
+    (ty, v) <- lookupValueByName p $ coerce id
     return (I.Var v, fromBody ty, Pure)
   elaborate (Positional _ (Struct bs)) = do
     (_, aty, zs, p) <- foldlM elaborateBindings (?env, fromBody mempty, [], Pure) bs
