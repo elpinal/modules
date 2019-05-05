@@ -176,7 +176,7 @@ getPos (Omit id)     = getPosition id
 
 decl :: Parser (Positional Decl)
 decl = choice
-  [ (\id ty -> connecting id ty $ Spec (fromPositional id) ty) <$> identifier <*> (symbol ":" >> typeParser)
+  [ (\id ps ty -> connecting id ty $ Spec (fromPositional id) ps ty) <$> identifier <*> many param <*> (symbol ":" >> typeParser)
   , try $ (\p id ps ty -> positional (connect p $ getPosition ty) $ ManTypeSpec (fromPositional id) ps ty) <$> reserved "type" <*> identifier <*> many param <*> (symbol "=" >> typeParser)
   , (\p id ps -> positional (connect p $ getLast $ sconcat $ coerce $ (:|) (getPosition id) $ getPos <$> ps) $ AbsTypeSpec (fromPositional id) ps) <$> reserved "type" <*> identifier <*> many param
   , (\pos ty -> positional (connect pos $ getPosition ty) $ DInclude ty) <$> reserved "include" <*> typeParser
