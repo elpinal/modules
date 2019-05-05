@@ -306,7 +306,7 @@ instance Display ElaborateError where
   display (MissingExplicitType p e) = display p ++ ": expression without explicit type: " ++ display e
   display (DuplicateSpec p s)       = display p ++ ": this declaration duplicates specification(s): " ++ displaySet s
   display (NoRealization ty aty v)  = "could not find realization for " ++ display v ++ ": " ++ display (WithName ty) ++ " against " ++ display (WithName aty)
-  display (NotMatch ty aty e)       = display (WithName ty) ++ " does not macth against " ++ display (WithName aty) ++ ": " ++ display e
+  display (NotMatch ty aty e)       = display (WithName ty) ++ " does not match against " ++ display (WithName aty) ++ ": " ++ display e
 
 displaySet :: Display a => Set.Set a -> String
 displaySet s = f ""
