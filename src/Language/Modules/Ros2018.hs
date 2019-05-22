@@ -335,8 +335,8 @@ equalPath p1 @ (Path v1 tys1) p2 @ (Path v2 tys2)
   | v1 /= v2                   = throwError $ PathMismatch p1 p2
   | length tys1 /= length tys2 = throwError $ PathMismatch p1 p2
   | otherwise =
-    -- TODO: It is perhaps wrong to assume the base kind.
-    let f (ty1, ty2) = run $ runError $ equal (toType ty1) (toType ty2) I.Base in
+    -- TODO: It is perhaps needed to check whether `ty1` and `ty2` have the same kind.
+    let f (ty1, ty2) = run $ runError $ kindOf (toType ty1) >>= equal (toType ty1) (toType ty2) in
     case mapM_ f $ zip tys1 tys2 of
       Right ()             -> return ()
       Left (Failure _ _ _) -> throwError $ PathMismatch p1 p2
@@ -424,7 +424,7 @@ applyPath s (Path v tys) =
     Just (Parameterized ks ty)
       | length ks == length tys -> f ks ty
       | length ks < length tys  -> g (length tys - length ks) ks ty
-      | otherwise               -> error "ill-formed semantic path"
+      | otherwise               -> error $ "ill-formed semantic path: " ++ show (ks, tys)
   where
     f :: [IKind] -> SemanticType -> SemanticType
     f ks ty = shift (-length ks) $ applySmall (fromList $ zip (map variable [0..length ks-1]) $ map parameterized $ reverse $ shift (length ks) tys) ty
