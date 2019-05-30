@@ -286,6 +286,10 @@ instance Shift Type where
 tvar :: Int -> Type
 tvar = TVar . variable
 
+infixr 2 +>
+(+>) :: Type -> Type -> Type
+(+>) = TFun
+
 some :: [Kind] -> Type -> Type
 some ks ty = foldl (flip Some) ty ks
 
@@ -333,6 +337,7 @@ data Term
   | If Term Term Term
   -- To make debug easy.
   | Let [Term] Term
+  | Fix
   deriving (Eq, Show)
 
 instance DisplayName Term where
@@ -369,6 +374,7 @@ instance DisplayName Term where
       showParen (4 <= n) $ showString "let " . appEndo (mconcat $ coerce $ intersperse (showString "; ") $ fst $ foldr (\f (fs, i) -> (displayVariable i . showString " = " . f : fs, i + 1)) ([], 0) fs) . showString " in " . f
   displaysWithName n (If t1 t2 t3) =
     showParen (4 <= n) $ showString "if " . displaysWithName 0 t1 . showString " then " . displaysWithName 0 t2 . showString " else " . displaysWithName 0 t3
+  displaysWithName _ Fix = showString "fix"
 
 displayTypeVariables :: (?nctx :: NameContext) => Int -> ShowS
 displayTypeVariables 0 = id
@@ -790,6 +796,7 @@ instance Typed Term where
         equal ty2 ty3 Base
         return ty2
       _ -> throw $ NotBool ty1
+  typeOf Fix = return $ Forall Base $ Forall Base $ ((tvar 1 +> tvar 0) +> tvar 1 +> tvar 0) +> tvar 1 +> tvar 0
 
 equalKind :: Member (Error Failure) r => Kind -> Kind -> Eff r ()
 equalKind k1 k2
