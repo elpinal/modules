@@ -245,6 +245,7 @@ data Expr
   | Wrap (Positional Expr) (Positional Type)
   | Unwrap (Positional Expr) (Positional Type)
   | Let [Positional Binding] (Positional Expr)
+  | Fix
   deriving (Eq, Show)
 
 instance Display Expr where
@@ -261,6 +262,7 @@ instance Display Expr where
   displaysPrec n (Wrap e ty)           = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
   displaysPrec n (Unwrap e ty)         = showParen (4 <= n) $ showString "unwrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
   displaysPrec n (Let bs e)            = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
+  displaysPrec _ Fix                   = showString "fix"
 
 displaysBindings :: [Positional Binding] -> ShowS
 displaysBindings bs = appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showSpace (not $ null bs)
@@ -959,6 +961,22 @@ instance Elaboration Expr where
     id <- coerce <$> freshName
     -- TODO: Handle positions correctly.
     elaborate $ positional p $ Proj (positional p $ Struct $ bs ++ [positional p $ val id e]) id
+  elaborate (Positional p Fix) = do
+    id1 <- coerce <$> freshName
+    id2 <- coerce <$> freshName
+    -- TODO: Handle positions correctly.
+    let ty1 = positional p $ arrowI Nothing (positional p $ Expr $ Id id1) $ positional p $ Expr $ Id id2
+    ty <- elaborate $ positional p $
+                      arrowP (Just id1) (positional p TypeType) $ positional p $
+                      arrowP (Just id2) (positional p TypeType) $ positional p $
+                      arrowI Nothing (positional p $ arrowI Nothing ty1 ty1) ty1
+    let f = SemanticPath . fromVariable
+    let t = I.Poly I.Base $ I.Abs (toType $ AbstractType $ fromBody $ f $ variable 0) $
+            I.Poly I.Base $ I.Abs (toType $ AbstractType $ fromBody $ f $ variable 0) $
+            I.Abs ((tvar 1 +> tvar 0) +> tvar 1 +> tvar 0) $
+            I.Abs (tvar 1) $
+            I.Fix `I.Inst` tvar 1 `I.Inst` tvar 0 `I.App` var 1 `I.App` var 0
+    return (t, ty, Pure)
 
 elaborateIf :: (Members (Effs Expr) r, ?env :: Env) => Positional Ident -> Positional Expr -> Positional Expr -> Positional Type -> Eff r (Output Expr)
 elaborateIf id e2 e3 ty = do

@@ -52,6 +52,7 @@ module Language.Modules.Ros2018.Internal
   , inst
   , pack
   , unpack
+  , (+>)
 
   -- * Kinding
   , Kinded(..)

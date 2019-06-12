@@ -159,6 +159,7 @@ reservedWords =
   , "let"
   , "in"
   , "local"
+  , "fix"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -245,6 +246,7 @@ expression' = choice
   , (\p e0 e1 e2 ty -> positional (connect p $ getPosition ty) $ If e0 e1 e2 ty) <$> reserved "if" <*> expression <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
   , (\p bs e -> positional (connect p $ getPosition e) $ Let bs e) <$> reserved "let" <*> bindings <*> (reserved "in" >> expression)
   , parens expression
+  , flip positional Fix <$> reserved "fix"
   ]
 
 params :: Parser (NonEmpty Param)
