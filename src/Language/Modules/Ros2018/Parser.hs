@@ -8,6 +8,7 @@ module Language.Modules.Ros2018.Parser
 import Data.Coerce
 import Data.Functor
 import Data.List.NonEmpty (NonEmpty(..))
+import Data.Maybe
 import Data.Monoid hiding (Last(..))
 import Data.Semigroup (sconcat, Last(..))
 import qualified Data.Text as T
@@ -253,14 +254,22 @@ term = choice
   , parens expression
   ]
 
-binary :: T.Text -> (Position -> a -> a -> a) -> Operator Parser a
-binary name f = InfixL (symbol name >>= \x -> return $ f $ getPosition x)
+binary :: Maybe (Parser ()) -> T.Text -> (Position -> a -> a -> a) -> Operator Parser a
+binary mp name f = InfixL $ try $ do
+  x <- symbol name
+  fromMaybe (pure ()) mp
+  return $ f $ getPosition x
+
+binop :: T.Text -> Maybe (Parser ()) -> Operator Parser (Positional Expr)
+binop s mp = binary mp s $ \p x y -> connecting x y $ (positional (getPosition x `connect` p) $ App (positional p $ Id $ ident s) x) `App` y
 
 exp_ :: Parser (Positional Expr)
 exp_ = makeExprParser (term <|> parens expression') table
   where
     table =
-      [ [ binary "+" $ \p x y -> connecting x y $ (positional (getPosition x `connect` p) $ App (positional p $ Id $ ident "+") x) `App` y
+      [ [ binop "+" Nothing
+        , binop "-" (Just $ notFollowedBy ">")
+        , binop "*" Nothing
         ]
       ]
 

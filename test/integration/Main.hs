@@ -12,10 +12,11 @@ import Text.RawString.QQ
 import Control.Exception.Safe
 import qualified Data.Text as T
 
-import Language.Modules.Ros2018
-import Language.Modules.Ros2018.Parser
-import Language.Modules.Ros2018.Internal
+import Language.Modules.Ros2018 hiding (Env)
 import Language.Modules.Ros2018.Display
+import Language.Modules.Ros2018.Impl
+import Language.Modules.Ros2018.Internal
+import Language.Modules.Ros2018.Parser
 
 main :: IO ()
 main = hspec spec
@@ -35,7 +36,7 @@ integration :: MonadThrow m => T.Text -> m ()
 integration txt = do
   e <- mustBeRight $ parseText "<filename>" txt
   (t, aty, _) <- mustBeRight (translate e) >>= mustBeRight
-  ty <- mustBeRight $ typecheck t
+  ty <- mustBeRight $ typecheck (toType <$> (builtins :: Env f SemanticType)) t
   mustBeRight $ equalType (toType aty) ty
 
 spec ::  Spec
