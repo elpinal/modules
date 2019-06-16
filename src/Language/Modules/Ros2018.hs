@@ -39,7 +39,6 @@ module Language.Modules.Ros2018
 
   -- * Elaboration
   , Elaboration(..)
-  , translate
   , runElaborate
 
   -- * Errors
@@ -80,7 +79,7 @@ module Language.Modules.Ros2018
   , applyPath
   ) where
 
-import Control.Monad.Freer hiding (translate, interpose)
+import Control.Monad.Freer hiding (interpose)
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.Fresh
 import Data.Bifunctor
@@ -103,7 +102,7 @@ import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Ftv as Ftv
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..), tabs)
-import Language.Modules.Ros2018.Internal (Term)
+import Language.Modules.Ros2018.Internal (Term, ToType(..))
 import Language.Modules.Ros2018.Position
 import Language.Modules.Ros2018.Shift
 
@@ -615,9 +614,6 @@ instance Semigroup Purity where
   Pure <> Pure = Pure
   _ <> _       = Impure
 
-class ToType a where
-  toType :: a -> IType
-
 instance ToType Fun where
   toType (Fun ty _ aty) = toType ty `I.TFun` toType aty
 
@@ -676,9 +672,6 @@ lookupInsts vs ty1 ty2 = fst <$> foldrM f ([], ty2) vs
       where
         res :: LError Parameterized
         res = lookupInst (fromVariable v) ty1 ty >>= (coerce . maybe (Left v) Right)
-
-translate :: Positional Expr -> Either I.Failure (Either ElaborateError (Term, AbstractType, Purity))
-translate e = run $ runError $ runError $ evalFresh 0 $ let ?env = I.emptyEnv in elaborate e
 
 runElaborate :: Eff '[Fresh, Error ElaborateError, Error I.Failure] a -> Either I.Failure (Either ElaborateError a)
 runElaborate x = run $ runError $ runError $ evalFresh 0 x

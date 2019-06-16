@@ -7,8 +7,9 @@ import qualified Data.Text.IO as TIO
 
 import Options.Applicative hiding (Failure)
 
-import Language.Modules.Ros2018 hiding (Type)
+import Language.Modules.Ros2018 hiding (Type, Env)
 import Language.Modules.Ros2018.Display
+import Language.Modules.Ros2018.Impl
 import Language.Modules.Ros2018.Internal
 import Language.Modules.Ros2018.Parser
 
@@ -81,6 +82,6 @@ interpret Command
       putStrLn $ display p
     exit ()
 
-  ty <- orThrow InternalTypeError $ typecheck t
+  ty <- orThrow InternalTypeError $ typecheck (toType <$> (builtins :: Env f SemanticType)) t
   liftIO $ putStrLn $ display $ WithName ty
   orThrow (TypeChangeError aty ty) $ equalType (toType aty) ty

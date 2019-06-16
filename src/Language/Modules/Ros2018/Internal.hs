@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExistentialQuantification #-}
@@ -100,6 +101,12 @@ module Language.Modules.Ros2018.Internal
 
   -- * Proxy
   , VProxy
+
+  -- * Embedding to internal objects
+  , ToType(..)
+
+  -- * Builtins
+  , Builtin(..)
   ) where
 
 import Control.Monad
@@ -413,6 +420,7 @@ data Env f ty = Env
   , nmap :: Map.Map Name Int
   , tempVenv :: Map.Map Int ty
   }
+  deriving Functor
 
 emptyEnv :: Env f ty
 emptyEnv = Env
@@ -424,6 +432,12 @@ emptyEnv = Env
 
 tenvLen :: (?env :: Env f ty) => Int
 tenvLen = length $ tenv ?env
+
+class ToType a where
+  toType :: a -> Type
+
+class Builtin ty where
+  builtins :: Env f ty
 
 class Annotated f where
   extract :: f a -> a
@@ -688,8 +702,8 @@ instance Annotated Id where
   extract (Id x) = x
   unannotated = Id
 
-typecheck :: Term -> Either Failure Type
-typecheck t = run $ runError $ let ?env = emptyEnv :: Env Id Type in whTypeOf t
+typecheck :: Env Id Type -> Term -> Either Failure Type
+typecheck env t = run $ runError $ let ?env = env in whTypeOf t
 
 whTypeOf :: (Typed a, Annotated f, Member (Error Failure) r, ?env :: Env f Type) => a -> Eff r Type
 whTypeOf x = reduce <$> typeOf x
