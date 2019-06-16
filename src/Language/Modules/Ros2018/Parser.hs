@@ -235,19 +235,34 @@ expressionScheme full = do
         else []
 
 expression' :: Parser (Positional Expr)
-expression' = choice
-  [ fmap Lit <$> literal
-  , (\p e ty -> positional (connect p $ getPosition ty) $ Wrap e ty) <$> reserved "wrap" <*> expressionBeforeColon <*> (symbol ":" >> typeParser)
+expression' = exp_ <|> choice
+  [ (\p e ty -> positional (connect p $ getPosition ty) $ Wrap e ty) <$> reserved "wrap" <*> expressionBeforeColon <*> (symbol ":" >> typeParser)
   , (\p e ty -> positional (connect p $ getPosition ty) $ Unwrap e ty) <$> reserved "unwrap" <*> expressionBeforeColon <*> (symbol ":" >> typeParser)
-  , fmap Id <$> identifier
   , structure
   , (\p ty -> positional (p `connect` getPosition ty) $ Type ty) <$> reserved "type" <*> typeParser
   , (\p ps e -> positional (connect p $ getPosition e) $ Abs ps e) <$> reserved "fun" <*> params <*> (symbol "=>" >> expression)
   , (\p e0 e1 e2 ty -> positional (connect p $ getPosition ty) $ If e0 e1 e2 ty) <$> reserved "if" <*> expression <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
   , (\p bs e -> positional (connect p $ getPosition e) $ Let bs e) <$> reserved "let" <*> bindings <*> (reserved "in" >> expression)
-  , parens expression
   , flip positional Fix <$> reserved "fix"
   ]
+
+term :: Parser (Positional Expr)
+term = choice
+  [ fmap Lit <$> literal
+  , fmap Id <$> identifier
+  , parens expression
+  ]
+
+binary :: T.Text -> (Position -> a -> a -> a) -> Operator Parser a
+binary name f = InfixL (symbol name >>= \x -> return $ f $ getPosition x)
+
+exp_ :: Parser (Positional Expr)
+exp_ = makeExprParser (term <|> parens expression') table
+  where
+    table =
+      [ [ binary "+" $ \p x y -> connecting x y $ (positional (getPosition x `connect` p) $ App (positional p $ Id $ ident "+") x) `App` y
+        ]
+      ]
 
 params :: Parser (NonEmpty Param)
 params = Comb.some param
