@@ -54,9 +54,9 @@ instance Builtin SemanticType where
     where
       ordering = quantify [I.unannotated I.Base] $ Structure
             [ (I.label "t", AbstractType $ fromBody $ tvarS 0)
-            , (I.label "lt", tvarS 0)
-            , (I.label "eq", tvarS 0)
-            , (I.label "gt", tvarS 0)
+            , (I.label "LT", tvarS 0)
+            , (I.label "EQ", tvarS 0)
+            , (I.label "GT", tvarS 0)
             ]
 
 translate :: Positional Expr -> Either Failure (Either ElaborateError (Term, AbstractType, Purity))
