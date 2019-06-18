@@ -97,6 +97,7 @@ module Language.Modules.Ros2018.Internal
   -- * Failure
   , Failure(..)
   , Evidence(..)
+  , throw
 
   -- * Proxy
   , VProxy
@@ -109,6 +110,7 @@ module Language.Modules.Ros2018.Internal
 
   -- * Monads
   , FailureM(..)
+  , PrimM(..)
   ) where
 
 import Control.Monad
@@ -346,6 +348,7 @@ data Term
   -- To make debug easy.
   | Let [Term] Term
   | Fix
+  | Primitive T.Text
   deriving (Eq, Show)
 
 instance DisplayName Term where
@@ -383,6 +386,7 @@ instance DisplayName Term where
   displaysWithName n (If t1 t2 t3) =
     showParen (4 <= n) $ showString "if " . displaysWithName 0 t1 . showString " then " . displaysWithName 0 t2 . showString " else " . displaysWithName 0 t3
   displaysWithName _ Fix = showString "fix"
+  displaysWithName n (Primitive s) = showParen (5 <= n) $ showString "primitive " . showString (show s)
 
 displayTypeVariables :: (?nctx :: NameContext) => Int -> ShowS
 displayTypeVariables 0 = id
@@ -692,8 +696,11 @@ mustBeBase x = do
     Base     -> return ()
     KFun _ _ -> throw $ NotBase k
 
+class PrimM m where
+  getTypeOfPrim :: T.Text -> m Type
+
 class Typed a where
-  typeOf :: (Annotated f, FailureM m, ?env :: Env f Type) => a -> m Type
+  typeOf :: (Annotated f, FailureM m, PrimM m, ?env :: Env f Type) => a -> m Type
 
 newtype Id a = Id a
 
@@ -701,7 +708,7 @@ instance Annotated Id where
   extract (Id x) = x
   unannotated = Id
 
-whTypeOf :: (Typed a, Annotated f, FailureM m, ?env :: Env f Type) => a -> m Type
+whTypeOf :: (Typed a, Annotated f, FailureM m, PrimM m, ?env :: Env f Type) => a -> m Type
 whTypeOf x = reduce <$> typeOf x
 
 data TypeError
@@ -713,6 +720,7 @@ data TypeError
   | TypeMismatch Type Type
   | MissingLabel Label (Record Type)
   | IllFormedPack [Type] [Kind]
+  | NoSuchPrimitive T.Text
   deriving (Eq, Show)
 
 instance Display TypeError where
@@ -724,6 +732,7 @@ instance Display TypeError where
   display (TypeMismatch ty1 ty2) = "type mismatch: " ++ display ty1 ++ " and " ++ display ty2
   display (MissingLabel l r)     = "missing label (" ++ display l ++ ") in " ++ display r
   display (IllFormedPack tys ks) = "ill-formed 'pack': the number of witness types (" ++ show (length tys) ++ ") and that of existential quantifiers (" ++ show (length ks) ++ ")"
+  display (NoSuchPrimitive s)    = "no such primitive: " ++ show s
 
 instance SpecificError TypeError where
   evidence = EvidType
@@ -807,7 +816,8 @@ instance Typed Term where
         equal ty2 ty3 Base
         return ty2
       _ -> throw $ NotBool ty1
-  typeOf Fix = return $ Forall Base $ Forall Base $ ((tvar 1 +> tvar 0) +> tvar 1 +> tvar 0) +> tvar 1 +> tvar 0
+  typeOf Fix           = return $ Forall Base $ Forall Base $ ((tvar 1 +> tvar 0) +> tvar 1 +> tvar 0) +> tvar 1 +> tvar 0
+  typeOf (Primitive s) = getTypeOfPrim s
 
 equalKind :: FailureM m => Kind -> Kind -> m ()
 equalKind k1 k2

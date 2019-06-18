@@ -13,9 +13,12 @@ module Language.Modules.Ros2018.Impl
   , runM_
   ) where
 
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Polysemy
-import Polysemy.Error
+import Polysemy.Error hiding (throw)
+import qualified Polysemy.Error as E
+import Polysemy.Reader
 import Polysemy.State
 
 import Language.Modules.Ros2018 hiding (Env)
@@ -23,18 +26,23 @@ import Language.Modules.Ros2018.Internal (Builtin(..), BaseType(..), insertValue
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Position
 
-newtype M a = M { unM :: Sem '[State Int, Error ElaborateError, Error Failure] a }
+newtype M a = M { unM :: Sem '[Reader (Map.Map T.Text AbstractType), State Int, Error ElaborateError, Error Failure] a }
   deriving (Functor, Applicative, Monad)
 
 runM_ :: Int -> M a -> Either Failure (Either ElaborateError a)
-runM_ n (M m) = run $ runError $ runError $ snd <$> runState n m
+runM_ n (M m) = run $ runError $ runError $ snd <$> runState n (runReader mempty m)
 
 instance I.FailureM M where
-  throwFailure f = M $ throw f
+  throwFailure f = M $ E.throw f
 
 instance ErrorM M where
-  throwE e       = M $ throw e
+  throwE e       = M $ E.throw e
   catchE (M m) f = M $ catch m $ unM . f
+
+instance PrimAM M where
+  getATypeOfPrim s = do
+    m <- M ask
+    maybe (I.throw $ I.NoSuchPrimitive s) return $ Map.lookup s m
 
 fresh :: M Int
 fresh = M $ do

@@ -161,6 +161,7 @@ reservedWords =
   , "in"
   , "local"
   , "fix"
+  , "primitive"
   ]
 
 identifier :: Parser (Positional Ident)
@@ -289,7 +290,17 @@ binding = choice
   , (\pos e -> positional (connect pos $ getPosition e) $ Include e) <$> reserved "include" <*> expression
   , (\pos e -> positional (connect pos $ getPosition e) $ Open e) <$> reserved "open" <*> expression
   , (\p1 bs1 bs2 p2 -> positional (connect p1 p2) $ Local bs1 bs2) <$> reserved "local" <*> bindings <*> (reserved "in" >> bindings) <*> reserved "end"
+  , (\p id s -> positional (connect p $ getPosition s) $ Primitive id $ fromPositional s) <$> reserved "primitive" <*> (fromPositional <$> identifier) <*> (symbol "=" >> text)
   ]
+
+text :: Parser (Positional T.Text)
+text = do
+  start <- getSourcePos
+  char '"'
+  t <- takeWhileP Nothing (/= '"')
+  symbol "\""
+  end <- getSourcePos
+  return $ positional (position start end) t
 
 ascription :: Parser (Asc, Positional Type)
 ascription = choice

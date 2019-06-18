@@ -10,7 +10,7 @@ import Options.Applicative hiding (Failure)
 import Language.Modules.Ros2018 hiding (Type, Env)
 import Language.Modules.Ros2018.Display
 import Language.Modules.Ros2018.Impl
-import Language.Modules.Ros2018.Internal
+import Language.Modules.Ros2018.Internal hiding (throw)
 import Language.Modules.Ros2018.Internal.Impl
 import Language.Modules.Ros2018.Parser
 

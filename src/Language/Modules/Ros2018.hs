@@ -79,6 +79,7 @@ module Language.Modules.Ros2018
 
   -- * Monads
   , FreshM(..)
+  , PrimAM(..)
   , ErrorM(..)
   ) where
 
@@ -194,6 +195,7 @@ data Binding
   | Include (Positional Expr)
   | Open (Positional Expr)
   | Local [Positional Binding] [Positional Binding]
+  | Primitive Ident T.Text
   deriving (Eq, Show)
 
 instance Display Binding where
@@ -202,6 +204,10 @@ instance Display Binding where
   displaysPrec _ (Include e)            = showString "include " . displaysPrec 5 e
   displaysPrec _ (Open e)               = showString "open " . displaysPrec 5 e
   displaysPrec n (Local bs1 bs2)        = showParen (4 <= n) $ showString "local " . displaysBindings bs1 . showString "in " . displaysBindings bs2 . showString "end"
+  displaysPrec _ (Primitive id t)       = showString "primitive " . displays id . showString " = " . displays t
+
+instance Display T.Text where
+  display = show
 
 val :: Ident -> Positional Expr -> Binding
 val id = Val id [] Nothing
@@ -694,7 +700,7 @@ pattern EmptyExistential1 x <- Existential (Quantified ([], x))
 
 instance Elaboration Type where
   type Output Type = AbstractType
-  type Effs Type m = (FailureM m, ErrorM m, FreshM m)
+  type Effs Type m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
 
   elaborate (Positional _ (Base b)) = return $ fromBody $ BaseType b
   elaborate (Positional p TypeType) = return $ quantify [positional p I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0
@@ -776,7 +782,7 @@ proj (Structure r) (id : ids) =
     Nothing -> throwE $ MissingLabel l
 proj ty _ = throwE $ NotStructure ty
 
-elaborateDecls :: (FailureM m, ErrorM m, FreshM m) => (Existential (Record SemanticType), Env) -> Positional Decl -> m (Existential (Record SemanticType), Env)
+elaborateDecls :: Effs Decl m => (Existential (Record SemanticType), Env) -> Positional Decl -> m (Existential (Record SemanticType), Env)
 elaborateDecls (acc, env) d = do
   let ?env = env
   aty <- elaborate d
@@ -801,7 +807,7 @@ arrowsP ps ty = foldr f ty ps
 
 instance Elaboration Decl where
   type Output Decl = Existential (Record SemanticType)
-  type Effs Decl m = (FailureM m, ErrorM m, FreshM m)
+  type Effs Decl m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
 
   elaborate (Positional p (Spec id ps ty)) =
     case ps of
@@ -836,7 +842,7 @@ strongSealing aty
 
 instance Elaboration Expr where
   type Output Expr = (Term, AbstractType, Purity)
-  type Effs Expr m = (FailureM m, ErrorM m, FreshM m)
+  type Effs Expr m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
 
   elaborate (Positional pos (Lit l)) = do
     b <- elaborate $ Positional pos l
@@ -1015,9 +1021,12 @@ merge aty1 aty2 =
   let ty1 = shift (qsLen aty2) $ getBody aty1 in
   quantify (getAnnotatedKinds aty2 ++ getAnnotatedKinds aty1) $ getBody aty2 <> ty1
 
+class Monad m => PrimAM m where
+  getATypeOfPrim :: T.Text -> m AbstractType
+
 instance Elaboration Binding where
   type Output Binding = (Term, Existential (Record SemanticType), Purity)
-  type Effs Binding m = (FailureM m, ErrorM m, FreshM m)
+  type Effs Binding m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
 
   elaborate (Positional p (Val id ps asc e)) =
     case (ps, asc) of
@@ -1053,3 +1062,8 @@ instance Elaboration Binding where
 
   -- TODO: Handle positions correctly.
   elaborate (Positional p (Local bs1 bs2)) = elaborate $ positional p $ Include $ positional p $ Let bs1 $ positional p $ Struct bs2
+
+  elaborate (Positional _ (Primitive id s)) = do
+    aty <- getATypeOfPrim s
+    let l = I.toLabel $ coerce id
+    return (I.TmRecord $ record [(l, I.Primitive s)], (\x -> record [(l, x)]) <$> aty, Pure)
