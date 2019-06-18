@@ -39,7 +39,6 @@ module Language.Modules.Ros2018
 
   -- * Elaboration
   , Elaboration(..)
-  , runElaborate
 
   -- * Errors
   , ElaborateError
@@ -83,9 +82,6 @@ module Language.Modules.Ros2018
   , ErrorM(..)
   ) where
 
-import Control.Monad.Freer hiding (interpose)
-import Control.Monad.Freer.Error
-import Control.Monad.Freer.Fresh
 import Data.Bifunctor
 import Data.Coerce
 import Data.Foldable
@@ -105,7 +101,7 @@ import GHC.Generics
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Ftv as Ftv
 import qualified Language.Modules.Ros2018.Internal as I
-import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..), tabs)
+import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..), tabs, Id(..))
 import Language.Modules.Ros2018.Internal (Term, ToType(..))
 import Language.Modules.Ros2018.Internal.Impl
 import Language.Modules.Ros2018.Position
@@ -677,9 +673,6 @@ lookupInsts vs ty1 ty2 = fst <$> foldrM f ([], ty2) vs
       where
         res :: LError Parameterized
         res = lookupInst (fromVariable v) ty1 ty >>= (coerce . maybe (Left v) Right)
-
-runElaborate :: Eff '[Fresh, Error ElaborateError, Error I.Failure] a -> Either I.Failure (Either ElaborateError a)
-runElaborate x = run $ runError $ runError $ evalFresh 0 x
 
 class Elaboration a where
   type Output a

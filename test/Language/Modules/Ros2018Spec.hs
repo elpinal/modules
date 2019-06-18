@@ -7,10 +7,10 @@ module Language.Modules.Ros2018Spec where
 import Test.Hspec
 
 import Control.Monad.Freer
-import Control.Monad.Freer.Error
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Position
+import Language.Modules.Ros2018.Impl
 import Language.Modules.Ros2018.Internal (emptyEnv, var, tvar, variable, label, record, insertType, Literal(..), BaseType(..), Failure(..))
 import qualified Language.Modules.Ros2018.Internal as I
 
@@ -20,6 +20,8 @@ shouldBeRight (Right x) expected         = x `shouldBe` expected
 
 dummyP :: a -> Positional a
 dummyP = positional dummyPos
+
+runElaborate = runM_ 0
 
 spec :: Spec
 spec = do
@@ -51,15 +53,15 @@ spec = do
 
   describe "match" $
     it "performs signature matching" $ do
-      let right :: a -> Either ElaborateError a
-          right x = return x
+      let right x = return x
+      let runEl x = either (error "") id $ runElaborate x
       let ?env = emptyEnv :: Env
 
-      run (runError $ match' (BaseType Int) (fromBody $ BaseType Int)) `shouldBe` right (I.Abs (I.BaseType Int) $ var 0, [])
-      run (runError $ match' (AbstractType $ fromBody $ BaseType Int) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.BaseType Int `I.TFun` I.TRecord []) $ I.Abs (I.BaseType Int) $ I.TmRecord [], [I.BaseType Int])
+      (runEl $ match' (BaseType Int) (fromBody $ BaseType Int)) `shouldBe` right (I.Abs (I.BaseType Int) $ var 0, [])
+      (runEl $ match' (AbstractType $ fromBody $ BaseType Int) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.BaseType Int `I.TFun` I.TRecord []) $ I.Abs (I.BaseType Int) $ I.TmRecord [], [I.BaseType Int])
 
       let ?env = insertType $ dummyP I.Base
-      run (runError $ match' (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.TFun (tvar 0) $ I.TRecord []) $ I.Abs (tvar 0) $ I.TmRecord [], [I.tvar 0])
+      (runEl $ match' (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.TFun (tvar 0) $ I.TRecord []) $ I.Abs (tvar 0) $ I.TmRecord [], [I.tvar 0])
 
   describe "applySmall" $
     it "performs parallel substitution" $ do

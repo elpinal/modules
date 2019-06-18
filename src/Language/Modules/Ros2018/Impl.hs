@@ -10,6 +10,7 @@
 
 module Language.Modules.Ros2018.Impl
   ( translate
+  , runM_
   ) where
 
 import qualified Data.Text as T
