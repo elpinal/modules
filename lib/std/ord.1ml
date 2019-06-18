@@ -1,0 +1,39 @@
+type Ordering = sig
+  type t;
+
+  LT : t;
+  EQ : t;
+  GT : t;
+end;
+
+Bool = struct
+  or (b1 : bool) (b2 : bool) =
+    if b1
+      then true
+      else b2
+    end : bool;
+end;
+
+Ord (X : sig type t; compare : (O : Ordering) -> t -> t -> O.t end) =
+  let
+    x = struct
+      type t = bool;
+      LT = false;
+      EQ = false;
+      GT = false;
+    end;
+  in
+  struct
+    lt = X.compare (struct include x; LT = true end);
+    eq = X.compare (struct include x; EQ = true end);
+    gt = X.compare (struct include x; GT = true end);
+
+    le (a : X.t) (b : X.t) = Bool.or (lt a b) (eq a b);
+    ge (a : X.t) (b : X.t) = Bool.or (gt a b) (eq a b);
+  end;
+
+Int = struct
+  primitive compare = "int_compare";
+
+  include Ord (struct type t = int; compare = compare end);
+end;

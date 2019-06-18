@@ -93,7 +93,16 @@ instance FreshM (M k) where
 primitives :: Map.Map T.Text AbstractType
 primitives =
   [ ("and", fromBody $ bool --> bool --> bool)
+  , ("int_compare", fromBody $ ordering --&> int --> int --> tvarS 0)
   ]
+  where
+    ordering :: AbstractType
+    ordering = quantify [I.unannotated I.Base] $ Structure
+      [ (I.label "t", AbstractType $ fromBody $ tvarS 0)
+      , (I.label "LT", tvarS 0)
+      , (I.label "EQ", tvarS 0)
+      , (I.label "GT", tvarS 0)
+      ]
 
 infixr 2 -->
 (-->) :: SemanticType -> SemanticType -> SemanticType
@@ -126,18 +135,7 @@ instance Builtin SemanticType where
         [ ("+", int --> int --> int)
         , ("-", int --> int --> int)
         , ("*", int --> int --> int)
-        , ("Ordering", AbstractType ordering)
-        , ("Int", Structure
-            [ (I.label "compare", ordering --&> int --> int --> tvarS 0)
-            ])
         ]
-    where
-      ordering = quantify [I.unannotated I.Base] $ Structure
-            [ (I.label "t", AbstractType $ fromBody $ tvarS 0)
-            , (I.label "LT", tvarS 0)
-            , (I.label "EQ", tvarS 0)
-            , (I.label "GT", tvarS 0)
-            ]
 
 translate :: I.FailureM k => Y k -> Positional Expr -> Either Failure (Either ElaborateError (Term, AbstractType, Purity))
 translate f e = runM_ 0 f $ let ?env = builtins in elaborate e
