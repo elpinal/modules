@@ -17,13 +17,14 @@ import Polysemy.Error hiding (throw)
 import qualified Polysemy.Error as E
 import Polysemy.Reader
 
+import Language.Modules.Ros2018.Impl
 import Language.Modules.Ros2018.Internal
 
 newtype M a = M (Sem '[Reader (Map.Map T.Text Type), Error Failure] a)
   deriving (Functor, Applicative, Monad)
 
 runFailure :: M a -> Either Failure a
-runFailure (M m) = run $ runError $ runReader mempty m
+runFailure (M m) = run $ runError $ runReader (toType <$> primitives) m
 
 instance FailureM M where
   throwFailure f = M $ E.throw f

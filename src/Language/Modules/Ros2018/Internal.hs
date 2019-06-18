@@ -98,6 +98,7 @@ module Language.Modules.Ros2018.Internal
   , Failure(..)
   , Evidence(..)
   , throw
+  , fromSpecific
 
   -- * Proxy
   , VProxy

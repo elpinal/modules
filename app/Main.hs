@@ -72,7 +72,7 @@ interpret Command
     liftIO $ putStrLn $ display e
     exit ()
 
-  (t, aty, p) <- orThrow TranslateError (translate e) >>= orThrow ElaborateError
+  (t, aty, p) <- orThrow TranslateError (translate (Y runFailure) e) >>= orThrow ElaborateError
   when switchE $ do
     liftIO $ do
       putStrLn "Term:"

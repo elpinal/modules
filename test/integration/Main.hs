@@ -36,7 +36,7 @@ shouldBeRight (Right x) expected = x `shouldBe` expected
 integration :: MonadThrow m => T.Text -> m ()
 integration txt = do
   e <- mustBeRight $ parseText "<filename>" txt
-  (t, aty, _) <- mustBeRight (translate e) >>= mustBeRight
+  (t, aty, _) <- mustBeRight (translate (Y runFailure) e) >>= mustBeRight
   ty <- mustBeRight $ typecheck (toType <$> (builtins :: Env f SemanticType)) t
   mustBeRight $ equalType (toType aty) ty
 

@@ -1,8 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -11,6 +18,8 @@
 module Language.Modules.Ros2018.Impl
   ( translate
   , runM_
+  , primitives
+  , Y(..)
   ) where
 
 import qualified Data.Map.Strict as Map
@@ -26,36 +35,65 @@ import Language.Modules.Ros2018.Internal (Builtin(..), BaseType(..), insertValue
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Position
 
-newtype M a = M { unM :: Sem '[Reader (Map.Map T.Text AbstractType), State Int, Error ElaborateError, Error Failure] a }
+data Prim m a where
+  LookupPrim :: T.Text -> Prim m AbstractType
+
+makeSem ''Prim
+
+runPrim :: forall r a. Member (Error Failure) r => Sem (Prim ': r) a -> Sem r a
+runPrim = interpret f
+  where
+    f :: forall x m. Prim m x -> Sem r x
+    f (LookupPrim s) = maybe (E.throw @Failure $ I.fromSpecific $ I.NoSuchPrimitive s) return $ Map.lookup s primitives
+
+newtype Y k = Y { unY :: forall a. k a -> Either Failure a }
+
+newtype M k a = M
+  { unM :: Sem
+   '[ Prim
+    , Reader (Y k)
+    , State Int
+    , Error ElaborateError
+    , Error Failure
+    ] a
+  }
   deriving (Functor, Applicative, Monad)
 
-runM_ :: Int -> M a -> Either Failure (Either ElaborateError a)
-runM_ n (M m) = run $ runError $ runError $ snd <$> runState n (runReader mempty m)
+runM_ :: forall k a. Int -> Y k -> M k a -> Either Failure (Either ElaborateError a)
+runM_ n f (M m) = run $ runError $ runError $ snd <$> runState n (runReader f $ runPrim m)
 
-instance I.FailureM M where
+instance I.FailureM (M k) where
   throwFailure f = M $ E.throw f
 
-instance ErrorM M where
+instance ErrorM (M k) where
   throwE e       = M $ E.throw e
   catchE (M m) f = M $ catch m $ unM . f
 
-instance PrimAM M where
-  getATypeOfPrim s = do
-    m <- M ask
-    maybe (I.throw $ I.NoSuchPrimitive s) return $ Map.lookup s m
+instance PrimAM (M k) where
+  getATypeOfPrim s = M $ lookupPrim s
 
-fresh :: M Int
+instance I.FailureM k => RunFailureM (M k) where
+  runF = M $ do
+    f <- ask @(Y k)
+    return $ Z $ unY f
+
+fresh :: M k Int
 fresh = M $ do
   n <- get
   modify (+ 1)
   return n
 
-instance FreshM M where
+instance FreshM (M k) where
   -- Generates a new name in the form: "?d28".
   freshName = do
     n <- fresh
     return $ name $ "?d" <> T.pack (show n)
   freshGenerated = I.generated <$> fresh
+
+primitives :: Map.Map T.Text AbstractType
+primitives =
+  [ ("and", fromBody $ bool --> bool --> bool)
+  ]
 
 infixr 2 -->
 (-->) :: SemanticType -> SemanticType -> SemanticType
@@ -64,6 +102,9 @@ ty1 --> ty2 = Function $ fromBody $ Fun ty1 Pure $ fromBody ty2
 infixr 2 --&>
 (--&>) :: Quantification f => f SemanticType -> SemanticType -> SemanticType
 ty1 --&> ty2 = Function $ quantify (getAnnotatedKinds ty1) $ Fun (getBody ty1) Pure $ fromBody ty2
+
+bool :: SemanticType
+bool = BaseType Bool
 
 int :: SemanticType
 int = BaseType Int
@@ -98,5 +139,5 @@ instance Builtin SemanticType where
             , (I.label "GT", tvarS 0)
             ]
 
-translate :: Positional Expr -> Either Failure (Either ElaborateError (Term, AbstractType, Purity))
-translate e = runM_ 0 $ let ?env = builtins in elaborate e
+translate :: I.FailureM k => Y k -> Positional Expr -> Either Failure (Either ElaborateError (Term, AbstractType, Purity))
+translate f e = runM_ 0 f $ let ?env = builtins in elaborate e

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
@@ -81,6 +82,10 @@ module Language.Modules.Ros2018
   , FreshM(..)
   , PrimAM(..)
   , ErrorM(..)
+  , RunFailureM(..)
+
+  -- * Others
+  , Z(..)
   ) where
 
 import Data.Bifunctor
@@ -104,7 +109,6 @@ import qualified Language.Modules.Ros2018.Ftv as Ftv
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..), tabs, Id(..))
 import Language.Modules.Ros2018.Internal (Term, ToType(..))
-import Language.Modules.Ros2018.Internal.Impl
 import Language.Modules.Ros2018.Position
 import Language.Modules.Ros2018.Shift
 
@@ -338,13 +342,19 @@ instance Ftv.Ftv VProxy Path where
 fromVariable :: Variable -> Path
 fromVariable v = Path v []
 
-equalPath :: (ErrorM m, ?env :: Env) => Path -> Path -> m ()
+data Z a = forall k. FailureM k => Z (k a -> Either Failure a)
+
+class Monad m => RunFailureM m where
+  runF :: m (Z a)
+
+equalPath :: (RunFailureM m, ErrorM m, ?env :: Env) => Path -> Path -> m ()
 equalPath p1 @ (Path v1 tys1) p2 @ (Path v2 tys2)
   | v1 /= v2                   = throwE $ PathMismatch p1 p2
   | length tys1 /= length tys2 = throwE $ PathMismatch p1 p2
-  | otherwise =
+  | otherwise = do
+    Z run <- runF
     -- TODO: It is perhaps needed to check whether `ty1` and `ty2` have the same kind.
-    let f (ty1, ty2) = runFailure $ kindOf (toType ty1) >>= equal (toType ty1) (toType ty2) in
+    let f (ty1, ty2) = run $ kindOf (toType ty1) >>= equal (toType ty1) (toType ty2)
     case mapM_ f $ zip tys1 tys2 of
       Right ()             -> return ()
       Left (Failure _ _ _) -> throwE $ PathMismatch p1 p2
@@ -452,7 +462,7 @@ getStructure ty            = throwE $ NotStructure ty
 class Subtype a where
   type Coercion a
 
-  (<:) :: (ErrorM m, ?env :: Env) => a -> a -> m (Coercion a)
+  (<:) :: (RunFailureM m, ErrorM m, ?env :: Env) => a -> a -> m (Coercion a)
 
 instance Subtype Purity where
   type Coercion Purity = ()
@@ -471,7 +481,7 @@ instance Subtype SemanticType where
   AbstractType aty1 <: AbstractType aty2 = aty1 <: aty2 $> I.Abs (toType $ AbstractType aty1) (toTerm aty2)
   Structure r1 <: Structure r2           = I.Abs (toType r1) . I.TmRecord <$> I.iter f r2
     where
-      f :: ErrorM m => I.Label -> SemanticType -> m Term
+      f :: (RunFailureM m, ErrorM m) => I.Label -> SemanticType -> m Term
       f l ty2 = do
         ty1 <- maybe (throwE $ MissingLabel l) return $ projRecord l r1
         t <- ty1 <: ty2
@@ -484,8 +494,9 @@ instance Subtype SemanticType where
     (t1, tys) <- ty2 `match'` quantify (getAnnotatedKinds u1) ty1
     t2 <- aty1 <: aty2
     return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
-  Wrapped aty1 <: Wrapped aty2 =
-    case runFailure $ equal (toType aty1) (toType aty2) I.Base of
+  Wrapped aty1 <: Wrapped aty2 = do
+    Z run <- runF
+    case run $ equal (toType aty1) (toType aty2) I.Base of
       Right ()             -> return $ I.Abs (toType aty1) $ var 0
       Left (Failure _ _ _) -> throwE $ NotSubtype (Wrapped aty1) (Wrapped aty2)
   ty1 <: ty2 = throwE $ NotSubtype ty1 ty2
@@ -498,13 +509,13 @@ instance Subtype AbstractType where
     (t, tys) <- match' (getBody aty1) aty2
     return $ I.Abs (toType aty1) $ I.unpack Nothing (var 0) (qsLen aty1) $ I.pack (I.App t $ var 0) tys (getKinds aty2) $ toType (getBody aty2)
 
-match :: (ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [Parameterized])
+match :: (RunFailureM m, ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [Parameterized])
 match ty aty = do
   tys <- either (throwE . NoRealization ty aty) return $ lookupInsts (enumVars aty) ty (getBody aty)
   t <- (ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)) `catchE` (throwE . NotMatch ty aty)
   return (t, tys)
 
-match' :: (ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [IType])
+match' :: (RunFailureM m, ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [IType])
 match' ty aty = do
   (t, tys) <- match ty aty
   return (t, toType <$> tys)
@@ -700,7 +711,7 @@ pattern EmptyExistential1 x <- Existential (Quantified ([], x))
 
 instance Elaboration Type where
   type Output Type = AbstractType
-  type Effs Type m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
+  type Effs Type m = (FailureM m, ErrorM m, FreshM m, PrimAM m, RunFailureM m)
 
   elaborate (Positional _ (Base b)) = return $ fromBody $ BaseType b
   elaborate (Positional p TypeType) = return $ quantify [positional p I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0
@@ -807,7 +818,7 @@ arrowsP ps ty = foldr f ty ps
 
 instance Elaboration Decl where
   type Output Decl = Existential (Record SemanticType)
-  type Effs Decl m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
+  type Effs Decl m = (FailureM m, ErrorM m, FreshM m, PrimAM m, RunFailureM m)
 
   elaborate (Positional p (Spec id ps ty)) =
     case ps of
@@ -842,7 +853,7 @@ strongSealing aty
 
 instance Elaboration Expr where
   type Output Expr = (Term, AbstractType, Purity)
-  type Effs Expr m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
+  type Effs Expr m = (FailureM m, ErrorM m, FreshM m, PrimAM m, RunFailureM m)
 
   elaborate (Positional pos (Lit l)) = do
     b <- elaborate $ Positional pos l
@@ -1026,7 +1037,7 @@ class Monad m => PrimAM m where
 
 instance Elaboration Binding where
   type Output Binding = (Term, Existential (Record SemanticType), Purity)
-  type Effs Binding m = (FailureM m, ErrorM m, FreshM m, PrimAM m)
+  type Effs Binding m = (FailureM m, ErrorM m, FreshM m, PrimAM m, RunFailureM m)
 
   elaborate (Positional p (Val id ps asc e)) =
     case (ps, asc) of

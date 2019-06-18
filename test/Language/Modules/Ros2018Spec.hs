@@ -13,6 +13,7 @@ import Language.Modules.Ros2018.Position
 import Language.Modules.Ros2018.Impl
 import Language.Modules.Ros2018.Internal (emptyEnv, var, tvar, variable, label, record, insertType, Literal(..), BaseType(..), Failure(..))
 import qualified Language.Modules.Ros2018.Internal as I
+import qualified Language.Modules.Ros2018.Internal.Impl as II
 
 shouldBeRight :: (HasCallStack, Eq a, Show a) => Either Failure a -> a -> Expectation
 shouldBeRight (Left (Failure err _ f)) _ = expectationFailure $ "error: " ++ f err
@@ -21,10 +22,10 @@ shouldBeRight (Right x) expected         = x `shouldBe` expected
 dummyP :: a -> Positional a
 dummyP = positional dummyPos
 
-runElaborate = runM_ 0
-
 spec :: Spec
 spec = do
+  let runElaborate = runM_ 0 $ Y II.runFailure
+
   describe "elaboration" $
     it "elaborates external objects into internal objects" $ do
       let ?env = emptyEnv :: Env
