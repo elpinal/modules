@@ -26,6 +26,8 @@ dependencies:
 - mtl >= 2.2.2
 - optparse-applicative >= 0.14.3.0
 - parser-combinators >= 1.0.1
+- polysemy >= 0.4.0.0
+- polysemy-plugin >= 0.2.1.0
 - safe-exceptions >= 0.1.7.0
 - template-haskell >= 2.14.0.0
 - text >= 1.2.3.1

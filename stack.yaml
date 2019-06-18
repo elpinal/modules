@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-13.14
+resolver: lts-13.25
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -39,7 +39,10 @@ packages:
 - .
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-# extra-deps: []
+extra-deps:
+- polysemy-0.4.0.0
+- polysemy-plugin-0.2.1.0@sha256:db5aa30eb9610c6c7aca782f68a128fef4656c867ed29ad328eb1322d8d9b414
+- th-abstraction-0.3.1.0@sha256:96042f6658f2dccfac03b33f0fd59f62b1f65b9b0a765d8a2ea6026f4081ee4a
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

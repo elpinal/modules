@@ -77,6 +77,10 @@ module Language.Modules.Ros2018
   -- * Substitution with small types
   , SubstitutionSmall(..)
   , applyPath
+
+  -- * Monads
+  , FreshM(..)
+  , ErrorM(..)
   ) where
 
 import Control.Monad.Freer hiding (interpose)
@@ -103,6 +107,7 @@ import qualified Language.Modules.Ros2018.Ftv as Ftv
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal hiding (Env, Term(..), Type(..), Kind(..), TypeError(..), tabs)
 import Language.Modules.Ros2018.Internal (Term, ToType(..))
+import Language.Modules.Ros2018.Internal.Impl
 import Language.Modules.Ros2018.Position
 import Language.Modules.Ros2018.Shift
 
@@ -331,16 +336,16 @@ instance Ftv.Ftv VProxy Path where
 fromVariable :: Variable -> Path
 fromVariable v = Path v []
 
-equalPath :: (Member (Error ElaborateError) r, ?env :: Env) => Path -> Path -> Eff r ()
+equalPath :: (ErrorM m, ?env :: Env) => Path -> Path -> m ()
 equalPath p1 @ (Path v1 tys1) p2 @ (Path v2 tys2)
-  | v1 /= v2                   = throwError $ PathMismatch p1 p2
-  | length tys1 /= length tys2 = throwError $ PathMismatch p1 p2
+  | v1 /= v2                   = throwE $ PathMismatch p1 p2
+  | length tys1 /= length tys2 = throwE $ PathMismatch p1 p2
   | otherwise =
     -- TODO: It is perhaps needed to check whether `ty1` and `ty2` have the same kind.
-    let f (ty1, ty2) = run $ runError $ kindOf (toType ty1) >>= equal (toType ty1) (toType ty2) in
+    let f (ty1, ty2) = runFailure $ kindOf (toType ty1) >>= equal (toType ty1) (toType ty2) in
     case mapM_ f $ zip tys1 tys2 of
       Right ()             -> return ()
-      Left (Failure _ _ _) -> throwError $ PathMismatch p1 p2
+      Left (Failure _ _ _) -> throwE $ PathMismatch p1 p2
 
 data Fun = Fun SemanticType Purity AbstractType
   deriving (Eq, Show)
@@ -438,35 +443,35 @@ applyPath s (Path v tys) =
 appendPath :: [SemanticType] -> Path -> Path
 appendPath tys' (Path v tys) = Path v $ tys ++ tys'
 
-getStructure :: Member (Error ElaborateError) r => SemanticType -> Eff r (Record SemanticType)
+getStructure :: ErrorM m => SemanticType -> m (Record SemanticType)
 getStructure (Structure r) = return r
-getStructure ty            = throwError $ NotStructure ty
+getStructure ty            = throwE $ NotStructure ty
 
 class Subtype a where
   type Coercion a
 
-  (<:) :: (Member (Error ElaborateError) r, ?env :: Env) => a -> a -> Eff r (Coercion a)
+  (<:) :: (ErrorM m, ?env :: Env) => a -> a -> m (Coercion a)
 
 instance Subtype Purity where
   type Coercion Purity = ()
 
   _ <: Impure    = return ()
   Pure <: Pure   = return ()
-  Impure <: Pure = throwError NotSubpurity
+  Impure <: Pure = throwE NotSubpurity
 
 instance Subtype SemanticType where
   type Coercion SemanticType = Term
 
   BaseType b1 <: BaseType b2
     | b1 == b2  = return $ I.Abs (I.BaseType b1) $ var 0
-    | otherwise = throwError $ NotSubtype (BaseType b1) (BaseType b2)
+    | otherwise = throwE $ NotSubtype (BaseType b1) (BaseType b2)
   SemanticPath p1 <: SemanticPath p2     = equalPath p1 p2 $> I.Abs (toType p1) (var 0)
   AbstractType aty1 <: AbstractType aty2 = aty1 <: aty2 $> I.Abs (toType $ AbstractType aty1) (toTerm aty2)
   Structure r1 <: Structure r2           = I.Abs (toType r1) . I.TmRecord <$> I.iter f r2
     where
-      f :: Member (Error ElaborateError) r => I.Label -> SemanticType -> Eff r Term
+      f :: ErrorM m => I.Label -> SemanticType -> m Term
       f l ty2 = do
-        ty1 <- maybe (throwError $ MissingLabel l) return $ projRecord l r1
+        ty1 <- maybe (throwE $ MissingLabel l) return $ projRecord l r1
         t <- ty1 <: ty2
         return $ I.App t $ var 0 `I.Proj` l
   Function u1 <: Function u2 = do
@@ -478,10 +483,10 @@ instance Subtype SemanticType where
     t2 <- aty1 <: aty2
     return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
   Wrapped aty1 <: Wrapped aty2 =
-    case run $ runError $ equal (toType aty1) (toType aty2) I.Base of
+    case runFailure $ equal (toType aty1) (toType aty2) I.Base of
       Right ()             -> return $ I.Abs (toType aty1) $ var 0
-      Left (Failure _ _ _) -> throwError $ NotSubtype (Wrapped aty1) (Wrapped aty2)
-  ty1 <: ty2 = throwError $ NotSubtype ty1 ty2
+      Left (Failure _ _ _) -> throwE $ NotSubtype (Wrapped aty1) (Wrapped aty2)
+  ty1 <: ty2 = throwE $ NotSubtype ty1 ty2
 
 instance Subtype AbstractType where
   type Coercion AbstractType = Term
@@ -491,13 +496,13 @@ instance Subtype AbstractType where
     (t, tys) <- match' (getBody aty1) aty2
     return $ I.Abs (toType aty1) $ I.unpack Nothing (var 0) (qsLen aty1) $ I.pack (I.App t $ var 0) tys (getKinds aty2) $ toType (getBody aty2)
 
-match :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [Parameterized])
+match :: (ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [Parameterized])
 match ty aty = do
-  tys <- either (throwError . NoRealization ty aty) return $ lookupInsts (enumVars aty) ty (getBody aty)
-  t <- (ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)) `catchError` (throwError . NotMatch ty aty)
+  tys <- either (throwE . NoRealization ty aty) return $ lookupInsts (enumVars aty) ty (getBody aty)
+  t <- (ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)) `catchE` (throwE . NotMatch ty aty)
   return (t, tys)
 
-match' :: (Member (Error ElaborateError) r, ?env :: Env) => SemanticType -> AbstractType -> Eff r (Term, [IType])
+match' :: (ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [IType])
 match' ty aty = do
   (t, tys) <- match ty aty
   return (t, toType <$> tys)
@@ -678,21 +683,25 @@ runElaborate x = run $ runError $ runError $ evalFresh 0 x
 
 class Elaboration a where
   type Output a
-  type Effs a :: [* -> *]
+  type Effs a (m :: * -> *) :: Constraint
 
-  elaborate :: (Members (Effs a) r, ?env :: Env) => Positional a -> Eff r (Output a)
+  elaborate :: (Effs a m, ?env :: Env) => Positional a -> m (Output a)
 
-freshName :: Member Fresh r => Eff r Name
-freshName = do
-  n <- fresh
-  return $ name $ "?d" <> T.pack (show n)
+class Monad m => ErrorM m where
+  throwE :: ElaborateError -> m a
+  catchE :: m a -> (ElaborateError -> m a) -> m a
+
+class Monad m => FreshM m where
+  -- Generates a new name in the form: "?d28".
+  freshName :: m Name
+  freshGenerated :: m Generated
 
 pattern EmptyExistential1 :: a -> Existential a
 pattern EmptyExistential1 x <- Existential (Quantified ([], x))
 
 instance Elaboration Type where
   type Output Type = AbstractType
-  type Effs Type = '[Error I.Failure, Error ElaborateError, Fresh]
+  type Effs Type m = (FailureM m, ErrorM m, FreshM m)
 
   elaborate (Positional _ (Base b)) = return $ fromBody $ BaseType b
   elaborate (Positional p TypeType) = return $ quantify [positional p I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0
@@ -718,15 +727,15 @@ instance Elaboration Type where
   elaborate (Positional p (Expr e)) = do
     z <- elaborate $ positional p e
     case z of
-      (_, _, Impure)                               -> throwError $ ImpureType e
+      (_, _, Impure)                               -> throwE $ ImpureType e
       (_, EmptyExistential1 (AbstractType aty), _) -> return aty
-      (_, EmptyExistential1 ty, _)                 -> throwError $ NotReifiedType p ty e
-      (_, aty, _)                                  -> throwError $ NotEmptyExistential aty
+      (_, EmptyExistential1 ty, _)                 -> throwE $ NotReifiedType p ty e
+      (_, aty, _)                                  -> throwE $ NotEmptyExistential aty
   elaborate (Positional _ (Singleton e)) = do
     withExplicitType e
     z <- elaborate e
     case z of
-      (_, _, Impure)               -> throwError $ ImpureType $ fromPositional e
+      (_, _, Impure)               -> throwE $ ImpureType $ fromPositional e
       (_, EmptyExistential1 ty, _) -> return $ fromBody ty
       (_, _, _)                    -> error "in the absence of weak sealing, a pure expression must not be given an existential type"
   elaborate (Positional _ (Sig ds)) = do
@@ -765,16 +774,16 @@ restrict vs ks =
   let m = Map.fromList $ zip (map variable [0..]) ks in
   Map.elems $ Map.restrictKeys m vs
 
-proj :: Member (Error ElaborateError) r => SemanticType -> [Ident] -> Eff r SemanticType
+proj :: ErrorM m => SemanticType -> [Ident] -> m SemanticType
 proj ty []                    = return ty
 proj (Structure r) (id : ids) =
   let l = toLabel $ coerce id in
   case projRecord l r of
     Just ty -> proj ty ids
-    Nothing -> throwError $ MissingLabel l
-proj ty _ = throwError $ NotStructure ty
+    Nothing -> throwE $ MissingLabel l
+proj ty _ = throwE $ NotStructure ty
 
-elaborateDecls :: Members '[Error I.Failure, Error ElaborateError, Fresh] r => (Existential (Record SemanticType), Env) -> Positional Decl -> Eff r (Existential (Record SemanticType), Env)
+elaborateDecls :: (FailureM m, ErrorM m, FreshM m) => (Existential (Record SemanticType), Env) -> Positional Decl -> m (Existential (Record SemanticType), Env)
 elaborateDecls (acc, env) d = do
   let ?env = env
   aty <- elaborate d
@@ -783,12 +792,12 @@ elaborateDecls (acc, env) d = do
   mustBeDisjoint (getPosition d) acc aty
   return (merge acc aty, ?env)
 
-mustBeDisjoint :: Member (Error ElaborateError) r => Position -> Existential (Record SemanticType) -> Existential (Record SemanticType) -> Eff r ()
+mustBeDisjoint :: ErrorM m => Position -> Existential (Record SemanticType) -> Existential (Record SemanticType) -> m ()
 mustBeDisjoint p e1 e2 =
   let s = I.intersection (getBody e1) $ getBody e2 in
   if Set.null s
     then return ()
-    else throwError $ DuplicateSpec p s
+    else throwE $ DuplicateSpec p s
 
 arrowsP :: [Param] -> Positional Type -> Positional Type
 arrowsP ps ty = foldr f ty ps
@@ -799,7 +808,7 @@ arrowsP ps ty = foldr f ty ps
 
 instance Elaboration Decl where
   type Output Decl = Existential (Record SemanticType)
-  type Effs Decl = '[Error I.Failure, Error ElaborateError, Fresh]
+  type Effs Decl m = (FailureM m, ErrorM m, FreshM m)
 
   elaborate (Positional p (Spec id ps ty)) =
     case ps of
@@ -809,23 +818,23 @@ instance Elaboration Decl where
   elaborate (Positional p (ManTypeSpec id ps ty)) = elaborate $ positional p $ spec id $ arrowsP ps $ positional (getPosition ty) (Singleton $ positional (getPosition ty) $ Type ty) -- TODO: Handle positions correctly.
   elaborate (Positional _ (DInclude ty))          = elaborate ty >>= qfmap getStructure
 
-withExplicitType :: Member (Error ElaborateError) r => Positional Expr -> Eff r ()
+withExplicitType :: ErrorM m => Positional Expr -> m ()
 withExplicitType (Positional p e) =
   case e of
     Seal _ _           -> return ()
     TransparentAsc _ _ -> return ()
     Type _             -> return ()
-    _                  -> throwError $ MissingExplicitType p e
+    _                  -> throwE $ MissingExplicitType p e
 
 instance Elaboration Literal where
   type Output Literal = BaseType
-  type Effs Literal = '[]
+  type Effs Literal m = Applicative m
 
-  elaborate = return . I.typeOfLiteral . fromPositional
+  elaborate = pure . I.typeOfLiteral . fromPositional
 
-mustBePure :: Member (Error ElaborateError) r => Purity -> Eff r ()
+mustBePure :: ErrorM m => Purity -> m ()
 mustBePure Pure   = return ()
-mustBePure Impure = throwError NotPure
+mustBePure Impure = throwE NotPure
 
 strongSealing :: AbstractType -> Purity
 strongSealing aty
@@ -834,7 +843,7 @@ strongSealing aty
 
 instance Elaboration Expr where
   type Output Expr = (Term, AbstractType, Purity)
-  type Effs Expr = '[Error I.Failure, Error ElaborateError, Fresh]
+  type Effs Expr m = (FailureM m, ErrorM m, FreshM m)
 
   elaborate (Positional pos (Lit l)) = do
     b <- elaborate $ Positional pos l
@@ -897,7 +906,7 @@ instance Elaboration Expr where
           Function u -> do
             (t3, tys) <- match (getBody aty2) $ toExistential $ qmap domain u
             return (I.App (I.inst t1 $ toType <$> tys) $ I.App t3 t2, shift (-qsLen u) $ applySmall (fromList $ zip (enumVars u) $ shift (qsLen u) tys) $ codomain $ getBody u, getPurity $ getBody u)
-          ty1 -> throwError $ NotFunction (getPosition e1) ty1
+          ty1 -> throwE $ NotFunction (getPosition e1) ty1
       _ -> do
         id1 <- coerce <$> freshName
         id2 <- coerce <$> freshName
@@ -907,7 +916,7 @@ instance Elaboration Expr where
     (t, aty, p) <- elaborate e
     r <- getStructure $ getBody aty
     let l = toLabel $ coerce id
-    ty <- maybe (throwError $ MissingLabel l) return $ projRecord l r
+    ty <- maybe (throwE $ MissingLabel l) return $ projRecord l r
     let aty1 = qmap (const ty) aty
     return (I.unpack Nothing t (qsLen aty) $ I.pack (I.Proj (var 0) l) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty1, aty1, p)
   elaborate (Positional p (If e1 e2 e3 ty)) = do
@@ -926,8 +935,8 @@ instance Elaboration Expr where
           EmptyExistential1 (Wrapped aty2') -> do
             t2 <- aty1 <: aty2'
             return (I.App t2 t1, aty2, Pure)
-          EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
-          _ -> throwError $ NotEmptyExistential aty2
+          EmptyExistential1 ty' -> throwE $ NotWrappedType (getPosition ty) ty'
+          _ -> throwE $ NotEmptyExistential aty2
       _ -> do
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
@@ -938,14 +947,14 @@ instance Elaboration Expr where
         (t1, aty1, _) <- elaborate e
         aty1' <- case getBody aty1 of
           Wrapped aty1' -> return aty1'
-          ty            -> throwError $ NotWrappedType (getPosition e) ty
+          ty            -> throwE $ NotWrappedType (getPosition e) ty
         aty2 <- elaborate ty
         case aty2 of
           EmptyExistential1 (Wrapped aty2') -> do
             t2 <- aty1' <: aty2'
             return (I.App t2 t1, aty2', strongSealing aty2')
-          EmptyExistential1 ty' -> throwError $ NotWrappedType (getPosition ty) ty'
-          _ -> throwError $ NotEmptyExistential aty2
+          EmptyExistential1 ty' -> throwE $ NotWrappedType (getPosition ty) ty'
+          _ -> throwE $ NotEmptyExistential aty2
       _ -> do
         id <- coerce <$> freshName
         -- TODO: Handle positions correctly.
@@ -971,7 +980,7 @@ instance Elaboration Expr where
             I.Fix `I.Inst` tvar 1 `I.Inst` tvar 0 `I.App` var 1 `I.App` var 0
     return (t, ty, Pure)
 
-elaborateIf :: (Members (Effs Expr) r, ?env :: Env) => Positional Ident -> Positional Expr -> Positional Expr -> Positional Type -> Eff r (Output Expr)
+elaborateIf :: (Effs Expr m , ?env :: Env) => Positional Ident -> Positional Expr -> Positional Expr -> Positional Type -> m (Output Expr)
 elaborateIf id e2 e3 ty = do
   (t1, aty1, _) <- elaborate $ Id <$> id
   case getBody aty1 of
@@ -982,23 +991,23 @@ elaborateIf id e2 e3 ty = do
       f2 <- aty2 <: aty
       f3 <- aty3 <: aty
       return (I.If t1 (I.App f2 t2) $ I.App f3 t3, aty, p2 <> p3 <> strongSealing aty)
-    ty -> throwError $ NotBool (getPosition id) ty
+    ty -> throwE $ NotBool (getPosition id) ty
 
 buildRecord :: [[(Bool, I.Label)]] -> Map.Map I.Label Term
 buildRecord lls = fst $ foldl f (mempty, 0) lls
   where
     f = foldr (\(b, l) (m', n') -> (if b then Map.insertWith (\_ x -> x) l (var n') m' else m', n' + 1))
 
-joinBindings :: Member Fresh r => Term -> (Term, Int, [(Bool, I.Label)]) -> Eff r Term
+joinBindings :: FreshM m => Term -> (Term, Int, [(Bool, I.Label)]) -> m Term
 joinBindings acc (t, n, ls) = do
-  g <- I.generated <$> fresh
+  g <- freshGenerated
   return $ I.unpack (Just g) t n $ I.Let (map (I.Proj (I.GVar g) . snd) ls) acc
 
 type IsExport = Bool
 
 type Acc = (Env, Existential (Record SemanticType), [(Term, Int, [(IsExport, I.Label)])], Purity)
 
-elaborateBindings :: (Members (Effs Expr) r, ?env :: Env) => Acc -> Positional Binding -> Eff r Acc
+elaborateBindings :: (Effs Expr m, ?env :: Env) => Acc -> Positional Binding -> m Acc
 elaborateBindings (env, whole_aty, zs, p0) b = do
   let ?env = env
   (t, aty, p) <- elaborate b
@@ -1015,7 +1024,7 @@ merge aty1 aty2 =
 
 instance Elaboration Binding where
   type Output Binding = (Term, Existential (Record SemanticType), Purity)
-  type Effs Binding = '[Error I.Failure, Error ElaborateError, Fresh]
+  type Effs Binding m = (FailureM m, ErrorM m, FreshM m)
 
   elaborate (Positional p (Val id ps asc e)) =
     case (ps, asc) of

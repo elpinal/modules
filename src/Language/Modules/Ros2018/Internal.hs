@@ -62,11 +62,9 @@ module Language.Modules.Ros2018.Internal
   , Typed(..)
   , whTypeOf
   , typeOfLiteral
-  , typecheck
 
   -- * Type equivalence and reduction
   , equal
-  , equalType
   , reduce
 
   -- * Type substitution
@@ -88,6 +86,7 @@ module Language.Modules.Ros2018.Internal
 
   -- * Annotation
   , Annotated(..)
+  , Id
 
   -- * Errors
   , EnvError(..)
@@ -107,11 +106,12 @@ module Language.Modules.Ros2018.Internal
 
   -- * Builtins
   , Builtin(..)
+
+  -- * Monads
+  , FailureM(..)
   ) where
 
 import Control.Monad
-import Control.Monad.Freer
-import Control.Monad.Freer.Error
 import Data.Coerce
 import Data.Foldable (fold)
 import Data.Functor
@@ -310,7 +310,7 @@ tabs ks ty = foldl (flip TAbs) ty ks
 tRecord :: Map.Map Label Type -> Type
 tRecord = TRecord . Record
 
-splitExQuantifiers :: Member (Error Failure) r => Int -> Type -> Eff r ([Kind], Type)
+splitExQuantifiers :: FailureM m => Int -> Type -> m ([Kind], Type)
 splitExQuantifiers 0 ty          = return ([], ty)
 splitExQuantifiers n (Some k ty) = do
   (ks, ty) <- splitExQuantifiers (n - 1) ty
@@ -457,8 +457,11 @@ class Display a => SpecificError a where
 fromSpecific :: SpecificError a => a -> Failure
 fromSpecific x = Failure x evidence display
 
-throw :: (Member (Error Failure) r, SpecificError a) => a -> Eff r b
-throw = throwError . fromSpecific
+throw :: (FailureM m, SpecificError a) => a -> m b
+throw = throwFailure . fromSpecific
+
+class Monad m => FailureM m where
+  throwFailure :: Failure -> m a
 
 data EnvError
   = UnboundName Position Name
@@ -508,26 +511,26 @@ insertTempValue (Generated n) ty = ?env
   { tempVenv = Map.insert n ty $ tempVenv ?env
   }
 
-lookupType :: (Member (Error Failure) r, ?env :: Env f ty) => Variable -> Eff r (f Kind)
+lookupType :: (FailureM m, ?env :: Env f ty) => Variable -> m (f Kind)
 lookupType (Variable n) = do
   case tenv ?env of
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundTypeVariable $ Variable n
 
-lookupValueByName :: (Member (Error Failure) r, ?env :: Env f ty) => Position -> Name -> Eff r (ty, Variable)
+lookupValueByName :: (FailureM m, ?env :: Env f ty) => Position -> Name -> m (ty, Variable)
 lookupValueByName p name = do
   n <- maybe (throw $ UnboundName p name) return $ Map.lookup name $ nmap ?env
   let v = Variable $ length (venv ?env) - n
   ty <- lookupValue v
   return (ty, v)
 
-lookupValue :: (Member (Error Failure) r, ?env :: Env f ty) => Variable -> Eff r ty
+lookupValue :: (FailureM m, ?env :: Env f ty) => Variable -> m ty
 lookupValue (Variable n) = do
   case venv ?env of
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundVariable $ Variable n
 
-lookupTempValue :: (Member (Error Failure) r, ?env :: Env f ty) => Generated -> Eff r ty
+lookupTempValue :: (FailureM m, ?env :: Env f ty) => Generated -> m ty
 lookupTempValue (Generated n) = do
   case Map.lookup n $ tempVenv ?env of
     Just ty -> return ty
@@ -549,18 +552,14 @@ instance Display TypeEquivError where
 instance SpecificError TypeEquivError where
   evidence = EvidTypeEquiv
 
--- Assumes input types have the base kind.
-equalType :: Type -> Type -> Either Failure ()
-equalType ty1 ty2 = run $ runError $ let ?env = emptyEnv :: Env Id Type in equal ty1 ty2 Base
-
 -- Assumes well-kindness of input types.
-equal :: (Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => Type -> Type -> Kind -> Eff r ()
+equal :: (Shift ty, Annotated f, FailureM m, ?env :: Env f ty) => Type -> Type -> Kind -> m ()
 equal ty1 ty2 Base         = void $ strEquiv (reduce ty1) (reduce ty2)
 equal ty1 ty2 (KFun k1 k2) =
   let ?env = insertType $ unannotated k1 in
     equal (TApp (shift 1 ty1) $ tvar 0) (TApp (shift 1 ty2) $ tvar 0) k2
 
-strEquiv :: (Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => Type -> Type -> Eff r Kind
+strEquiv :: (Shift ty, Annotated f, FailureM m, ?env :: Env f ty) => Type -> Type -> m Kind
 strEquiv ty1 @ (BaseType b1) ty2 @ (BaseType b2)
   | b1 == b2  = return Base -- Assumes base types have the base kind.
   | otherwise = throw $ StructurallyInequivalent ty1 ty2
@@ -644,7 +643,7 @@ subst :: Int -> Type -> Type -> Type
 subst n by = apply $ Subst $ Map.singleton (Variable n) by
 
 class Kinded a where
-  kindOf :: (Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => a -> Eff r Kind
+  kindOf :: (Shift ty, Annotated f, FailureM m, ?env :: Env f ty) => a -> m Kind
 
 data KindError
   = NotBase Kind
@@ -686,7 +685,7 @@ instance Kinded Type where
         | otherwise -> throw $ KindMismatch_ k11 k2
       Base -> throw $ NotFunctionKind k1
 
-mustBeBase :: (Kinded a, Shift ty, Annotated f, Member (Error Failure) r, ?env :: Env f ty) => a -> Eff r ()
+mustBeBase :: (Kinded a, Shift ty, Annotated f, FailureM m, ?env :: Env f ty) => a -> m ()
 mustBeBase x = do
   k <- kindOf x
   case k of
@@ -694,7 +693,7 @@ mustBeBase x = do
     KFun _ _ -> throw $ NotBase k
 
 class Typed a where
-  typeOf :: (Annotated f, Member (Error Failure) r, ?env :: Env f Type) => a -> Eff r Type
+  typeOf :: (Annotated f, FailureM m, ?env :: Env f Type) => a -> m Type
 
 newtype Id a = Id a
 
@@ -702,10 +701,7 @@ instance Annotated Id where
   extract (Id x) = x
   unannotated = Id
 
-typecheck :: Env Id Type -> Term -> Either Failure Type
-typecheck env t = run $ runError $ let ?env = env in whTypeOf t
-
-whTypeOf :: (Typed a, Annotated f, Member (Error Failure) r, ?env :: Env f Type) => a -> Eff r Type
+whTypeOf :: (Typed a, Annotated f, FailureM m, ?env :: Env f Type) => a -> m Type
 whTypeOf x = reduce <$> typeOf x
 
 data TypeError
@@ -743,7 +739,7 @@ instance Typed Literal where
 instance Typed a => Typed (Record a) where
   typeOf (Record m) = tRecord <$> mapM typeOf m
 
-lookupRecord :: Member (Error Failure) r => Label -> Record Type -> Eff r Type
+lookupRecord :: FailureM m => Label -> Record Type -> m Type
 lookupRecord l (Record m) = maybe (throw $ MissingLabel l $ Record m) return $ Map.lookup l m
 
 -- Invariant: `typeOf` always returns, if any, a type which has the base kind.
@@ -813,7 +809,7 @@ instance Typed Term where
       _ -> throw $ NotBool ty1
   typeOf Fix = return $ Forall Base $ Forall Base $ ((tvar 1 +> tvar 0) +> tvar 1 +> tvar 0) +> tvar 1 +> tvar 0
 
-equalKind :: Member (Error Failure) r => Kind -> Kind -> Eff r ()
+equalKind :: FailureM m => Kind -> Kind -> m ()
 equalKind k1 k2
   | k1 == k2  = return ()
   | otherwise = throw $ KindMismatch_ k1 k2
