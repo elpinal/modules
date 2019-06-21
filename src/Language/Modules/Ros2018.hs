@@ -472,6 +472,7 @@ instance Subtype Purity where
   Impure <: Pure = throwE NotSubpurity
 
 instance Subtype SemanticType where
+  -- The returned term may not have free term variables, but may have free type variables.
   type Coercion SemanticType = Term
 
   BaseType b1 <: BaseType b2
@@ -491,7 +492,7 @@ instance Subtype SemanticType where
     let (Fun ty2 p2 aty2) = getBody u2
     let ?env = I.insertTypes $ reverse $ getAnnotatedKinds u2
     p1 <: p2
-    (t1, tys) <- ty2 `match'` quantify (getAnnotatedKinds u1) ty1
+    (t1, tys) <- ty2 `match'` shift (qsLen u2) (quantify (getAnnotatedKinds u1) ty1)
     t2 <- aty1 <: aty2
     return $ I.Abs (toType u1) $ I.poly (getKinds u2) $ I.Abs (toType ty2) $ I.App t2 $ I.App (I.inst (var 1) tys) $ I.App t1 $ var 0
   Wrapped aty1 <: Wrapped aty2 = do
@@ -502,19 +503,24 @@ instance Subtype SemanticType where
   ty1 <: ty2 = throwE $ NotSubtype ty1 ty2
 
 instance Subtype AbstractType where
+  -- The returned term may not have free term variables, but may have free type variables.
   type Coercion AbstractType = Term
 
   aty1 <: aty2 = do
     let ?env = insertTypes $ reverse $ getAnnotatedKinds aty1
-    (t, tys) <- match' (getBody aty1) aty2
+    (t, tys) <- match' (getBody aty1) $ shift (qsLen aty1) aty2
     return $ I.Abs (toType aty1) $ I.unpack Nothing (var 0) (qsLen aty1) $ I.pack (I.App t $ var 0) tys (getKinds aty2) $ toType (getBody aty2)
 
+-- Assumes both arguments are in the same context.
+-- The returned term may not have free term variables, but may have free type variables.
 match :: (RunFailureM m, ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [Parameterized])
 match ty aty = do
-  tys <- either (throwE . NoRealization ty aty) return $ lookupInsts (enumVars aty) ty (getBody aty)
-  t <- (ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) $ shift (qsLen aty) tys) $ getBody aty)) `catchE` (throwE . NotMatch ty aty)
-  return (t, tys)
+  tys <- either (throwE . NoRealization ty aty) return $ lookupInsts (enumVars aty) (shift (qsLen aty) ty) (getBody aty)
+  t <- (ty <: shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) tys) $ getBody aty)) `catchE` (throwE . NotMatch ty aty)
+  return (t, shift (-qsLen aty) tys)
 
+-- Assumes both arguments are in the same context.
+-- The returned term may not have free term variables, but may have free type variables.
 match' :: (RunFailureM m, ErrorM m, ?env :: Env) => SemanticType -> AbstractType -> m (Term, [IType])
 match' ty aty = do
   (t, tys) <- match ty aty
@@ -676,12 +682,14 @@ lookupInst p1 (EmptyExistential ty) (EmptyExistential (SemanticPath p2))
 lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p) r1 r2
 lookupInst p (Function u1) (Function u2)
   | isPure (getBody u1) && isPure (getBody u2) = do
+    -- FIXME: Perhaps needs shift since each set of quantifiers may has a different size.
     ps <- lookupInsts (enumVars u1) (domain $ getBody u2) (domain $ getBody u1)
     let s = fromList $ zip (map variable [0..]) ps
     mfty <- lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) $ shift (qsLen u2) p) (applySmall s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2)
     return $ fmap (tabs $ getKinds u2) <$> mfty
 lookupInst _ _ _ = return Nothing
 
+-- Maybe assumes all of 3 arguments is in the same context.
 lookupInsts :: [Variable] -> SemanticType -> SemanticType -> LError [Parameterized]
 lookupInsts vs ty1 ty2 = fst <$> foldrM f ([], ty2) vs
   where
@@ -765,6 +773,7 @@ instance Elaboration Type where
     let n = tenvLen
     let z = restrict vs11 $ getAnnotatedKinds aty1
     let ?env = I.insertTypes $ reverse z
+    -- TODO: This might be wrong: shift needed?
     (_, tys) <- getBody aty2 `match` quantify (restrict vs12 $ getAnnotatedKinds aty1) ty'
     let r = take n $ [ (variable i, parameterized $ SemanticPath $ fromVariable $ variable $ i - Set.size vs12) | i <- [qsLen aty1..] ]
     return $ quantify (z ++ getAnnotatedKinds aty2) $ replace (applySmall (fromList $ zip (Set.toAscList vs12) tys ++ zip (Set.toAscList vs11) (parameterized . SemanticPath . fromVariable . variable <$> [0..]) ++ r) $ shiftAbove (qsLen aty1) (qsLen aty2) $ getBody aty1) ids $ getBody aty2
@@ -875,9 +884,9 @@ instance Elaboration Expr where
     case fromPositional e of
       Id _ -> do
         (t1, aty1, p) <- elaborate e
-        mustBePure p
+        mustBePure p -- Variables have always the pure effect.
         aty2 <- elaborate ty
-        (t2, tys) <- match' (getBody aty1) aty2
+        (t2, tys) <- match' (getBody aty1) aty2 -- @aty1@ has always no quantifiers.
         return (I.pack (I.App t2 t1) tys (getKinds aty2) (toType $ getBody aty2), aty2, strongSealing aty2)
       _ -> do
         id <- coerce <$> freshName

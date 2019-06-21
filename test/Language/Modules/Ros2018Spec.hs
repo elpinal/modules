@@ -22,6 +22,9 @@ shouldBeRight (Right x) expected         = x `shouldBe` expected
 dummyP :: a -> Positional a
 dummyP = positional dummyPos
 
+tvarS :: Int -> SemanticType
+tvarS = SemanticPath . fromVariable . I.variable
+
 spec :: Spec
 spec = do
   let runElaborate = runM_ 0 $ Y II.runFailure
@@ -63,6 +66,36 @@ spec = do
 
       let ?env = insertType $ dummyP I.Base
       (runEl $ match' (AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0) (quantify [dummyP I.Base] $ AbstractType $ fromBody $ SemanticPath $ fromVariable $ variable 0)) `shouldBe` right (I.Abs (I.TFun (tvar 0) $ I.TRecord []) $ I.Abs (tvar 0) $ I.TmRecord [], [I.tvar 0])
+
+      runEl (match'
+              (Structure [(label "s", AbstractType $ fromBody $ tvarS 0)])
+              (quantify [dummyP I.Base] $ Structure [(label "s", AbstractType $ fromBody $ tvarS 0)])
+              ) `shouldBe` right
+        ( I.Abs (I.TRecord [(label "s", tvar 0 `I.TFun` I.TRecord [])]) $
+                  I.TmRecord [(label "s", I.Abs (tvar 0 `I.TFun` I.TRecord []) (I.Abs (tvar 0) $ I.TmRecord []) `I.App` I.Proj (var 0) (label "s"))]
+        , [I.tvar 0]
+        )
+
+      runEl (match'
+              (Structure [(label "s", AbstractType $ fromBody $ tvarS 0), (label "t", AbstractType $ fromBody $ BaseType Bool)])
+              (quantify [dummyP I.Base] $ Structure [(label "s", AbstractType $ fromBody $ tvarS 0)])
+              ) `shouldBe` right
+        ( I.Abs (I.TRecord [(label "s", tvar 0 `I.TFun` I.TRecord []), (label "t", I.BaseType Bool `I.TFun` I.TRecord [])]) $
+                  I.TmRecord [(label "s", I.Abs (tvar 0 `I.TFun` I.TRecord []) (I.Abs (tvar 0) $ I.TmRecord []) `I.App` I.Proj (var 0) (label "s"))]
+        , [I.tvar 0]
+        )
+
+      runEl (match'
+              (Structure [(label "s", AbstractType $ fromBody $ tvarS 0), (label "t", AbstractType $ fromBody $ BaseType Bool)])
+              (quantify [dummyP I.Base, dummyP I.Base] $ Structure [(label "s", AbstractType $ fromBody $ tvarS 1), (label "t", AbstractType $ fromBody $ tvarS 0)])
+              ) `shouldBe` right
+        ( I.Abs (I.TRecord [(label "s", tvar 0 `I.TFun` I.TRecord []), (label "t", I.BaseType Bool `I.TFun` I.TRecord [])]) $
+                  I.TmRecord
+                  [ (label "s", I.Abs (tvar 0 `I.TFun` I.TRecord []) (I.Abs (tvar 0) $ I.TmRecord []) `I.App` I.Proj (var 0) (label "s"))
+                  , (label "t", I.Abs (I.BaseType Bool `I.TFun` I.TRecord []) (I.Abs (I.BaseType Bool) $ I.TmRecord []) `I.App` I.Proj (var 0) (label "t"))
+                  ]
+        , [I.BaseType Bool, I.tvar 0]
+        )
 
   describe "applySmall" $
     it "performs parallel substitution" $ do
