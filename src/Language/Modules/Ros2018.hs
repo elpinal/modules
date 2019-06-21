@@ -874,7 +874,7 @@ instance Elaboration Expr where
     (_, aty, zs, p) <- foldlM elaborateBindings (?env, fromBody mempty, [], Pure) bs
     let lls = map (\(_, _, ls) -> ls) zs
     let t = I.TmRecord $ Record $ buildRecord lls
-    let t1 = I.pack t (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty
+    let t1 = I.pack t (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ shift (qsLen aty) $ getBody aty
     t <- foldlM joinBindings t1 zs
     return (t, Structure <$> aty, p)
   elaborate (Positional _ (Type ty)) = do

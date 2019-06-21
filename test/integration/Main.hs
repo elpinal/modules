@@ -284,3 +284,30 @@ spec = do
 
           f = fun (M : T) => fun (x : M.w (type bool) 800) => x true;
           |] `shouldBeRight` ()
+
+        integration [r|
+          type S = sig
+            type s;
+            type t;
+          end;
+
+          F = fun (x : type) => struct
+            M = struct
+              s = x;
+              type t = char;
+            end;
+            N = M :> S;
+          end;
+          |] `shouldBeRight` ()
+
+        integration [r|
+          type S = sig
+            type s;
+            type t;
+          end;
+
+          F x : S = struct
+            s = x;
+            type t = char;
+          end;
+          |] `shouldBeRight` ()
