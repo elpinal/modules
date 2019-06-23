@@ -36,20 +36,22 @@ orThrow f = either (throw . f) return
 main :: IO ()
 main = run
 
-data Command = Command
-  { parse :: Bool
-  , elab :: Bool
-  , filename :: FilePath
-  }
+data Command
+  = Run
+    { parse :: Bool
+    , elab :: Bool
+    , filename :: FilePath
+    }
 
 filenameParser :: Parser FilePath
 filenameParser = argument str $ metavar "filename" <> help "Input filename"
 
 information :: InfoMod a
-information = fullDesc <> progDesc "1ML_ex interpreter" <> header "1ML_ex"
+information = fullDesc <> header "1ML_ex"
 
 parser :: Parser Command
-parser = Command <$>
+parser = subparser $
+         command "run" $ flip info fullDesc $ Run <$>
          switch (short 'p' <> long "parse" <> help "Stop after parsing") <*>
          switch (short 'e' <> long "elaborate" <> help "Stop after elaboration") <*>
          filenameParser
@@ -60,7 +62,7 @@ run = do
   runContT (interpret cmd) return
 
 interpret :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
-interpret Command
+interpret Run
   { filename = fp
   , parse = switchP
   , elab = switchE
