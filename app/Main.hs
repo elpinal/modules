@@ -1,7 +1,6 @@
 module Main where
 
 import Control.Exception.Safe
-import Control.Monad
 import Control.Monad.Cont
 import qualified Data.Text.IO as TIO
 
@@ -38,9 +37,7 @@ main = run
 
 data Command
   = Run
-    { parse :: Bool
-    , elab :: Bool
-    , filename :: FilePath
+    { filename :: FilePath
     }
 
 filenameParser :: Parser FilePath
@@ -52,8 +49,6 @@ information = fullDesc <> header "1ML_ex"
 parser :: Parser Command
 parser = subparser $
          command "run" $ flip info fullDesc $ Run <$>
-         switch (short 'p' <> long "parse" <> help "Stop after parsing") <*>
-         switch (short 'e' <> long "elaborate" <> help "Stop after elaboration") <*>
          filenameParser
 
 run :: (MonadIO m, MonadThrow m) => m ()
@@ -64,26 +59,12 @@ run = do
 interpret :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
 interpret Run
   { filename = fp
-  , parse = switchP
-  , elab = switchE
-  } = callCC $ \exit -> do
+  } = do
   txt <- liftIO $ TIO.readFile fp
 
   e <- orThrow SyntaxError $ parseText fp txt
-  when switchP $ do
-    liftIO $ putStrLn $ display e
-    exit ()
 
-  (t, aty, p) <- orThrow TranslateError (translate (Y runFailure) e) >>= orThrow ElaborateError
-  when switchE $ do
-    liftIO $ do
-      putStrLn "Term:"
-      putStrLn $ display $ WithName t
-      putStrLn "Semantic type:"
-      putStrLn $ display $ WithName aty
-      putStrLn "Purity:"
-      putStrLn $ display p
-    exit ()
+  (t, aty, _) <- orThrow TranslateError (translate (Y runFailure) e) >>= orThrow ElaborateError
 
   ty <- orThrow InternalTypeError $ typecheck (toType <$> (builtins :: Env f SemanticType)) t
   liftIO $ putStrLn $ display $ WithName ty
