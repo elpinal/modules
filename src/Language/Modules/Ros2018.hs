@@ -116,7 +116,7 @@ type IType = I.Type
 type IKind = I.Kind
 
 newtype Ident = Ident Name
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 ident :: T.Text -> Ident
 ident = Ident . name

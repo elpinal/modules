@@ -2,7 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.Modules.Ros2018.Package.Config
-  ( parseConfig
+  ( Config(..)
+  , Import(..)
+  , configFile
+  , parseConfig
+  , C(..)
   ) where
 
 import Control.Comonad
@@ -17,13 +21,21 @@ import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
+import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
 import Language.Modules.Ros2018.NDList hiding (empty)
 import Language.Modules.Ros2018.Position
 
+configFile :: FilePath
+configFile = "1ml.package"
+
 -- Provides comparison based on @extract@ of @Comonad@.
 newtype C w a = C (w a)
   deriving (Show, Functor)
+
+instance Comonad w => Comonad (C w) where
+  extract (C x)  = extract x
+  extend f (C x) = C $ extend (\_ -> f $ C x) x
 
 instance (Comonad w, Eq a) => Eq (C w a) where
   C x == C y = extract x == extract y
@@ -36,7 +48,7 @@ data Config = Config
   }
   deriving (Eq, Show)
 
-data Import = Import (Positional T.Text) (C Positional T.Text)
+data Import = Import (Positional Ident) (C Positional T.Text)
   deriving Show
 
 instance Eq Import where
@@ -79,7 +91,7 @@ config = Config . fromList <$> many p
       pos <- reserved "import"
       as <- word
       from <- word
-      return $ C $ positional pos $ Import as $ C from
+      return $ C $ positional pos $ Import (ident <$> as) $ C from
 
 newtype ConfigParseError = ConfigParseError (ParseErrorBundle T.Text Void)
 

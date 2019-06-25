@@ -6,9 +6,14 @@
 
 module Language.Modules.Ros2018.Package
   ( buildMain
+
   , PM(..)
   , Unit(..)
+
   , evaluate
+
+  , AbsolutePath
+  , ImportMap
   ) where
 
 import Data.List
@@ -36,17 +41,19 @@ type RootRelativePath = FilePath
 
 type AbsolutePath = FilePath
 
+type ImportMap = Map.Map Ident AbsolutePath
+
 -- Package manager
 data PM m a where
   Parse :: RootRelativePath -> PM m Unit
-  ReadConfig :: PM m (Map.Map Ident AbsolutePath, [Ident])
+  ReadConfig :: PM m (ImportMap, [Ident])
   Elaborate :: Positional Expr -> PM m (I.Term, AbstractType)
   Evaluate :: I.Term -> PM m ()
   -- Returns not necessarily injective mapping.
   GetMapping :: RootRelativePath -> PM m (Map.Map RootRelativePath Ident)
   GetFileName :: RootRelativePath -> Positional Ident -> PM m RootRelativePath
   -- May return a variable denoting an external library.
-  ResolveExternal :: Map.Map Ident AbsolutePath -> Positional T.Text -> PM m I.Term
+  ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
   ElaborateExternal :: Ident -> PM m I.Term
   Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
   CatchE :: m a -> a -> PM m a
