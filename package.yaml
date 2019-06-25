@@ -20,6 +20,7 @@ description:         Please see the README on GitHub at <https://github.com/elpi
 
 dependencies:
 - base >= 4.7 && < 5
+- comonad >= 5.0.5
 - containers >= 0.5.11.0
 - freer-simple >= 1.1.0.0
 - megaparsec >= 7.0.4
