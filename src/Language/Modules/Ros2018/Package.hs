@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
@@ -56,11 +57,15 @@ data PM m a where
   ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
   ElaborateExternal :: Ident -> PM m I.Term
   Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
-  CatchE :: m a -> a -> PM m a
 
 makeSem ''PM
 
-buildMain :: Member PM r => Sem r ()
+data CatchE m a where
+  CatchE :: m a -> a -> CatchE m a
+
+makeSem ''CatchE
+
+buildMain :: Members '[PM, CatchE] r => Sem r ()
 buildMain = do
   (m, ids) <- readConfig
   tms <- mapM elaborateExternal ids

@@ -33,20 +33,16 @@ instance Display PrettyError where
   display (PrettyError e) = display e
 
 runPM :: forall r a. Members '[Lift IO, Error PrettyError] r => Sem (PM ': r) a -> Sem r a
-runPM = interpretH f
+runPM = interpret f
   where
-    f :: forall m a. PM m a -> Tactical PM m r a
-    f (Evaluate t) = do
-      x <- sendM $ putStrLn $ display $ WithName t
-      state <- getInitialStateT
-      return $ (\_ -> x) <$> state
+    f :: forall m a. PM m a -> Sem r a
+    f (Evaluate t) = sendM $ putStrLn $ display $ WithName t
     f ReadConfig = do
       txt <- sendM $ TIO.readFile configFile
       cfg <- either (throw . PrettyError) return $ parseConfig configFile txt
       let is = imports cfg
       m <- buildMap is
-      state <- getInitialStateT
-      return $ const (m, toList $ g . extract <$> is) <$> state
+      return (m, toList $ g . extract <$> is)
         where
           g :: Import -> Ident
           g (Import id _) = extract id
