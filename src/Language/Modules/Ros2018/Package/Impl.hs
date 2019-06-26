@@ -16,9 +16,9 @@ import Control.Comonad
 import Data.Foldable
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
 import Polysemy
 import Polysemy.Error
+import Polysemy.Trace
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
@@ -56,13 +56,16 @@ instance Evidential PMError where
 instance Evidential ConfigParseError where
   evidence = EvidConfigParse
 
-runPM :: forall r a. Members '[Lift IO, Error PrettyError] r => Sem (PM ': r) a -> Sem r a
+runPM :: forall r a. Members '[FileSystem, Trace, Error PrettyError] r => Sem (PM ': r) a -> Sem r a
 runPM = interpret f
   where
     f :: forall m a. PM m a -> Sem r a
-    f (Evaluate t) = sendM $ putStrLn $ display $ WithName t
+    f (Parse path) = do
+      case path of
+        "lib.1ml" -> throwP NoLib
+        _         -> error "not yet implemented"
     f ReadConfig = do
-      txt <- sendM $ TIO.readFile configFile
+      txt <- readFileT configFile
       cfg <- either throwP return $ parseConfig configFile txt
       let is = imports cfg
       m <- buildMap is
@@ -70,10 +73,7 @@ runPM = interpret f
         where
           g :: Import -> Ident
           g (Import id _) = extract id
-    f (Parse path) = do
-      case path of
-        "lib.1ml" -> throwP NoLib
-        _         -> error "not yet implemented"
+    f (Evaluate t) = trace $ display $ WithName t
 
 data ConfigError
   = ShadowedImport (Positional Ident)

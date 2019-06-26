@@ -10,10 +10,14 @@ module Language.Modules.Ros2018.Package
 
   , PM(..)
   , CatchE(..)
+  , FileSystem(..)
+
   , Unit(..)
 
   , evaluate
   , parse
+
+  , readFileT
 
   , AbsolutePath
   , ImportMap
@@ -61,6 +65,11 @@ data PM m a where
   Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
 
 makeSem ''PM
+
+data FileSystem m a where
+  ReadFileT :: FilePath -> FileSystem m T.Text
+
+makeSem ''FileSystem
 
 data CatchE m a where
   CatchE :: m a -> a -> CatchE m a
