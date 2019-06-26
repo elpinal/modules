@@ -6,6 +6,7 @@ module Language.Modules.Ros2018.Package.Config
   , Import(..)
   , configFile
   , parseConfig
+  , ConfigParseError
   , C(..)
   ) where
 

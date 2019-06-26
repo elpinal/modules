@@ -9,9 +9,11 @@ module Language.Modules.Ros2018.Package
   ( buildMain
 
   , PM(..)
+  , CatchE(..)
   , Unit(..)
 
   , evaluate
+  , parse
 
   , AbsolutePath
   , ImportMap
