@@ -24,6 +24,7 @@ import Polysemy.Reader
 import Polysemy.Trace
 import System.Directory
 import System.FilePath
+import System.IO.Error
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
@@ -79,9 +80,9 @@ runPM = interpret f
   where
     f :: forall m a. PM m a -> Sem r a
     f (Parse path) = do
-      case path of
-        "lib.1ml" -> throwP NoLib
-        _         -> error "not yet implemented"
+      root <- ask
+      txt <- readFileT $ root </> path
+      parseT txt
     f ReadConfig = do
       txt <- readFileT configFile
       cfg <- either throwP return $ parseConfig configFile txt
@@ -125,15 +126,22 @@ buildMap is = foldlM f mempty is
 toAbsolute :: T.Text -> AbsolutePath
 toAbsolute = T.unpack
 
-runFileSystemIO :: forall r a. Member (Lift IO) r => Sem (FileSystem ': r) a -> Sem r a
+runFileSystemIO :: forall r a. Members '[Error PrettyError, Lift IO] r => Sem (FileSystem ': r) a -> Sem r a
 runFileSystemIO = interpret f
   where
     f :: forall m a. FileSystem m a -> Sem r a
-    f (ReadFileT path)       = sendM $ TIO.readFile path
+    f (ReadFileT path) = do
+      x <- sendM $ tryIOError $ TIO.readFile path
+      either g return x
     f (TraverseDir p path f) = do
       entries <- sendM $ filter p <$> listDirectory path
       xs <- sendM $ mapM (\e -> (,) (makeRelative path e) . f <$> TIO.readFile e) entries
       return $ Map.fromList xs
+
+    g :: forall a. IOError -> Sem r a
+    g e
+      | isDoesNotExistError e = throwP NoLib
+      | otherwise             = sendM $ ioError e
 
 runCatchE :: forall r a. Members '[Error PrettyError] r => Sem (CatchE ': r) a -> Sem r a
 runCatchE = interpretH f
