@@ -17,10 +17,12 @@ import Data.Foldable
 import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Polysemy
 import Polysemy.Error
 import Polysemy.Reader
 import Polysemy.Trace
+import System.Directory
 import System.FilePath
 
 import Language.Modules.Ros2018
@@ -122,6 +124,16 @@ buildMap is = foldlM f mempty is
 -- TODO
 toAbsolute :: T.Text -> AbsolutePath
 toAbsolute = T.unpack
+
+runFileSystemIO :: forall r a. Member (Lift IO) r => Sem (FileSystem ': r) a -> Sem r a
+runFileSystemIO = interpret f
+  where
+    f :: forall m a. FileSystem m a -> Sem r a
+    f (ReadFileT path)       = sendM $ TIO.readFile path
+    f (TraverseDir p path f) = do
+      entries <- sendM $ filter p <$> listDirectory path
+      xs <- sendM $ mapM (\e -> (,) (makeRelative path e) . f <$> TIO.readFile e) entries
+      return $ Map.fromList xs
 
 runCatchE :: forall r a. Members '[Error PrettyError] r => Sem (CatchE ': r) a -> Sem r a
 runCatchE = interpretH f
