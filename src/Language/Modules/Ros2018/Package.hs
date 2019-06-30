@@ -9,6 +9,7 @@ module Language.Modules.Ros2018.Package
   ( buildMain
 
   , PM(..)
+  , Parser(..)
   , CatchE(..)
   , FileSystem(..)
 
@@ -17,10 +18,15 @@ module Language.Modules.Ros2018.Package
   , evaluate
   , parse
 
-  , readFileT
+  , parseT
 
+  , readFileT
+  , traverseDir
+
+  , RootRelativePath
   , AbsolutePath
   , ImportMap
+  , FileModuleMap
   ) where
 
 import Data.List
@@ -34,7 +40,8 @@ import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Position
 
 data Unit = Unit
-  { uses :: [Positional T.Text]
+  { mname :: Ident
+  , uses :: [Positional T.Text]
   , submodules :: NDList (Visibility, Positional Ident)
   , body :: Positional Expr
   }
@@ -50,15 +57,17 @@ type AbsolutePath = FilePath
 
 type ImportMap = Map.Map Ident AbsolutePath
 
+type FileModuleMap = Map.Map RootRelativePath Ident
+
 -- Package manager
 data PM m a where
   Parse :: RootRelativePath -> PM m Unit
   ReadConfig :: PM m (ImportMap, [Ident])
   Elaborate :: Positional Expr -> PM m (I.Term, AbstractType)
   Evaluate :: I.Term -> PM m ()
-  -- Returns not necessarily injective mapping.
-  GetMapping :: RootRelativePath -> PM m (Map.Map RootRelativePath Ident)
-  GetFileName :: RootRelativePath -> Positional Ident -> PM m RootRelativePath
+  -- Returns not necessarily injective, filename-to-module-identifier mapping.
+  GetMapping :: RootRelativePath -> PM m FileModuleMap
+  GetFileName :: FileModuleMap -> RootRelativePath -> Positional Ident -> PM m RootRelativePath
   -- May return a variable denoting an external library.
   ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
   ElaborateExternal :: Ident -> PM m I.Term
@@ -66,8 +75,15 @@ data PM m a where
 
 makeSem ''PM
 
+data Parser m a where
+  ParseT :: T.Text -> Parser m Unit
+
+makeSem ''Parser
+
 data FileSystem m a where
   ReadFileT :: FilePath -> FileSystem m T.Text
+  TraverseDir :: (FilePath -> Bool) -> FilePath ->
+                 (T.Text -> a) -> FileSystem m (Map.Map RootRelativePath a)
 
 makeSem ''FileSystem
 
@@ -93,7 +109,7 @@ buildLib = do
   let ts = uses u
   m <- getMapping "."
   let sms = submodules u
-  ps <- mapM (getFileName "." . snd) sms
+  ps <- mapM (getFileName m "." . snd) sms
   mapM_ build ps
   (t, _) <- elaborate $ body u
   return t
@@ -111,7 +127,7 @@ build p = do
   let ts = uses u
   m <- getMapping $ stripExt p
   let sms = submodules u
-  ps <- mapM (getFileName (stripExt p) . snd) sms
+  ps <- mapM (getFileName m (stripExt p) . snd) sms
   mapM_ build ps
   (t, _) <- elaborate $ body u
   evaluate t

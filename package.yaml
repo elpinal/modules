@@ -22,6 +22,7 @@ dependencies:
 - base >= 4.7 && < 5
 - comonad >= 5.0.5
 - containers >= 0.5.11.0
+- filepath >= 1.4.2.1
 - freer-simple >= 1.1.0.0
 - megaparsec >= 7.0.4
 - mtl >= 2.2.2

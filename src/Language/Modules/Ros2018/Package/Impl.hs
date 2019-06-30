@@ -14,11 +14,14 @@ module Language.Modules.Ros2018.Package.Impl
 
 import Control.Comonad
 import Data.Foldable
+import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Polysemy
 import Polysemy.Error
+import Polysemy.Reader
 import Polysemy.Trace
+import System.FilePath
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
@@ -45,10 +48,14 @@ throwP = throw . PrettyError evidence
 
 data PMError
   = NoLib
+  | DuplicateModule (Positional Ident) RootRelativePath
+  | NoSuchModule (Positional Ident) RootRelativePath
   deriving (Eq, Show)
 
 instance Display PMError where
-  display NoLib = "no lib.1ml"
+  display NoLib                    = "no lib.1ml"
+  display (DuplicateModule id dir) = display (getPosition id) ++ ": " ++ show dir ++ ": duplicate module: " ++ display id
+  display (NoSuchModule id dir)    = display (getPosition id) ++ ": " ++ show dir ++ ": no such module: " ++ display id
 
 instance Evidential PMError where
   evidence = EvidPM
@@ -56,7 +63,16 @@ instance Evidential PMError where
 instance Evidential ConfigParseError where
   evidence = EvidConfigParse
 
-runPM :: forall r a. Members '[FileSystem, Trace, Error PrettyError] r => Sem (PM ': r) a -> Sem r a
+traverseDirS :: Member FileSystem r => (FilePath -> Bool) -> FilePath ->
+               (T.Text -> Sem r a) -> Sem r (Map.Map RootRelativePath a)
+traverseDirS p path f = do
+  m <- traverseDir p path f
+  sequence m
+
+getMName :: Unit -> Sem r Ident
+getMName u = return $ mname u
+
+runPM :: forall r a. Members '[Parser, FileSystem, Trace, Error PrettyError, Reader FilePath] r => Sem (PM ': r) a -> Sem r a
 runPM = interpret f
   where
     f :: forall m a. PM m a -> Sem r a
@@ -74,6 +90,14 @@ runPM = interpret f
           g :: Import -> Ident
           g (Import id _) = extract id
     f (Evaluate t) = trace $ display $ WithName t
+    f (GetMapping path) = do
+      ask >>= \root -> traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \content -> parseT content >>= getMName
+    f (GetFileName m dir id) = do
+      let m' = Map.filter (== extract id) m
+      maybe (throwP $ NoSuchModule id dir) f $ Map.minViewWithKey m'
+        where
+          f :: forall z. ((RootRelativePath, z), FileModuleMap) -> Sem r RootRelativePath
+          f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
 
 data ConfigError
   = ShadowedImport (Positional Ident)
