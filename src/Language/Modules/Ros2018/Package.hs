@@ -34,7 +34,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Polysemy
 
-import Language.Modules.Ros2018 (Expr, Ident, AbstractType)
+import Language.Modules.Ros2018 (Expr, Ident, AbstractType, Purity)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Position
@@ -63,7 +63,7 @@ type FileModuleMap = Map.Map RootRelativePath Ident
 data PM m a where
   Parse :: RootRelativePath -> PM m Unit
   ReadConfig :: PM m (ImportMap, [Ident])
-  Elaborate :: Positional Expr -> PM m (I.Term, AbstractType)
+  Elaborate :: Positional Expr -> PM m (I.Term, AbstractType, Purity)
   Evaluate :: I.Term -> PM m ()
   -- Returns not necessarily injective, filename-to-module-identifier mapping.
   GetMapping :: RootRelativePath -> PM m FileModuleMap
@@ -100,7 +100,7 @@ buildMain = do
   u <- parse "main.1ml"
   let ts = uses u
   vs <- mapM (resolveExternal m) ts
-  (t, _) <- elaborate $ body u
+  (t, _, _) <- elaborate $ body u
   combine tms mt t >>= evaluate
 
 buildLib :: Member PM r => Sem r I.Term
@@ -111,7 +111,7 @@ buildLib = do
   let sms = submodules u
   ps <- mapM (getFileName m "." . snd) sms
   mapM_ build ps
-  (t, _) <- elaborate $ body u
+  (t, _, _) <- elaborate $ body u
   return t
 
 -- TODO
@@ -129,5 +129,5 @@ build p = do
   let sms = submodules u
   ps <- mapM (getFileName m (stripExt p) . snd) sms
   mapM_ build ps
-  (t, _) <- elaborate $ body u
+  (t, _, _) <- elaborate $ body u
   evaluate t
