@@ -14,6 +14,7 @@ module Language.Modules.Ros2018.Package
   , FileSystem(..)
 
   , Unit(..)
+  , Visibility(..)
 
   , evaluate
   , parse
@@ -40,7 +41,7 @@ import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Position
 
 data Unit = Unit
-  { mname :: Ident
+  { mname :: Positional Ident
   , uses :: [Positional T.Text]
   , submodules :: NDList (Visibility, Positional Ident)
   , body :: Positional Expr

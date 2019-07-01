@@ -3,6 +3,7 @@
 module Language.Modules.Ros2018.Parser
   ( parseText
   , SyntaxError
+  , identifier
   ) where
 
 import Data.Coerce

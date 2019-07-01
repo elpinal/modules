@@ -73,7 +73,7 @@ traverseDirS p path f = do
   sequence m
 
 getMName :: Unit -> Sem r Ident
-getMName u = return $ mname u
+getMName u = return $ extract $ mname u
 
 runPM :: forall r a. Members '[Parser, FileSystem, Trace, Error PrettyError, Reader FilePath] r => Sem (PM ': r) a -> Sem r a
 runPM = interpret f
