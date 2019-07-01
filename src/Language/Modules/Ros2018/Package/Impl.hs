@@ -13,6 +13,7 @@ module Language.Modules.Ros2018.Package.Impl
   ) where
 
 import Control.Comonad
+import Control.Monad
 import Data.Foldable
 import Data.List
 import qualified Data.Map.Strict as Map
@@ -31,12 +32,15 @@ import Language.Modules.Ros2018.Display
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Package
 import Language.Modules.Ros2018.Package.Config
+import Language.Modules.Ros2018.Package.UnitParser
+import Language.Modules.Ros2018.Parser (whileParser)
 import Language.Modules.Ros2018.Position
 
 data Evidence e where
   EvidPM :: Evidence PMError
   EvidConfig :: Evidence ConfigError
   EvidConfigParse :: Evidence ConfigParseError
+  EvidUnitParse :: Evidence UnitParseError
 
 data PrettyError = forall e. Display e => PrettyError (Evidence e) e
 
@@ -66,8 +70,11 @@ instance Evidential PMError where
 instance Evidential ConfigParseError where
   evidence = EvidConfigParse
 
+instance Evidential UnitParseError where
+  evidence = EvidUnitParse
+
 traverseDirS :: Member FileSystem r => (FilePath -> Bool) -> FilePath ->
-               (T.Text -> Sem r a) -> Sem r (Map.Map RootRelativePath a)
+               (FilePath -> T.Text -> Sem r a) -> Sem r (Map.Map RootRelativePath a)
 traverseDirS p path f = do
   m <- traverseDir p path f
   sequence m
@@ -82,7 +89,7 @@ runPM = interpret f
     f (Parse path) = do
       root <- ask
       txt <- readFileT $ root </> path
-      parseT txt
+      parseT path txt
     f ReadConfig = do
       txt <- readFileT configFile
       cfg <- either throwP return $ parseConfig configFile txt
@@ -94,7 +101,7 @@ runPM = interpret f
           g (Import id _) = extract id
     f (Evaluate t) = trace $ display $ WithName t
     f (GetMapping path) = do
-      ask >>= \root -> traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \content -> parseT content >>= getMName
+      ask >>= \root -> traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
     f (GetFileName m dir id) = do
       let m' = Map.filter (== extract id) m
       maybe (throwP $ NoSuchModule id dir) f $ Map.minViewWithKey m'
@@ -126,6 +133,12 @@ buildMap is = foldlM f mempty is
 toAbsolute :: T.Text -> AbsolutePath
 toAbsolute = T.unpack
 
+runParser :: forall r a. Member (Error PrettyError) r => Sem (Parser ': r) a -> Sem r a
+runParser = interpret f
+  where
+    f :: forall m a. Parser m a -> Sem r a
+    f (ParseT fp txt) = either throwP return $ parseUnit whileParser fp txt
+
 runFileSystemIO :: forall r a. Members '[Error PrettyError, Lift IO] r => Sem (FileSystem ': r) a -> Sem r a
 runFileSystemIO = interpret f
   where
@@ -135,7 +148,9 @@ runFileSystemIO = interpret f
       either g return x
     f (TraverseDir p path f) = do
       entries <- sendM $ filter p <$> listDirectory path
-      xs <- sendM $ mapM (\e -> (,) (makeRelative path e) . f <$> TIO.readFile e) entries
+      xs <- sendM $ forM entries $ \e -> do
+        let rpath = makeRelative path e
+        (,) rpath . f rpath <$> TIO.readFile e
       return $ Map.fromList xs
 
     g :: forall a. IOError -> Sem r a

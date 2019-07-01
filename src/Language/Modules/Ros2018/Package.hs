@@ -77,14 +77,14 @@ data PM m a where
 makeSem ''PM
 
 data Parser m a where
-  ParseT :: T.Text -> Parser m Unit
+  ParseT :: FilePath -> T.Text -> Parser m Unit
 
 makeSem ''Parser
 
 data FileSystem m a where
   ReadFileT :: FilePath -> FileSystem m T.Text
   TraverseDir :: (FilePath -> Bool) -> FilePath ->
-                 (T.Text -> a) -> FileSystem m (Map.Map RootRelativePath a)
+                 (FilePath -> T.Text -> a) -> FileSystem m (Map.Map RootRelativePath a)
 
 makeSem ''FileSystem
 
