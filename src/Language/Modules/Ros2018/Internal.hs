@@ -536,7 +536,9 @@ lookupValueByName p name = do
       let v = Variable $ length (venv ?env) - n
       ty <- lookupValue v
       return (ty, Var v)
-    Gen n -> error "TODO"
+    Gen n -> do
+      ty <- lookupTempValue $ Generated n
+      return (ty, GVar $ Generated n)
 
 lookupValue :: (FailureM m, ?env :: Env f ty) => Variable -> m ty
 lookupValue (Variable n) = do
