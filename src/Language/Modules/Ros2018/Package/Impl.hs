@@ -22,6 +22,7 @@ import qualified Data.Text.IO as TIO
 import Polysemy
 import Polysemy.Error
 import Polysemy.Reader
+import Polysemy.State
 import Polysemy.Trace
 import System.Directory
 import System.FilePath
@@ -29,6 +30,7 @@ import System.IO.Error
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
+import Language.Modules.Ros2018.Internal (Generated)
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Package
 import Language.Modules.Ros2018.Package.Config
@@ -82,7 +84,10 @@ traverseDirS p path f = do
 getMName :: Unit -> Sem r Ident
 getMName u = return $ extract $ mname u
 
-runPM :: forall r a. Members '[Parser, FileSystem, Trace, Error PrettyError, Reader FilePath] r => Sem (PM ': r) a -> Sem r a
+data UsePath = UsePath PackageName RootRelativePath Ident
+  deriving (Eq, Ord, Show)
+
+runPM :: forall r a. Members '[VariableGenerator, State (Map.Map UsePath Generated), Parser, FileSystem, Trace, Error PrettyError, Reader FilePath] r => Sem (PM ': r) a -> Sem r a
 runPM = interpret f
   where
     f :: forall m a. PM m a -> Sem r a
@@ -108,6 +113,9 @@ runPM = interpret f
         where
           f :: forall z. ((RootRelativePath, z), FileModuleMap) -> Sem r RootRelativePath
           f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
+    f (Register pname dir id) = do
+      g <- generateVar
+      modify $ Map.insert (UsePath pname dir id) g
 
 data ConfigError
   = ShadowedImport (Positional Ident)

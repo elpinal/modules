@@ -12,6 +12,7 @@ module Language.Modules.Ros2018.Package
   , Parser(..)
   , CatchE(..)
   , FileSystem(..)
+  , VariableGenerator(..)
 
   , Unit(..)
   , Visibility(..)
@@ -24,19 +25,25 @@ module Language.Modules.Ros2018.Package
   , readFileT
   , traverseDir
 
+  , generateVar
+
   , RootRelativePath
   , AbsolutePath
   , ImportMap
   , FileModuleMap
+  , PackageName
   ) where
 
+import Control.Comonad
 import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Polysemy
+import System.FilePath (takeDirectory)
 
 import Language.Modules.Ros2018 (Expr, Ident, AbstractType, Purity)
 import qualified Language.Modules.Ros2018.Internal as I
+import Language.Modules.Ros2018.Internal (Generated)
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Position
 
@@ -60,19 +67,22 @@ type ImportMap = Map.Map Ident AbsolutePath
 
 type FileModuleMap = Map.Map RootRelativePath Ident
 
+type PackageName = Ident
+
 -- Package manager
 data PM m a where
   Parse :: RootRelativePath -> PM m Unit
   ReadConfig :: PM m (ImportMap, [Ident])
-  Elaborate :: Positional Expr -> PM m (I.Term, AbstractType, Purity)
+  Elaborate :: [Positional T.Text] -> Positional Expr -> PM m (I.Term, AbstractType, Purity)
   Evaluate :: I.Term -> PM m ()
   -- Returns not necessarily injective, filename-to-module-identifier mapping.
   GetMapping :: RootRelativePath -> PM m FileModuleMap
   GetFileName :: FileModuleMap -> RootRelativePath -> Positional Ident -> PM m RootRelativePath
-  -- May return a variable denoting an external library.
-  ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
+  -- -- May return a variable denoting an external library.
+  -- ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
   ElaborateExternal :: Ident -> PM m I.Term
   Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
+  Register :: PackageName -> RootRelativePath -> Ident -> PM m ()
 
 makeSem ''PM
 
@@ -89,31 +99,40 @@ data FileSystem m a where
 
 makeSem ''FileSystem
 
+data VariableGenerator m a where
+  GenerateVar :: VariableGenerator m Generated
+
+makeSem ''VariableGenerator
+
 data CatchE m a where
   CatchE :: m a -> a -> CatchE m a
 
 makeSem ''CatchE
 
+mname' :: Unit -> Ident
+mname' = extract . mname
+
 buildMain :: Members '[PM, CatchE] r => Sem r ()
 buildMain = do
   (m, ids) <- readConfig
   tms <- mapM elaborateExternal ids
-  mt <- fmap Just buildLib `catchE` Nothing
   u <- parse "main.1ml"
+  mt <- fmap Just (buildLib $ mname' u) `catchE` Nothing
   let ts = uses u
-  vs <- mapM (resolveExternal m) ts
-  (t, _, _) <- elaborate $ body u
+  -- vs <- mapM (resolveExternal m) ts
+  (t, _, _) <- elaborate ts $ body u
   combine tms mt t >>= evaluate
 
-buildLib :: Member PM r => Sem r I.Term
-buildLib = do
+buildLib :: Member PM r => PackageName -> Sem r I.Term
+buildLib id = do
   u <- parse "lib.1ml"
   let ts = uses u
   m <- getMapping "."
   let sms = submodules u
   ps <- mapM (getFileName m "." . snd) sms
-  mapM_ build ps
-  (t, _, _) <- elaborate $ body u
+  mapM_ (build id) ps
+  (t, _, _) <- elaborate ts $ body u
+  register id "." $ mname' u
   return t
 
 -- TODO
@@ -123,13 +142,14 @@ stripExt p =
     then drop 4 p
     else error "stripExt"
 
-build :: Member PM r => RootRelativePath -> Sem r ()
-build p = do
+build :: Member PM r => PackageName -> RootRelativePath -> Sem r ()
+build id p = do
   u <- parse p
   let ts = uses u
   m <- getMapping $ stripExt p
   let sms = submodules u
   ps <- mapM (getFileName m (stripExt p) . snd) sms
-  mapM_ build ps
-  (t, _, _) <- elaborate $ body u
-  evaluate t
+  mapM_ (build id) ps
+  (t, _, _) <- elaborate ts $ body u
+  register id (takeDirectory p) $ mname' u
+  return ()
