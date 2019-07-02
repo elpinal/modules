@@ -869,7 +869,7 @@ instance Elaboration Expr where
     return (I.Lit l, fromBody $ BaseType b, Pure) -- Literals are always pure.
   elaborate (Positional p (Id id)) = do
     (ty, v) <- lookupValueByName p $ coerce id
-    return (I.Var v, fromBody ty, Pure)
+    return (v, fromBody ty, Pure)
   elaborate (Positional _ (Struct bs)) = do
     (_, aty, zs, p) <- foldlM elaborateBindings (?env, fromBody mempty, [], Pure) bs
     let lls = map (\(_, _, ls) -> ls) zs

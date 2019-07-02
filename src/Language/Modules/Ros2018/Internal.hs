@@ -527,14 +527,15 @@ lookupType (Variable n) = do
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundTypeVariable $ Variable n
 
-lookupValueByName :: (FailureM m, ?env :: Env f ty) => Position -> Name -> m (ty, Variable)
+-- The second component of the returned value is an ordinary or generated variable.
+lookupValueByName :: (FailureM m, ?env :: Env f ty) => Position -> Name -> m (ty, Term)
 lookupValueByName p name = do
   e <- maybe (throw $ UnboundName p name) return $ Map.lookup name $ nmap ?env
   case e of
     Idx n -> do
       let v = Variable $ length (venv ?env) - n
       ty <- lookupValue v
-      return (ty, v)
+      return (ty, Var v)
     Gen n -> error "TODO"
 
 lookupValue :: (FailureM m, ?env :: Env f ty) => Variable -> m ty
