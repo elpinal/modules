@@ -83,6 +83,7 @@ makeSem ''Parser
 
 data FileSystem m a where
   ReadFileT :: FilePath -> FileSystem m T.Text
+  -- @traverseDir p dir f@ traverses a directory @dir@, applying @f@ to each file which satisfies a predicate @p@.
   TraverseDir :: (FilePath -> Bool) -> FilePath ->
                  (FilePath -> T.Text -> a) -> FileSystem m (Map.Map RootRelativePath a)
 
