@@ -82,7 +82,7 @@ data PM m a where
   -- ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
   ElaborateExternal :: Ident -> PM m I.Term
   Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
-  Register :: PackageName -> RootRelativePath -> Ident -> PM m ()
+  Register :: PackageName -> RootRelativePath -> Ident -> PM m Generated
 
 makeSem ''PM
 
@@ -130,9 +130,9 @@ buildLib id = do
   m <- getMapping "."
   let sms = submodules u
   ps <- mapM (getFileName m "." . snd) sms
-  mapM_ (build id) ps
+  gs <- mapM (build id) ps
   (t, _, _) <- elaborate ts $ body u
-  register id "." $ mname' u
+  _ <- register id "." $ mname' u
   return t
 
 -- TODO
@@ -142,14 +142,13 @@ stripExt p =
     then drop 4 p
     else error "stripExt"
 
-build :: Member PM r => PackageName -> RootRelativePath -> Sem r ()
+build :: Member PM r => PackageName -> RootRelativePath -> Sem r Generated
 build id p = do
   u <- parse p
   let ts = uses u
   m <- getMapping $ stripExt p
   let sms = submodules u
   ps <- mapM (getFileName m (stripExt p) . snd) sms
-  mapM_ (build id) ps
+  gs <- mapM (build id) ps
   (t, _, _) <- elaborate ts $ body u
   register id (takeDirectory p) $ mname' u
-  return ()

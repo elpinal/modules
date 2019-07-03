@@ -116,6 +116,7 @@ runPM = interpret f
     f (Register pname dir id) = do
       g <- generateVar
       modify $ Map.insert (UsePath pname dir id) g
+      return g
 
 data ConfigError
   = ShadowedImport (Positional Ident)
