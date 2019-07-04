@@ -24,12 +24,14 @@ import Polysemy.Error
 import Polysemy.Reader
 import Polysemy.State
 import Polysemy.Trace
+import Polysemy.Writer
 import System.Directory
 import System.FilePath
 import System.IO.Error
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
+import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Package
@@ -87,7 +89,7 @@ getMName u = return $ extract $ mname u
 data UsePath = UsePath PackageName RootRelativePath Ident
   deriving (Eq, Ord, Show)
 
-runPM :: forall r a. Members '[VariableGenerator, State (Map.Map UsePath Generated), Parser, FileSystem, Trace, Error PrettyError, Reader FilePath] r => Sem (PM ': r) a -> Sem r a
+runPM :: forall r a. Members '[Writer [(Generated, I.Term)], VariableGenerator, State (Map.Map UsePath Generated), Parser, FileSystem, Trace, Error PrettyError, Reader FilePath] r => Sem (PM ': r) a -> Sem r a
 runPM = interpret f
   where
     f :: forall m a. PM m a -> Sem r a
@@ -117,6 +119,7 @@ runPM = interpret f
       g <- generateVar
       modify $ Map.insert (UsePath pname dir id) g
       return g
+    f (Emit g t) = tell [(g, t)]
 
 data ConfigError
   = ShadowedImport (Positional Ident)

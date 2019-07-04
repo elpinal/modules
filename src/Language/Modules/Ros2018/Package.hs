@@ -83,6 +83,7 @@ data PM m a where
   ElaborateExternal :: Ident -> PM m I.Term
   Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
   Register :: PackageName -> RootRelativePath -> Ident -> PM m Generated
+  Emit :: Generated -> I.Term -> PM m ()
 
 makeSem ''PM
 
@@ -150,5 +151,7 @@ build id p = do
   let sms = submodules u
   ps <- mapM (getFileName m (stripExt p) . snd) sms
   gs <- mapM (build id) ps
-  (t, _, _) <- elaborate ts $ body u
-  register id (takeDirectory p) $ mname' u
+  (t, aty, purity) <- elaborate ts $ body u
+  g <- register id (takeDirectory p) $ mname' u
+  emit g t
+  return g
