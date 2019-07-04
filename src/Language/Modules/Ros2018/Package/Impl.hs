@@ -89,7 +89,18 @@ getMName u = return $ extract $ mname u
 data UsePath = UsePath PackageName RootRelativePath Ident
   deriving (Eq, Ord, Show)
 
-runPM :: forall r a. Members '[Writer [(Generated, I.Term)], VariableGenerator, State (Map.Map UsePath Generated), Parser, FileSystem, Trace, Error PrettyError, Reader FilePath] r => Sem (PM ': r) a -> Sem r a
+type PMEffs =
+ '[ Error PrettyError
+  , FileSystem
+  , Parser
+  , Reader FilePath
+  , State (Map.Map UsePath Generated)
+  , Trace
+  , VariableGenerator
+  , Writer [(Generated, I.Term)]
+  ]
+
+runPM :: forall r a. Members PMEffs r => Sem (PM ': r) a -> Sem r a
 runPM = interpret f
   where
     f :: forall m a. PM m a -> Sem r a
