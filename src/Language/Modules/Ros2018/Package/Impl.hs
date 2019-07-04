@@ -119,7 +119,8 @@ runPM = interpret f
           g (Import id _) = extract id
     f (Evaluate t) = trace $ display $ WithName t
     f (GetMapping path) = do
-      ask >>= \root -> traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
+      root <- ask
+      traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
     f (GetFileName m dir id) = do
       let m' = Map.filter (== extract id) m
       maybe (throwP $ NoSuchModule id dir) f $ Map.minViewWithKey m'
