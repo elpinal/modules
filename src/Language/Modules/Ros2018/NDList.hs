@@ -13,6 +13,7 @@ import qualified Data.Set as Set
 import GHC.Exts
 
 -- A list with no duplicates.
+-- TODO: Perhaps @NDList@ should not implement @Functor@ to maintain the invariant.
 newtype NDList a = NDList [a]
   deriving (Eq, Show, Functor, Foldable, Traversable)
 

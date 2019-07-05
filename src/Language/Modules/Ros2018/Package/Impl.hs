@@ -94,7 +94,7 @@ type PMEffs =
   , FileSystem
   , Parser
   , Reader FilePath
-  , State (Map.Map UsePath Generated)
+  , State (Map.Map UsePath (Generated, AbstractType))
   , Trace
   , VariableGenerator
   , Writer [(Generated, I.Term)]
@@ -127,9 +127,9 @@ runPM = interpret f
         where
           f :: forall z. ((RootRelativePath, z), FileModuleMap) -> Sem r RootRelativePath
           f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
-    f (Register pname dir id) = do
+    f (Register pname dir id aty) = do
       g <- generateVar
-      modify $ Map.insert (UsePath pname dir id) g
+      modify $ Map.insert (UsePath pname dir id) (g, aty)
       return g
     f (Emit g t) = tell [(g, t)]
 
