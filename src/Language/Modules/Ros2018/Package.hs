@@ -133,8 +133,8 @@ buildLib id = do
   let ts = uses u
   m <- getMapping "."
   let sms = submodules u
-  ps <- mapM (getFileName m "." . coerce . extract) sms
-  xs <- mapM (build id) $ toList ps
+  ps <- mapM (getFileName m "." . coerce . extract) $ toList sms
+  xs <- mapM (build id) ps
   (t, aty, _) <- elaborate xs ts $ body u
   _ <- register id "." (mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
   return t
@@ -152,8 +152,8 @@ build id p = do
   let ts = uses u
   m <- getMapping $ stripExt p
   let sms = submodules u
-  ps <- mapM (getFileName m (stripExt p) . coerce . extract) sms
-  xs <- mapM (build id) $ toList ps
+  ps <- mapM (getFileName m (stripExt p) . coerce . extract) $ toList sms
+  xs <- mapM (build id) ps
   (t, aty, _) <- elaborate xs ts $ body u
   g <- register id (takeDirectory p) (mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
   emit g t

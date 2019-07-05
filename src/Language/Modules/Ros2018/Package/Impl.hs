@@ -113,7 +113,7 @@ runPM = interpret f
       cfg <- either throwP return $ parseConfig configFile txt
       let is = imports cfg
       m <- buildMap is
-      return (m, toList $ g . extract <$> is)
+      return (m, g . extract <$> toList is)
         where
           g :: Import -> Ident
           g (Import id _) = extract id
