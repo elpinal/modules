@@ -35,6 +35,7 @@ module Language.Modules.Ros2018.Package
   ) where
 
 import Control.Comonad
+import Data.Coerce
 import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -46,12 +47,13 @@ import Language.Modules.Ros2018 (Expr, Ident, AbstractType, Purity)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
 import Language.Modules.Ros2018.NDList
+import Language.Modules.Ros2018.Package.Config (C(..))
 import Language.Modules.Ros2018.Position
 
 data Unit = Unit
   { mname :: Positional Ident
   , uses :: [Positional T.Text]
-  , submodules :: NDList (Visibility, Positional Ident)
+  , submodules :: NDList (C ((,) Visibility) (C Positional Ident))
   , body :: Positional Expr
   }
 
@@ -131,7 +133,7 @@ buildLib id = do
   let ts = uses u
   m <- getMapping "."
   let sms = submodules u
-  ps <- mapM (getFileName m "." . snd) sms
+  ps <- mapM (getFileName m "." . coerce . extract) sms
   xs <- mapM (build id) $ toList ps
   (t, aty, _) <- elaborate xs ts $ body u
   _ <- register id "." (mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
@@ -150,7 +152,7 @@ build id p = do
   let ts = uses u
   m <- getMapping $ stripExt p
   let sms = submodules u
-  ps <- mapM (getFileName m (stripExt p) . snd) sms
+  ps <- mapM (getFileName m (stripExt p) . coerce . extract) sms
   xs <- mapM (build id) $ toList ps
   (t, aty, _) <- elaborate xs ts $ body u
   g <- register id (takeDirectory p) (mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".

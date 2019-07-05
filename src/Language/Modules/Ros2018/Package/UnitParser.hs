@@ -88,7 +88,7 @@ unit p = do
   return Unit
     { mname = id
     , uses = us
-    , submodules = coerce sms
+    , submodules = sms
     , body = b
     }
 

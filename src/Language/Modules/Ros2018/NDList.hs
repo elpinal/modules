@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Language.Modules.Ros2018.NDList
@@ -16,6 +17,8 @@ import GHC.Exts
 -- TODO: Perhaps @NDList@ should not implement @Functor@ to maintain the invariant.
 newtype NDList a = NDList [a]
   deriving (Eq, Show, Functor, Foldable, Traversable)
+
+type role NDList nominal
 
 instance Ord a => IsList (NDList a) where
   type Item (NDList a) = a
