@@ -86,7 +86,7 @@ data PM m a where
   GetFileName :: FileModuleMap -> RootRelativePath -> Positional Ident -> PM m RootRelativePath
   -- -- May return a variable denoting an external library.
   -- ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
-  ElaborateExternal :: Ident -> PM m I.Term
+  -- ElaborateExternal :: Ident -> PM m I.Term
   Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
   Register :: PackageName -> RootRelativePath -> Ident -> AbstractType -> PM m Generated
   Emit :: Generated -> I.Term -> PM m ()
@@ -127,13 +127,13 @@ mname' = extract . mname
 buildMain :: Members '[PM, CatchE] r => Sem r ()
 buildMain = do
   (m, ids) <- readConfig
-  tms <- mapM elaborateExternal ids
+  -- tms <- mapM elaborateExternal ids
   u <- parse "main.1ml"
   mt <- fmap Just (buildLib $ mname' u) `catchE` Nothing
   let ts = uses u
   -- vs <- mapM (resolveExternal m) ts
   (t, _, _) <- elaborate [] ts $ body u
-  combine tms mt t >>= evaluate
+  combine [] mt t >>= evaluate
 
 buildLib :: Member PM r => PackageName -> Sem r I.Term
 buildLib id = do

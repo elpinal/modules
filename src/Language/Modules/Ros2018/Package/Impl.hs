@@ -138,6 +138,9 @@ runPM = interpret f
       g <- generateVar
       modify $ Map.insert (UsePath pname dir id) (g, aty)
       return g
+    f (Combine _ lib main) = do
+      case lib of
+        Nothing -> return main
     f (Emit g t) = tell [(g, t)]
 
 data ConfigError
