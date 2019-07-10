@@ -20,6 +20,8 @@ import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc.Render.String
 import Polysemy
 import Polysemy.Error
 import Polysemy.Reader
@@ -34,6 +36,7 @@ import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
+import qualified Language.Modules.Ros2018.Internal.Erased as E
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Package
 import Language.Modules.Ros2018.Package.Config
@@ -124,7 +127,7 @@ runPM = interpret f
                                  let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
                                  I.insertTempValueWithName (unIdent id) g $ getBody aty
       elab (foldl z id xs) e
-    f (Evaluate t) = trace $ display $ WithName t
+    f (Evaluate (U t)) = trace $ renderString $ layoutSmart defaultLayoutOptions $ t (0 :: Int)
     f (GetMapping path) = do
       root <- ask
       traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
@@ -140,7 +143,7 @@ runPM = interpret f
       return g
     f (Combine _ lib main) = do
       case lib of
-        Nothing -> return main
+        Nothing -> return $ U $ E.erase main
     f (Emit g t) = tell [(g, t)]
 
 data ConfigError

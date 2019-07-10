@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -35,6 +36,8 @@ module Language.Modules.Ros2018.Package
   , ImportMap
   , FileModuleMap
   , PackageName
+
+  , U(..)
   ) where
 
 import Control.Comonad
@@ -49,6 +52,7 @@ import System.FilePath (takeDirectory)
 import Language.Modules.Ros2018 (Expr, Ident, AbstractType, Purity)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
+import qualified Language.Modules.Ros2018.Internal.Erased as E
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Package.Config (C(..))
 import Language.Modules.Ros2018.Position
@@ -75,19 +79,21 @@ type FileModuleMap = Map.Map RootRelativePath Ident
 
 type PackageName = Ident
 
+newtype U = U (forall t. E.Term t => t)
+
 -- Package manager
 data PM m a where
   Parse :: RootRelativePath -> PM m Unit
   ReadConfig :: PM m (ImportMap, [Ident])
   Elaborate :: [(Ident, Generated, AbstractType)] -> [Positional T.Text] -> Positional Expr -> PM m (I.Term, AbstractType, Purity)
-  Evaluate :: I.Term -> PM m ()
+  Evaluate :: U -> PM m ()
   -- Returns not necessarily injective, filename-to-module-identifier mapping.
   GetMapping :: RootRelativePath -> PM m FileModuleMap
   GetFileName :: FileModuleMap -> RootRelativePath -> Positional Ident -> PM m RootRelativePath
   -- -- May return a variable denoting an external library.
   -- ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
   -- ElaborateExternal :: Ident -> PM m I.Term
-  Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m I.Term
+  Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m U
   Register :: PackageName -> RootRelativePath -> Ident -> AbstractType -> PM m Generated
   Emit :: Generated -> I.Term -> PM m ()
 
