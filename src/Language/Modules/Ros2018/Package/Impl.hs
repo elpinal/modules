@@ -90,8 +90,7 @@ traverseDirS p path f = do
 getMName :: Unit -> Sem r Ident
 getMName u = return $ extract $ mname u
 
-data UsePath = UsePath PackageName RootRelativePath Ident
-  deriving (Eq, Ord, Show)
+newtype S = S (Map.Map UsePath (Generated, AbstractType))
 
 type PMEffs =
  '[ Elab
@@ -99,7 +98,7 @@ type PMEffs =
   , FileSystem
   , Parser
   , Reader FilePath
-  , State (Map.Map UsePath (Generated, AbstractType))
+  , State S
   , Trace
   , VariableGenerator
   , Writer [(Generated, I.Term)]
@@ -137,13 +136,18 @@ runPM = interpret f
         where
           f :: forall z. ((RootRelativePath, z), FileModuleMap) -> Sem r RootRelativePath
           f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
-    f (Register pname dir id aty) = do
+    f (Register up aty) = do
       g <- generateVar
-      modify $ Map.insert (UsePath pname dir id) (g, aty)
+      modify $ \(S m) -> S $ Map.insert up (g, aty) m
       return g
-    f (Combine _ lib main) = do
+    f (Combine pn _ lib main) = do
       case lib of
-        Nothing -> return $ U $ E.erase main
+        Nothing  -> return $ U $ E.erase main
+        Just lib -> do
+          let l = U $ E.erase lib
+          let m = U $ E.erase main
+          g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fst $ Map.lookup (Root pn) m
+          return $ U $ E.unpack (Just g) (unU l) (unU m)
     f (Emit g t) = tell [(g, t)]
 
 data ConfigError

@@ -19,6 +19,8 @@ module Language.Modules.Ros2018.Package
   , Unit(..)
   , Visibility(..)
 
+  , UsePath(..)
+
   , evaluate
   , parse
 
@@ -79,7 +81,12 @@ type FileModuleMap = Map.Map RootRelativePath Ident
 
 type PackageName = Ident
 
-newtype U = U (forall t. E.Term t => t)
+newtype U = U { unU :: forall t. E.Term t => t }
+
+data UsePath
+  = UsePath PackageName RootRelativePath Ident
+  | Root PackageName
+  deriving (Eq, Ord, Show)
 
 -- Package manager
 data PM m a where
@@ -93,8 +100,8 @@ data PM m a where
   -- -- May return a variable denoting an external library.
   -- ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
   -- ElaborateExternal :: Ident -> PM m I.Term
-  Combine :: [I.Term] -> Maybe I.Term -> I.Term -> PM m U
-  Register :: PackageName -> RootRelativePath -> Ident -> AbstractType -> PM m Generated
+  Combine :: PackageName -> [I.Term] -> Maybe I.Term -> I.Term -> PM m U
+  Register :: UsePath -> AbstractType -> PM m Generated
   Emit :: Generated -> I.Term -> PM m ()
 
 makeSem ''PM
@@ -135,11 +142,12 @@ buildMain = do
   (m, ids) <- readConfig
   -- tms <- mapM elaborateExternal ids
   u <- parse "main.1ml"
-  mt <- fmap Just (buildLib $ mname' u) `catchE` Nothing
+  let pn = mname' u
+  mt <- fmap Just (buildLib pn) `catchE` Nothing
   let ts = uses u
   -- vs <- mapM (resolveExternal m) ts
   (t, _, _) <- elaborate [] ts $ body u
-  combine [] mt t >>= evaluate
+  combine pn [] mt t >>= evaluate
 
 buildLib :: Member PM r => PackageName -> Sem r I.Term
 buildLib id = do
@@ -150,7 +158,7 @@ buildLib id = do
   ps <- mapM (getFileName m "." . coerce . extract) $ toList sms
   xs <- mapM (build id) ps
   (t, aty, _) <- elaborate xs ts $ body u
-  _ <- register id "." (mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
+  _ <- register (Root id) aty -- TODO: Perhaps no need to register if the module is marked as "private".
   return t
 
 -- TODO
@@ -169,6 +177,6 @@ build id p = do
   ps <- mapM (getFileName m (stripExt p) . coerce . extract) $ toList sms
   xs <- mapM (build id) ps
   (t, aty, _) <- elaborate xs ts $ body u
-  g <- register id (takeDirectory p) (mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
+  g <- register (UsePath id (takeDirectory p) $ mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
   emit g t
   return (mname' u, g, aty)
