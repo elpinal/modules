@@ -2,6 +2,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
@@ -90,7 +91,8 @@ data UsePath = UsePath PackageName RootRelativePath Ident
   deriving (Eq, Ord, Show)
 
 type PMEffs =
- '[ Error PrettyError
+ '[ Elab
+  , Error PrettyError
   , FileSystem
   , Parser
   , Reader FilePath
@@ -117,6 +119,11 @@ runPM = interpret f
         where
           g :: Import -> Ident
           g (Import id _) = extract id
+    f (Elaborate xs ts e) = do
+      let z f (id, g, aty) env = let ?env = env in
+                                 let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
+                                 I.insertTempValueWithName (unIdent id) g $ getBody aty
+      elab (foldl z id xs) e
     f (Evaluate t) = trace $ display $ WithName t
     f (GetMapping path) = do
       root <- ask

@@ -9,6 +9,7 @@ module Language.Modules.Ros2018.Package
   ( buildMain
 
   , PM(..)
+  , Elab(..)
   , Parser(..)
   , CatchE(..)
   , FileSystem(..)
@@ -26,6 +27,8 @@ module Language.Modules.Ros2018.Package
   , traverseDir
 
   , generateVar
+
+  , elab
 
   , RootRelativePath
   , AbsolutePath
@@ -89,6 +92,11 @@ data PM m a where
   Emit :: Generated -> I.Term -> PM m ()
 
 makeSem ''PM
+
+data Elab m a where
+  Elab :: (I.Env f ty -> I.Env f ty) -> Positional Expr -> Elab m (I.Term, AbstractType, Purity)
+
+makeSem ''Elab
 
 data Parser m a where
   ParseT :: FilePath -> T.Text -> Parser m Unit

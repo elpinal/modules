@@ -81,6 +81,7 @@ module Language.Modules.Ros2018.Internal
   , insertType
   , insertTypes
   , insertValue
+  , insertTempValueWithName
   , lookupType
   , lookupValueByName
 
@@ -520,6 +521,11 @@ insertTempValue :: (?env :: Env f ty) => Generated -> ty -> Env f ty
 insertTempValue (Generated n) ty = ?env
   { tempVenv = Map.insert n ty $ tempVenv ?env
   }
+
+insertTempValueWithName :: (?env :: Env f ty) => Name -> Generated -> ty -> Env f ty
+insertTempValueWithName name (Generated n) ty =
+  let ?env = insertTempValue (Generated n) ty in
+  ?env { nmap = Map.insert name (Gen n) $ nmap ?env }
 
 lookupType :: (FailureM m, ?env :: Env f ty) => Variable -> m (f Kind)
 lookupType (Variable n) = do

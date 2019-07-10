@@ -21,6 +21,7 @@ module Language.Modules.Ros2018
   -- * Objects
     Ident
   , ident
+  , unIdent
 
   -- * Syntax
   , Type(..)
@@ -120,6 +121,9 @@ newtype Ident = Ident Name
 
 ident :: T.Text -> Ident
 ident = Ident . name
+
+unIdent :: Ident -> Name
+unIdent = coerce
 
 instance Display Ident where
   display (Ident name) = display name
