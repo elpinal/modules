@@ -120,7 +120,7 @@ runPM = interpret f
           g :: Import -> Ident
           g (Import id _) = extract id
     f (Elaborate xs ts e) = do
-      let z f (id, g, aty) env = let ?env = env in
+      let z f (id, g, aty) env = let ?env = f env in
                                  let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
                                  I.insertTempValueWithName (unIdent id) g $ getBody aty
       elab (foldl z id xs) e
