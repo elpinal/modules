@@ -51,7 +51,7 @@ import GHC.Exts (IsList(..))
 import Polysemy
 import System.FilePath (takeDirectory)
 
-import Language.Modules.Ros2018 (Expr, Ident, AbstractType, Purity)
+import Language.Modules.Ros2018 (Env, Expr, Ident, AbstractType, Purity)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
 import qualified Language.Modules.Ros2018.Internal.Erased as E
@@ -107,7 +107,7 @@ data PM m a where
 makeSem ''PM
 
 data Elab m a where
-  Elab :: (I.Env f ty -> I.Env f ty) -> Positional Expr -> Elab m (I.Term, AbstractType, Purity)
+  Elab :: (Env -> Env) -> Positional Expr -> Elab m (I.Term, AbstractType, Purity)
 
 makeSem ''Elab
 

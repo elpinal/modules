@@ -20,6 +20,7 @@ module Language.Modules.Ros2018.Impl
   , runM_
   , primitives
   , Y(..)
+  , M0
   ) where
 
 import qualified Data.Map.Strict as Map
@@ -58,6 +59,8 @@ newtype M k a = M
     ] a
   }
   deriving (Functor, Applicative, Monad)
+
+type M0 = M
 
 runM_ :: forall k a. Int -> Y k -> M k a -> Either Failure (Either ElaborateError a)
 runM_ n f (M m) = run $ runError $ runError $ snd <$> runState n (runReader f $ runPrim m)

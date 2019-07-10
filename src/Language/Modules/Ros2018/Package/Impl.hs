@@ -34,6 +34,7 @@ import System.IO.Error
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Display
+import Language.Modules.Ros2018.Impl (M0)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
 import qualified Language.Modules.Ros2018.Internal.Erased as E
@@ -149,6 +150,14 @@ runPM = interpret f
           g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fst $ Map.lookup (Root pn) m
           return $ U $ E.unpack (Just g) (unU l) (unU m)
     f (Emit g t) = tell [(g, t)]
+
+runElab :: forall k r a. (I.FailureM k, Members '[Lift (M0 k)] r) => Sem (Elab ': r) a -> Sem r a
+runElab = interpret f
+  where
+    f :: forall m a. Elab m a -> Sem r a
+    f (Elab f e) = do
+      let ?env = f I.builtins
+      sendM $ elaborate e
 
 data ConfigError
   = ShadowedImport (Positional Ident)
