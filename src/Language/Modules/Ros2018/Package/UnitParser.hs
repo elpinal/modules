@@ -83,7 +83,7 @@ unit :: Parser (Positional Expr) -> Parser Unit
 unit p = do
   id <- moduleName
   us <- many use
-  sms <- manyND submodule >>= maybe (fail "duplicate submodule") return
+  sms <- manyND submodule >>= maybe (fail "duplicate submodule") return -- TODO: Wrong error position.
   b <- p
   return Unit
     { mname = id

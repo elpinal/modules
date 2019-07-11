@@ -99,8 +99,9 @@ class Monad m => Parser m where
 class Monad m => FileSystem m where
   readFileT :: FilePath -> m T.Text
   -- @traverseDir p dir f@ traverses a directory @dir@, applying @f@ to each file which satisfies a predicate @p@.
+  -- If @dir@ does not exist, @Nothing@ is returned.
   traverseDir :: (FilePath -> Bool) -> FilePath ->
-                 (FilePath -> T.Text -> a) -> m (Map.Map RootRelativePath a)
+                 (FilePath -> T.Text -> a) -> m (Maybe (Map.Map RootRelativePath a))
 
 class Monad m => VariableGenerator m where
   generateVar :: m Generated

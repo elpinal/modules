@@ -25,6 +25,7 @@ import Control.Monad
 import Data.Foldable
 import Data.List
 import qualified Data.Map.Strict as Map
+import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Text.Prettyprint.Doc
@@ -97,10 +98,12 @@ instance Evidential ElaborateError where
   evidence = EvidElaborate
 
 traverseDirS :: FileSystem m => (FilePath -> Bool) -> FilePath ->
-               (FilePath -> T.Text -> m a) -> m (Map.Map RootRelativePath a)
+               (FilePath -> T.Text -> m a) -> m (Maybe (Map.Map RootRelativePath a))
 traverseDirS p path f = do
   m <- traverseDir p path f
-  sequence m
+  case m of
+    Just m -> Just <$> sequence m
+    Nothing -> return Nothing
 
 getMName :: Unit -> Sem r Ident
 getMName u = return $ extract $ mname u
@@ -140,7 +143,8 @@ instance Members PMEffs r => PM (Sem r) where
     evaluate (U t) = trace $ renderString $ layoutSmart defaultLayoutOptions $ t (0 :: Int)
     getMapping path = do
       root <- ask
-      traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
+      mm <- traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
+      return $ fromMaybe mempty mm
     getFileName m dir id = do
       let m' = Map.filter (== extract id) m
       maybe (throwP $ NoSuchModule id dir) f $ Map.minViewWithKey m'
@@ -212,11 +216,18 @@ instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
           | otherwise             = sendM $ ioError e
   traverseDir p path f = do
     z <- sendM $ tryIOError $ filter p <$> listDirectory path
-    entries <- either (throwP . ListDir path) return z
-    xs <- sendM $ forM entries $ \e -> do
-      let rpath = makeRelative path e
-      (,) rpath . f rpath <$> TIO.readFile e
-    return $ Map.fromList xs
+    entries <- either g (return . Just) z
+    case entries of
+      Nothing -> return Nothing
+      Just entries -> do
+        xs <- sendM $ forM entries $ \e -> do
+          let rpath = makeRelative path e
+          (,) rpath . f rpath <$> TIO.readFile e
+        return $ Just $ Map.fromList xs
+      where
+        g e
+          | isDoesNotExistError e = return Nothing
+          | otherwise             = throwP $ ListDir path e
 
 instance Member (State Int) r => VariableGenerator (Sem r) where
   generateVar = do
