@@ -173,7 +173,10 @@ instance Members PMEffs r => PM (Sem r) where
                                  let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
                                  I.insertTempValueWithName (unIdent id) g $ getBody aty
       elab (foldl z (foldl w id $ zip ups ps) xs) e
-    evaluate (U t) = trace $ renderString $ layoutSmart defaultLayoutOptions $ t (0 :: Int)
+    evaluate (U t) = do
+      xs <- get @[(Generated, I.Term)]
+      let t0 = foldr (\(g, t1) t2 -> E.unpack (Just g) (E.erase t1) t2) t xs
+      trace $ renderString $ layoutSmart defaultLayoutOptions $ t0 (0 :: Int)
     getMapping path = do
       root <- ask
       mm <- traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
