@@ -18,9 +18,9 @@
 module Language.Modules.Ros2018.Impl
   ( translate
   , runM_
+  , runMN
   , primitives
   , Y(..)
-  , M0
   ) where
 
 import qualified Data.Map.Strict as Map
@@ -60,10 +60,11 @@ newtype M k a = M
   }
   deriving (Functor, Applicative, Monad)
 
-type M0 = M
-
 runM_ :: forall k a. Int -> Y k -> M k a -> Either Failure (Either ElaborateError a)
 runM_ n f (M m) = run $ runError $ runError $ snd <$> runState n (runReader f $ runPrim m)
+
+runMN:: forall k a. Int -> Y k -> M k a -> Either Failure (Either ElaborateError (a, Int))
+runMN n f (M m) = run $ runError $ runError $ (\(x, y) -> (y, x)) <$> runState n (runReader f $ runPrim m)
 
 instance I.FailureM (M k) where
   throwFailure f = M $ E.throw f

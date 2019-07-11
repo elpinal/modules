@@ -5,12 +5,16 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module Language.Modules.Ros2018.Package.Impl
-  ( runPM
+  (
   ) where
 
 import Control.Comonad
@@ -32,12 +36,13 @@ import System.Directory
 import System.FilePath
 import System.IO.Error
 
-import Language.Modules.Ros2018
+import Language.Modules.Ros2018 as R
 import Language.Modules.Ros2018.Display
-import Language.Modules.Ros2018.Impl (M0)
+import Language.Modules.Ros2018.Impl (Y(..), runMN)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
 import qualified Language.Modules.Ros2018.Internal.Erased as E
+import qualified Language.Modules.Ros2018.Internal.Impl as II
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Package
 import Language.Modules.Ros2018.Package.Config
@@ -50,6 +55,7 @@ data Evidence e where
   EvidConfig :: Evidence ConfigError
   EvidConfigParse :: Evidence ConfigParseError
   EvidUnitParse :: Evidence UnitParseError
+  EvidElaborate :: Evidence ElaborateError
 
 data PrettyError = forall e. Display e => PrettyError (Evidence e) e
 
@@ -82,8 +88,11 @@ instance Evidential ConfigParseError where
 instance Evidential UnitParseError where
   evidence = EvidUnitParse
 
-traverseDirS :: Member FileSystem r => (FilePath -> Bool) -> FilePath ->
-               (FilePath -> T.Text -> Sem r a) -> Sem r (Map.Map RootRelativePath a)
+instance Evidential ElaborateError where
+  evidence = EvidElaborate
+
+traverseDirS :: FileSystem m => (FilePath -> Bool) -> FilePath ->
+               (FilePath -> T.Text -> m a) -> m (Map.Map RootRelativePath a)
 traverseDirS p path f = do
   m <- traverseDir p path f
   sequence m
@@ -94,26 +103,22 @@ getMName u = return $ extract $ mname u
 newtype S = S (Map.Map UsePath (Generated, AbstractType))
 
 type PMEffs =
- '[ Elab
-  , Error PrettyError
-  , FileSystem
-  , Parser
+ '[ Error PrettyError
   , Reader FilePath
   , State S
   , Trace
-  , VariableGenerator
   , Writer [(Generated, I.Term)]
+  , Lift IO
+  , State Int
+  , Error I.Failure
   ]
 
-runPM :: forall r a. Members PMEffs r => Sem (PM ': r) a -> Sem r a
-runPM = interpret f
-  where
-    f :: forall m a. PM m a -> Sem r a
-    f (Parse path) = do
+instance Members PMEffs r => PM (Sem r) where
+    parse path = do
       root <- ask
       txt <- readFileT $ root </> path
       parseT path txt
-    f ReadConfig = do
+    readConfig = do
       txt <- readFileT configFile
       cfg <- either throwP return $ parseConfig configFile txt
       let is = imports cfg
@@ -122,26 +127,26 @@ runPM = interpret f
         where
           g :: Import -> Ident
           g (Import id _) = extract id
-    f (Elaborate xs ts e) = do
+    elaborate xs ts e = do
       let z f (id, g, aty) env = let ?env = f env in
                                  let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
                                  I.insertTempValueWithName (unIdent id) g $ getBody aty
       elab (foldl z id xs) e
-    f (Evaluate (U t)) = trace $ renderString $ layoutSmart defaultLayoutOptions $ t (0 :: Int)
-    f (GetMapping path) = do
+    evaluate (U t) = trace $ renderString $ layoutSmart defaultLayoutOptions $ t (0 :: Int)
+    getMapping path = do
       root <- ask
       traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
-    f (GetFileName m dir id) = do
+    getFileName m dir id = do
       let m' = Map.filter (== extract id) m
       maybe (throwP $ NoSuchModule id dir) f $ Map.minViewWithKey m'
         where
           f :: forall z. ((RootRelativePath, z), FileModuleMap) -> Sem r RootRelativePath
           f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
-    f (Register up aty) = do
+    register up aty = do
       g <- generateVar
       modify $ \(S m) -> S $ Map.insert up (g, aty) m
       return g
-    f (Combine pn _ lib main) = do
+    combine pn _ lib main = do
       case lib of
         Nothing  -> return $ U $ E.erase main
         Just lib -> do
@@ -149,15 +154,20 @@ runPM = interpret f
           let m = U $ E.erase main
           g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fst $ Map.lookup (Root pn) m
           return $ U $ E.unpack (Just g) (unU l) (unU m)
-    f (Emit g t) = tell [(g, t)]
+    emit g t = tell [(g, t)]
+    catchE m x = m `catch` f
+      where
+        f (PrettyError EvidPM NoLib) = return x -- The absence of lib.1ml is OK.
+        f e                          = throw e
 
-runElab :: forall k r a. (I.FailureM k, Members '[Lift (M0 k)] r) => Sem (Elab ': r) a -> Sem r a
-runElab = interpret f
-  where
-    f :: forall m a. Elab m a -> Sem r a
-    f (Elab f e) = do
-      let ?env = f I.builtins
-      sendM $ elaborate e
+instance Members '[State Int, Error I.Failure, Error PrettyError] r => Elab (Sem r) where
+  elab f e = do
+    n <- get
+    let ?env = f I.builtins
+    let ww = runMN n (Y II.runFailure) $ R.elaborate e
+    (x, n') <- return ww >>= either (throw @I.Failure) return >>= either throwP return
+    put n'
+    return x
 
 data ConfigError
   = ShadowedImport (Positional Ident)
@@ -183,39 +193,27 @@ buildMap is = foldlM f mempty is
 toAbsolute :: T.Text -> AbsolutePath
 toAbsolute = T.unpack
 
-runParser :: forall r a. Member (Error PrettyError) r => Sem (Parser ': r) a -> Sem r a
-runParser = interpret f
-  where
-    f :: forall m a. Parser m a -> Sem r a
-    f (ParseT fp txt) = either throwP return $ parseUnit whileParser fp txt
+instance Member (Error PrettyError) r => Parser (Sem r) where
+  parseT fp txt = either throwP return $ parseUnit whileParser fp txt
 
-runFileSystemIO :: forall r a. Members '[Error PrettyError, Lift IO] r => Sem (FileSystem ': r) a -> Sem r a
-runFileSystemIO = interpret f
-  where
-    f :: forall m a. FileSystem m a -> Sem r a
-    f (ReadFileT path) = do
-      x <- sendM $ tryIOError $ TIO.readFile path
-      either g return x
-    f (TraverseDir p path f) = do
-      entries <- sendM $ filter p <$> listDirectory path
-      xs <- sendM $ forM entries $ \e -> do
-        let rpath = makeRelative path e
-        (,) rpath . f rpath <$> TIO.readFile e
-      return $ Map.fromList xs
+instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
+  readFileT path = do
+    x <- sendM $ tryIOError $ TIO.readFile path
+    either g return x
+      where
+        g :: forall a. IOError -> Sem r a
+        g e
+          | isDoesNotExistError e = throwP NoLib
+          | otherwise             = sendM $ ioError e
+  traverseDir p path f = do
+    entries <- sendM $ filter p <$> listDirectory path
+    xs <- sendM $ forM entries $ \e -> do
+      let rpath = makeRelative path e
+      (,) rpath . f rpath <$> TIO.readFile e
+    return $ Map.fromList xs
 
-    g :: forall a. IOError -> Sem r a
-    g e
-      | isDoesNotExistError e = throwP NoLib
-      | otherwise             = sendM $ ioError e
-
-runCatchE :: forall r a. Members '[Error PrettyError] r => Sem (CatchE ': r) a -> Sem r a
-runCatchE = interpretH f
-  where
-    f :: forall m a. CatchE m a -> Tactical CatchE m r a
-    f (CatchE m x) = do
-      y <- runT m
-      raise (runCatchE y) `catch` g
-        where
-          g :: forall m r. Members '[Error PrettyError] r => PrettyError -> Tactical CatchE m r a
-          g (PrettyError EvidPM NoLib) = pureT x -- The absence of lib.1ml is OK.
-          g e                          = throw e
+instance Member (State Int) r => VariableGenerator (Sem r) where
+  generateVar = do
+    n <- get
+    put $ n + 1
+    return $ I.generated n

@@ -4,7 +4,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Language.Modules.Ros2018.Package
   ( buildMain
@@ -12,7 +11,6 @@ module Language.Modules.Ros2018.Package
   , PM(..)
   , Elab(..)
   , Parser(..)
-  , CatchE(..)
   , FileSystem(..)
   , VariableGenerator(..)
 
@@ -20,18 +18,6 @@ module Language.Modules.Ros2018.Package
   , Visibility(..)
 
   , UsePath(..)
-
-  , evaluate
-  , parse
-
-  , parseT
-
-  , readFileT
-  , traverseDir
-
-  , generateVar
-
-  , elab
 
   , RootRelativePath
   , AbsolutePath
@@ -48,7 +34,6 @@ import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import GHC.Exts (IsList(..))
-import Polysemy
 import System.FilePath (takeDirectory)
 
 import Language.Modules.Ros2018 (Env, Expr, Ident, AbstractType, Purity)
@@ -89,55 +74,41 @@ data UsePath
   deriving (Eq, Ord, Show)
 
 -- Package manager
-data PM m a where
-  Parse :: RootRelativePath -> PM m Unit
-  ReadConfig :: PM m (ImportMap, [Ident])
-  Elaborate :: [(Ident, Generated, AbstractType)] -> [Positional T.Text] -> Positional Expr -> PM m (I.Term, AbstractType, Purity)
-  Evaluate :: U -> PM m ()
+class Monad m => PM m where
+  parse :: RootRelativePath -> m Unit
+  readConfig :: m (ImportMap, [Ident])
+  elaborate :: [(Ident, Generated, AbstractType)] -> [Positional T.Text] -> Positional Expr -> m (I.Term, AbstractType, Purity)
+  evaluate :: U -> m ()
   -- Returns not necessarily injective, filename-to-module-identifier mapping.
-  GetMapping :: RootRelativePath -> PM m FileModuleMap
-  GetFileName :: FileModuleMap -> RootRelativePath -> Positional Ident -> PM m RootRelativePath
+  getMapping :: RootRelativePath -> m FileModuleMap
+  getFileName :: FileModuleMap -> RootRelativePath -> Positional Ident -> m RootRelativePath
   -- -- May return a variable denoting an external library.
-  -- ResolveExternal :: ImportMap -> Positional T.Text -> PM m I.Term
-  -- ElaborateExternal :: Ident -> PM m I.Term
-  Combine :: PackageName -> [I.Term] -> Maybe I.Term -> I.Term -> PM m U
-  Register :: UsePath -> AbstractType -> PM m Generated
-  Emit :: Generated -> I.Term -> PM m ()
+  -- resolveExternal :: ImportMap -> Positional T.Text -> m I.Term
+  -- elaborateExternal :: Ident -> m I.Term
+  combine :: PackageName -> [I.Term] -> Maybe I.Term -> I.Term -> m U
+  register :: UsePath -> AbstractType -> m Generated
+  emit :: Generated -> I.Term -> m ()
+  catchE :: m a -> a -> m a
 
-makeSem ''PM
+class Monad m => Elab m where
+  elab :: (Env -> Env) -> Positional Expr -> m (I.Term, AbstractType, Purity)
 
-data Elab m a where
-  Elab :: (Env -> Env) -> Positional Expr -> Elab m (I.Term, AbstractType, Purity)
+class Monad m => Parser m where
+  parseT :: FilePath -> T.Text -> m Unit
 
-makeSem ''Elab
-
-data Parser m a where
-  ParseT :: FilePath -> T.Text -> Parser m Unit
-
-makeSem ''Parser
-
-data FileSystem m a where
-  ReadFileT :: FilePath -> FileSystem m T.Text
+class Monad m => FileSystem m where
+  readFileT :: FilePath -> m T.Text
   -- @traverseDir p dir f@ traverses a directory @dir@, applying @f@ to each file which satisfies a predicate @p@.
-  TraverseDir :: (FilePath -> Bool) -> FilePath ->
-                 (FilePath -> T.Text -> a) -> FileSystem m (Map.Map RootRelativePath a)
+  traverseDir :: (FilePath -> Bool) -> FilePath ->
+                 (FilePath -> T.Text -> a) -> m (Map.Map RootRelativePath a)
 
-makeSem ''FileSystem
-
-data VariableGenerator m a where
-  GenerateVar :: VariableGenerator m Generated
-
-makeSem ''VariableGenerator
-
-data CatchE m a where
-  CatchE :: m a -> a -> CatchE m a
-
-makeSem ''CatchE
+class Monad m => VariableGenerator m where
+  generateVar :: m Generated
 
 mname' :: Unit -> Ident
 mname' = extract . mname
 
-buildMain :: Members '[PM, CatchE] r => Sem r ()
+buildMain :: PM m => m ()
 buildMain = do
   (m, ids) <- readConfig
   -- tms <- mapM elaborateExternal ids
@@ -149,7 +120,7 @@ buildMain = do
   (t, _, _) <- elaborate [] ts $ body u
   combine pn [] mt t >>= evaluate
 
-buildLib :: Member PM r => PackageName -> Sem r I.Term
+buildLib :: PM m => PackageName -> m I.Term
 buildLib id = do
   u <- parse "lib.1ml"
   let ts = uses u
@@ -168,7 +139,7 @@ stripExt p =
     then drop 4 p
     else error "stripExt"
 
-build :: Member PM r => PackageName -> RootRelativePath -> Sem r (Ident, Generated, AbstractType)
+build :: PM m => PackageName -> RootRelativePath -> m (Ident, Generated, AbstractType)
 build id p = do
   u <- parse p
   let ts = uses u
