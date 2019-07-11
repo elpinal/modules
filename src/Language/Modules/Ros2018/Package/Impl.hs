@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -119,6 +120,11 @@ toUsePath txt =
   let ts = T.split (== '/') txt in
   case ts of
     [t] -> Root $ ident t
+    _   -> UsePath (ident $ head ts) (T.unpack $ f $ tail $ init ts) $ ident $ last ts
+      where
+        f :: [T.Text] -> T.Text
+        f [] = ""
+        f ws = foldr1 (\w s -> w <> ('/' `T.cons` s :: T.Text)) ws
 
 newtype S = S (Map.Map UsePath (Generated, AbstractType))
 
