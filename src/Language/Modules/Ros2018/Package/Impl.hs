@@ -77,6 +77,7 @@ data PMError
   | DuplicateModule (Positional Ident) RootRelativePath
   | NoSuchModule (Positional Ident) RootRelativePath
   | ListDir FilePath IOError
+  | UnboundUsePath UsePath
   deriving (Eq, Show)
 
 instance Display PMError where
@@ -84,6 +85,7 @@ instance Display PMError where
   display (DuplicateModule id dir) = display (getPosition id) ++ ": " ++ show dir ++ ": duplicate module: " ++ display id
   display (NoSuchModule id dir)    = display (getPosition id) ++ ": " ++ show dir ++ ": no such module: " ++ display id
   display (ListDir path e)         = "cannot obtain a list of entries in " ++ show path ++ ": " ++ show e
+  display (UnboundUsePath up)      = "unbound use path: " ++ show up
 
 instance Evidential PMError where
   evidence = EvidPM
@@ -107,6 +109,16 @@ traverseDirS p path f = do
 
 getMName :: Unit -> Sem r Ident
 getMName u = return $ extract $ mname u
+
+refer :: UsePath -> I.Name
+refer (Root pname)     = unIdent pname
+refer (UsePath _ _ id) = unIdent id
+
+toUsePath :: T.Text -> UsePath
+toUsePath txt =
+  let ts = T.split (== '/') txt in
+  case ts of
+    [t] -> Root $ ident t
 
 newtype S = S (Map.Map UsePath (Generated, AbstractType))
 
@@ -136,10 +148,19 @@ instance Members PMEffs r => PM (Sem r) where
           g :: Import -> Ident
           g (Import id _) = extract id
     elaborate xs ts e = do
+      let ups = map (toUsePath . extract) ts
+      let lookupUsePath :: UsePath -> Sem r (Generated, AbstractType)
+          lookupUsePath up = do
+            S m <- get
+            maybe (throwP $ UnboundUsePath up) return $ Map.lookup up m
+      ps <- mapM lookupUsePath ups
+      let w f (up, (g, aty)) env = let ?env = f env in
+                                   let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
+                                   I.insertTempValueWithName (refer up) g $ getBody aty
       let z f (id, g, aty) env = let ?env = f env in
                                  let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
                                  I.insertTempValueWithName (unIdent id) g $ getBody aty
-      elab (foldl z id xs) e
+      elab (foldl z (foldl w id $ zip ups ps) xs) e
     evaluate (U t) = trace $ renderString $ layoutSmart defaultLayoutOptions $ t (0 :: Int)
     getMapping path = do
       root <- ask
