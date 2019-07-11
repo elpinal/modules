@@ -12,6 +12,8 @@ module Language.Modules.Ros2018.Position
   , connecting
   ) where
 
+import Control.Comonad
+
 import Text.Megaparsec.Pos
 
 import Language.Modules.Ros2018.Display
@@ -43,6 +45,10 @@ data Positional a = Positional Position a
 -- Ignore a position.
 instance Display a => Display (Positional a) where
   displaysPrec n (Positional _ x) = displaysPrec n x
+
+instance Comonad Positional where
+  extract                        = fromPositional
+  duplicate w @ (Positional p _) = Positional p w
 
 positional :: Position -> a -> Positional a
 positional pos x = Positional pos x

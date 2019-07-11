@@ -21,6 +21,7 @@ module Language.Modules.Ros2018
   -- * Objects
     Ident
   , ident
+  , unIdent
 
   -- * Syntax
   , Type(..)
@@ -116,10 +117,13 @@ type IType = I.Type
 type IKind = I.Kind
 
 newtype Ident = Ident Name
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 ident :: T.Text -> Ident
 ident = Ident . name
+
+unIdent :: Ident -> Name
+unIdent = coerce
 
 instance Display Ident where
   display (Ident name) = display name
@@ -869,7 +873,7 @@ instance Elaboration Expr where
     return (I.Lit l, fromBody $ BaseType b, Pure) -- Literals are always pure.
   elaborate (Positional p (Id id)) = do
     (ty, v) <- lookupValueByName p $ coerce id
-    return (I.Var v, fromBody ty, Pure)
+    return (v, fromBody ty, Pure)
   elaborate (Positional _ (Struct bs)) = do
     (_, aty, zs, p) <- foldlM elaborateBindings (?env, fromBody mempty, [], Pure) bs
     let lls = map (\(_, _, ls) -> ls) zs

@@ -18,6 +18,7 @@
 module Language.Modules.Ros2018.Impl
   ( translate
   , runM_
+  , runMN
   , primitives
   , Y(..)
   ) where
@@ -61,6 +62,9 @@ newtype M k a = M
 
 runM_ :: forall k a. Int -> Y k -> M k a -> Either Failure (Either ElaborateError a)
 runM_ n f (M m) = run $ runError $ runError $ snd <$> runState n (runReader f $ runPrim m)
+
+runMN:: forall k a. Int -> Y k -> M k a -> Either Failure (Either ElaborateError (a, Int))
+runMN n f (M m) = run $ runError $ runError $ (\(x, y) -> (y, x)) <$> runState n (runReader f $ runPrim m)
 
 instance I.FailureM (M k) where
   throwFailure f = M $ E.throw f

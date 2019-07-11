@@ -81,6 +81,7 @@ module Language.Modules.Ros2018.Internal
   , insertType
   , insertTypes
   , insertValue
+  , insertTempValueWithName
   , lookupType
   , lookupValueByName
 
@@ -419,10 +420,15 @@ unpack :: Maybe Generated -> Term -> Int -> Term -> Term
 unpack Nothing t1 0 = Let [t1]
 unpack mg t1 n      = Unpack mg t1 n
 
+data NMapEntry
+  = Idx Int
+  | Gen Int
+  deriving (Eq, Show)
+
 data Env f ty = Env
   { tenv :: [f Kind]
   , venv :: [ty]
-  , nmap :: Map.Map Name Int
+  , nmap :: Map.Map Name NMapEntry
   , tempVenv :: Map.Map Int ty
   }
   deriving Functor
@@ -498,7 +504,7 @@ insertTypes (k : ks) = let ?env = insertType k in insertTypes ks
 insertValue :: (?env :: Env f ty) => Name -> ty -> Env f ty
 insertValue name ty = ?env
   { venv = ty : venv ?env
-  , nmap = Map.insert name (length (venv ?env) + 1) $ nmap ?env
+  , nmap = Map.insert name (Idx $ length (venv ?env) + 1) $ nmap ?env
   }
 
 insertValueWithoutName :: (?env :: Env f ty) => ty -> Env f ty
@@ -516,18 +522,29 @@ insertTempValue (Generated n) ty = ?env
   { tempVenv = Map.insert n ty $ tempVenv ?env
   }
 
+insertTempValueWithName :: (?env :: Env f ty) => Name -> Generated -> ty -> Env f ty
+insertTempValueWithName name (Generated n) ty =
+  let ?env = insertTempValue (Generated n) ty in
+  ?env { nmap = Map.insert name (Gen n) $ nmap ?env }
+
 lookupType :: (FailureM m, ?env :: Env f ty) => Variable -> m (f Kind)
 lookupType (Variable n) = do
   case tenv ?env of
     xs | 0 <= n && n < length xs -> return $ xs !! n
     _                            -> throw $ UnboundTypeVariable $ Variable n
 
-lookupValueByName :: (FailureM m, ?env :: Env f ty) => Position -> Name -> m (ty, Variable)
+-- The second component of the returned value is an ordinary or generated variable.
+lookupValueByName :: (FailureM m, ?env :: Env f ty) => Position -> Name -> m (ty, Term)
 lookupValueByName p name = do
-  n <- maybe (throw $ UnboundName p name) return $ Map.lookup name $ nmap ?env
-  let v = Variable $ length (venv ?env) - n
-  ty <- lookupValue v
-  return (ty, v)
+  e <- maybe (throw $ UnboundName p name) return $ Map.lookup name $ nmap ?env
+  case e of
+    Idx n -> do
+      let v = Variable $ length (venv ?env) - n
+      ty <- lookupValue v
+      return (ty, Var v)
+    Gen n -> do
+      ty <- lookupTempValue $ Generated n
+      return (ty, GVar $ Generated n)
 
 lookupValue :: (FailureM m, ?env :: Env f ty) => Variable -> m ty
 lookupValue (Variable n) = do

@@ -51,28 +51,30 @@ spec = do
 
   describe "insertType" $
     it "inserts a new type variable into an environment" $ do
+      let vv = Var . variable
+
       let ?env = emptyEnv :: Env [] Type
       let ?env = insertType [Base]
       let ?env = insertValue (name "x") $ BaseType Char
 
-      (runFailure $ lookupValueByName dummyPos $ name "x") `shouldBeRight` (BaseType Char, variable 0)
+      (runFailure $ lookupValueByName dummyPos $ name "x") `shouldBeRight` (BaseType Char, vv 0)
 
       let ?env = insertValue (name "y") $ tvar 0
-      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 0, variable 0)
+      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 0, vv 0)
 
       let ?env = insertValue (name "z") $ tvar 0
-      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 0, variable 1)
-      (runFailure $ lookupValueByName dummyPos $ name "z") `shouldBeRight` (tvar 0, variable 0)
+      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 0, vv 1)
+      (runFailure $ lookupValueByName dummyPos $ name "z") `shouldBeRight` (tvar 0, vv 0)
 
       let ?env = insertType [Base]
-      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 1, variable 1)
-      (runFailure $ lookupValueByName dummyPos $ name "z") `shouldBeRight` (tvar 1, variable 0)
+      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 1, vv 1)
+      (runFailure $ lookupValueByName dummyPos $ name "z") `shouldBeRight` (tvar 1, vv 0)
 
       let ?env = insertValue (name "v") $ tvar 0
-      (runFailure $ lookupValueByName dummyPos $ name "x") `shouldBeRight` (BaseType Char, variable 3)
-      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 1, variable 2)
-      (runFailure $ lookupValueByName dummyPos $ name "z") `shouldBeRight` (tvar 1, variable 1)
-      (runFailure $ lookupValueByName dummyPos $ name "v") `shouldBeRight` (tvar 0, variable 0)
+      (runFailure $ lookupValueByName dummyPos $ name "x") `shouldBeRight` (BaseType Char, vv 3)
+      (runFailure $ lookupValueByName dummyPos $ name "y") `shouldBeRight` (tvar 1, vv 2)
+      (runFailure $ lookupValueByName dummyPos $ name "z") `shouldBeRight` (tvar 1, vv 1)
+      (runFailure $ lookupValueByName dummyPos $ name "v") `shouldBeRight` (tvar 0, vv 0)
 
   describe "shift" $
     it "shifts type variables" $ do
