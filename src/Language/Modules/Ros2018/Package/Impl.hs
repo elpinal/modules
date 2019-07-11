@@ -37,7 +37,6 @@ import Polysemy.Error
 import Polysemy.Reader
 import Polysemy.State
 import Polysemy.Trace
-import Polysemy.Writer
 import System.Directory
 import System.FilePath
 import System.IO.Error
@@ -142,8 +141,8 @@ type PMEffs =
   , Reader FilePath
   , State Int
   , State S
+  , State [(Generated, I.Term)]
   , Trace
-  , Writer [(Generated, I.Term)]
   ]
 
 instance Members PMEffs r => PM (Sem r) where
@@ -197,7 +196,7 @@ instance Members PMEffs r => PM (Sem r) where
           let m = U $ E.erase main
           g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fst $ Map.lookup (Root pn) m
           return $ U $ E.unpack (Just g) (unU l) (unU m)
-    emit g t = tell [(g, t)]
+    emit g t = modify (++ [(g, t)])
     catchE m x = m `catch` f
       where
         f (PrettyError EvidPM (NoLib{})) = return x -- The absence of lib.1ml is OK.
@@ -271,6 +270,6 @@ instance Member (State Int) r => VariableGenerator (Sem r) where
 
 newtype H a = H { unH :: forall m. PM m => m a }
 
-runPM :: FilePath -> H a -> IO (Either PrettyError (Either I.Failure ([(Generated, I.Term)], a)))
-runPM fp m = runM $ runError $ runError $ runWriter $ runTraceIO $
+runPM :: FilePath -> H a -> IO (Either PrettyError (Either I.Failure a))
+runPM fp m = runM $ runError $ runError $ fmap snd $ runState [] $ runTraceIO $
              fmap snd $ runState (S mempty) $ fmap snd $ runState (0 :: Int) $ runReader fp $ unH m

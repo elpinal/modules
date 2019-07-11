@@ -63,9 +63,7 @@ run = do
 build :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
 build Run{} = do
   root <- liftIO getCurrentDirectory
-  x <- liftIO (runPM root $ H buildMain) >>= orThrow PrettyError_ >>= orThrow TranslateError
-  -- return $ fst x
-  return ()
+  liftIO (runPM root $ H buildMain) >>= orThrow PrettyError_ >>= orThrow TranslateError
 
 interpret :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
 interpret Run
