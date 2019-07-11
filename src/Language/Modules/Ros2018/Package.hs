@@ -136,7 +136,7 @@ buildLib id = do
 stripExt :: RootRelativePath -> RootRelativePath
 stripExt p =
   if ".1ml" `isSuffixOf` p
-    then drop 4 p
+    then take (length p - 4) p
     else error "stripExt"
 
 build :: PM m => PackageName -> RootRelativePath -> m (Ident, Generated, AbstractType)

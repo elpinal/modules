@@ -75,12 +75,14 @@ data PMError
   = NoLib IOError
   | DuplicateModule (Positional Ident) RootRelativePath
   | NoSuchModule (Positional Ident) RootRelativePath
+  | ListDir FilePath IOError
   deriving (Eq, Show)
 
 instance Display PMError where
   display (NoLib e)                = "no lib.1ml: " ++ show e
   display (DuplicateModule id dir) = display (getPosition id) ++ ": " ++ show dir ++ ": duplicate module: " ++ display id
   display (NoSuchModule id dir)    = display (getPosition id) ++ ": " ++ show dir ++ ": no such module: " ++ display id
+  display (ListDir path e)         = "cannot obtain a list of entries in " ++ show path ++ ": " ++ show e
 
 instance Evidential PMError where
   evidence = EvidPM
@@ -209,7 +211,8 @@ instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
           | isDoesNotExistError e = throwP $ NoLib e
           | otherwise             = sendM $ ioError e
   traverseDir p path f = do
-    entries <- sendM $ filter p <$> listDirectory path
+    z <- sendM $ tryIOError $ filter p <$> listDirectory path
+    entries <- either (throwP . ListDir path) return z
     xs <- sendM $ forM entries $ \e -> do
       let rpath = makeRelative path e
       (,) rpath . f rpath <$> TIO.readFile e
