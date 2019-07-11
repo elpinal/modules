@@ -3,11 +3,13 @@ module Main where
 import Control.Exception.Safe
 import Control.Monad.Cont
 import qualified Data.Text.IO as TIO
+import System.Directory
 
 import Options.Applicative hiding (Failure)
 
 import Language.Modules.Ros2018 hiding (Type, Env)
 import Language.Modules.Ros2018.Display
+import Language.Modules.Ros2018.Package.Impl
 import Language.Modules.Ros2018.Impl
 import Language.Modules.Ros2018.Internal hiding (throw)
 import Language.Modules.Ros2018.Internal.Impl
@@ -19,6 +21,7 @@ data InterpretException
   | ElaborateError ElaborateError
   | InternalTypeError Failure
   | TypeChangeError AbstractType Type Failure
+  | PrettyError_ PrettyError
 
 instance Exception InterpretException
 
@@ -28,6 +31,7 @@ instance Show InterpretException where
   show (ElaborateError e)                       = "elaboration error: " ++ display e
   show (InternalTypeError (Failure e _ f))      = "[bug(unsound)] internal type error: " ++ f e
   show (TypeChangeError aty ty (Failure e _ f)) = "[bug(unsound)] type has been changed during elaboration: expected " ++ display (WithName aty) ++ ", but got " ++ display (WithName ty) ++ ": " ++ f e
+  show (PrettyError_ e)                         = display e
 
 orThrow :: (MonadThrow m, Exception x) => (e -> x) -> Either e a -> m a
 orThrow f = either (throw . f) return
@@ -54,7 +58,14 @@ parser = subparser $
 run :: (MonadIO m, MonadThrow m) => m ()
 run = do
   cmd <- liftIO $ customExecParser (prefs showHelpOnEmpty) $ info (parser <**> helper) $ information
-  runContT (interpret cmd) return
+  runContT (build cmd) return
+
+build :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
+build Run{} = do
+  root <- liftIO getCurrentDirectory
+  x <- liftIO (runPM root $ H buildMain) >>= orThrow PrettyError_ >>= orThrow TranslateError
+  -- return $ fst x
+  return ()
 
 interpret :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
 interpret Run

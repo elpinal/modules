@@ -15,6 +15,9 @@
 
 module Language.Modules.Ros2018.Package.Impl
   ( runPM
+  , H(..)
+  , buildMain
+  , PrettyError(..)
   ) where
 
 import Control.Comonad
