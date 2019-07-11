@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -78,7 +79,7 @@ data PMError
   | DuplicateModule (Positional Ident) RootRelativePath
   | NoSuchModule (Positional Ident) RootRelativePath
   | ListDir FilePath IOError
-  | UnboundUsePath UsePath
+  | UnboundUsePath UsePath S
   deriving (Eq, Show)
 
 instance Display PMError where
@@ -86,7 +87,7 @@ instance Display PMError where
   display (DuplicateModule id dir) = display (getPosition id) ++ ": " ++ show dir ++ ": duplicate module: " ++ display id
   display (NoSuchModule id dir)    = display (getPosition id) ++ ": " ++ show dir ++ ": no such module: " ++ display id
   display (ListDir path e)         = "cannot obtain a list of entries in " ++ show path ++ ": " ++ show e
-  display (UnboundUsePath up)      = "unbound use path: " ++ show up
+  display (UnboundUsePath up s)    = "unbound use path: " ++ show up ++ ": known mapping: " ++ show s
 
 instance Evidential PMError where
   evidence = EvidPM
@@ -123,10 +124,16 @@ toUsePath txt =
     _   -> UsePath (ident $ head ts) (T.unpack $ f $ tail $ init ts) $ ident $ last ts
       where
         f :: [T.Text] -> T.Text
-        f [] = ""
-        f ws = foldr1 (\w s -> w <> ('/' `T.cons` s :: T.Text)) ws
+        f [] = "."
+        f ws = foldr1 g ws
+
+        g w s =
+          let s' = if T.null s then "." else s in
+          w <> ('/' `T.cons` s' :: T.Text)
 
 newtype S = S (Map.Map UsePath (Generated, AbstractType))
+  deriving newtype Show
+  deriving Eq
 
 type PMEffs =
  '[ Error I.Failure
@@ -158,7 +165,7 @@ instance Members PMEffs r => PM (Sem r) where
       let lookupUsePath :: UsePath -> Sem r (Generated, AbstractType)
           lookupUsePath up = do
             S m <- get
-            maybe (throwP $ UnboundUsePath up) return $ Map.lookup up m
+            maybe (throwP $ UnboundUsePath up $ S m) return $ Map.lookup up m
       ps <- mapM lookupUsePath ups
       let w f (up, (g, aty)) env = let ?env = f env in
                                    let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
