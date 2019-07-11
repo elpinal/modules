@@ -72,13 +72,13 @@ throwP :: (Evidential e, Member (Error PrettyError) r) => e -> Sem r a
 throwP = throw . PrettyError evidence
 
 data PMError
-  = NoLib
+  = NoLib IOError
   | DuplicateModule (Positional Ident) RootRelativePath
   | NoSuchModule (Positional Ident) RootRelativePath
   deriving (Eq, Show)
 
 instance Display PMError where
-  display NoLib                    = "no lib.1ml"
+  display (NoLib e)                = "no lib.1ml: " ++ show e
   display (DuplicateModule id dir) = display (getPosition id) ++ ": " ++ show dir ++ ": duplicate module: " ++ display id
   display (NoSuchModule id dir)    = display (getPosition id) ++ ": " ++ show dir ++ ": no such module: " ++ display id
 
@@ -160,8 +160,8 @@ instance Members PMEffs r => PM (Sem r) where
     emit g t = tell [(g, t)]
     catchE m x = m `catch` f
       where
-        f (PrettyError EvidPM NoLib) = return x -- The absence of lib.1ml is OK.
-        f e                          = throw e
+        f (PrettyError EvidPM (NoLib{})) = return x -- The absence of lib.1ml is OK.
+        f e                              = throw e
 
 instance Members '[State Int, Error I.Failure, Error PrettyError] r => Elab (Sem r) where
   elab f e = do
@@ -206,7 +206,7 @@ instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
       where
         g :: forall a. IOError -> Sem r a
         g e
-          | isDoesNotExistError e = throwP NoLib
+          | isDoesNotExistError e = throwP $ NoLib e
           | otherwise             = sendM $ ioError e
   traverseDir p path f = do
     entries <- sendM $ filter p <$> listDirectory path
