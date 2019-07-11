@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module Language.Modules.Ros2018.Package.Impl
-  (
+  ( runPM
   ) where
 
 import Control.Comonad
@@ -103,14 +103,14 @@ getMName u = return $ extract $ mname u
 newtype S = S (Map.Map UsePath (Generated, AbstractType))
 
 type PMEffs =
- '[ Error PrettyError
+ '[ Error I.Failure
+  , Error PrettyError
+  , Lift IO
   , Reader FilePath
+  , State Int
   , State S
   , Trace
   , Writer [(Generated, I.Term)]
-  , Lift IO
-  , State Int
-  , Error I.Failure
   ]
 
 instance Members PMEffs r => PM (Sem r) where
@@ -217,3 +217,9 @@ instance Member (State Int) r => VariableGenerator (Sem r) where
     n <- get
     put $ n + 1
     return $ I.generated n
+
+newtype H a = H { unH :: forall m. PM m => m a }
+
+runPM :: FilePath -> H a -> IO (Either PrettyError (Either I.Failure ([(Generated, I.Term)], a)))
+runPM fp m = runM $ runError $ runError $ runWriter $ runTraceIO $
+             fmap snd $ runState (S mempty) $ fmap snd $ runState (0 :: Int) $ runReader fp $ unH m
