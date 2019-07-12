@@ -9,6 +9,7 @@
 
 module Language.Modules.Ros2018.Internal.Erased.Dynamic
   ( Term(..)
+  , evaluate
   ) where
 
 import Data.Maybe
@@ -32,6 +33,13 @@ suc Zero = One
 suc One  = Two
 suc Two  = error "suc"
 
+data Arith
+  = Add
+  | Sub
+  | Mul
+  deriving (Eq, Show)
+  deriving Shift via Fixed Arith
+
 data Term where
   Lit :: Literal -> Term
   Var :: Variable -> Term
@@ -45,6 +53,7 @@ data Term where
   Let :: [Term] -> Term -> Term
   Fix :: Passed -> Term
   Primitive :: T.Text -> Term
+  Arith :: Arith -> Term -> Term -> Term
   And1 :: Term -> Term
   IntCompare1 :: Term -> Term
   deriving Generic
@@ -96,6 +105,7 @@ subst j by = f 0
     f c (LetG g t1 t2) = LetG g (f c t1) (f c t2)
     f c (If t1 t2 t3) = If (f c t1) (f c t2) (f c t3)
     f c (Let ts t) = Let (f c <$> ts) $ f (c + 1) t
+    f c (Arith a x y) = Arith a (f c x) (f c y)
 
 substTop :: Term -> Term -> Term
 substTop by t = shift (-1) $ subst (Right 0) (shift 1 by) t
@@ -103,6 +113,10 @@ substTop by t = shift (-1) $ subst (Right 0) (shift 1 by) t
 fromBool :: Term -> Bool
 fromBool (Lit (I.LBool b)) = b
 fromBool _                 = error "fromBool"
+
+fromInt :: Term -> Int
+fromInt (Lit (I.LInt b)) = b
+fromInt _                = error "fromInt"
 
 eval :: Term -> Term
 eval t @ Lit{} = t
@@ -137,8 +151,22 @@ eval (If t1 t2 t3) =
 eval (Let ts t) =
   let xs = shift (length ts) . eval <$> ts in
   shift (-length ts) $ foldl (\t (i, x) -> subst (Right i) x t) t $ zip [0..] $ reverse xs
+eval (Arith a x y) =
+  let m = fromInt x in
+  let n = fromInt y in
+  let i = Lit . I.LInt in
+  case a of
+    Add -> i $ m + n
+    Sub -> i $ m - n
+    Mul -> i $ m * n
 
 prim :: T.Text -> Term -> Term
 prim "and" t         = And1 t
 prim "int_compare" t = IntCompare1 t
 prim txt _           = error $ "unknown primitive: " ++ show txt
+
+evaluate :: Term -> Term
+evaluate t = eval $ Let [f Add, f Sub, f Mul] t
+  where
+    f a = Abs $ Abs $ Arith a (v 1) (v 0)
+    v = Var . variable
