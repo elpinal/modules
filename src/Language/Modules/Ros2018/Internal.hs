@@ -136,6 +136,7 @@ import Language.Modules.Ros2018.Shift
 
 newtype Label = Label T.Text
   deriving (Eq, Ord, Show)
+  deriving Shift via Fixed Label
 
 label :: T.Text -> Label
 label = coerce
@@ -161,6 +162,7 @@ Variable m -: Variable n = Variable $ m - n
 
 newtype Generated = Generated Int
   deriving (Eq, Show)
+  deriving Shift via Fixed Generated
 
 instance Display Generated where
   display (Generated n) = "g" ++ show n
@@ -326,6 +328,7 @@ data Literal
   | LInt Int
   | LChar Char
   deriving (Eq, Show)
+  deriving Shift via Fixed Literal
 
 instance Display Literal where
   display (LBool b)
