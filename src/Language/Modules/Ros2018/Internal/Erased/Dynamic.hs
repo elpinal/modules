@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -10,12 +11,26 @@ module Language.Modules.Ros2018.Internal.Erased.Dynamic
   ( Term(..)
   ) where
 
+import Data.Maybe
 import qualified Data.Text as T
 import GHC.Generics
 
 import qualified Language.Modules.Ros2018.Internal.Erased as E
-import Language.Modules.Ros2018.Internal (Generated, Variable, Label, Record, Literal)
+import qualified Language.Modules.Ros2018.Internal as I
+import Language.Modules.Ros2018.Internal (Generated, Variable, Label, Record, Literal, variable)
 import Language.Modules.Ros2018.Shift
+
+data Passed
+  = Zero
+  | One
+  | Two
+  deriving (Eq, Show)
+  deriving Shift via Fixed Passed
+
+suc :: Passed -> Passed
+suc Zero = One
+suc One  = Two
+suc Two  = error "suc"
 
 data Term where
   Lit :: Literal -> Term
@@ -28,8 +43,10 @@ data Term where
   LetG :: Generated -> Term -> Term -> Term
   If :: Term -> Term -> Term -> Term
   Let :: [Term] -> Term -> Term
-  Fix :: Term
+  Fix :: Passed -> Term
   Primitive :: T.Text -> Term
+  And1 :: Term -> Term
+  IntCompare1 :: Term -> Term
   deriving Generic
 
 instance Shift T.Text where
@@ -53,5 +70,75 @@ instance E.Term Term where
   unpack (Just g) t1 t2 = LetG g t1 t2
   if_ = If
   let_ = Let
-  fix = Fix
+  fix = Fix Zero
   primitive = Primitive
+
+subst :: Either Generated Int -> Term -> Term -> Term
+subst j by = f 0
+  where
+    f _ t @ Lit{} = t
+    f _ t @ Fix{} = t
+    f _ t @ Primitive{} = t
+    f _ t @ And1{} = t
+    f _ t @ IntCompare1{} = t
+    f c (Var v) =
+      case j of
+        Right j | variable (c + j) == v -> shift c by
+        _                               -> Var v
+    f c (GVar g1) =
+      case j of
+        Left g2 | g1 == g2 -> shift c by
+        _                  -> GVar g1
+    f c (Abs t) = Abs $ f (c + 1) t
+    f c (App t1 t2) = App (f c t1) (f c t2)
+    f c (TmRecord r) = TmRecord $ f c <$> r
+    f c (Proj t l) = Proj (f c t) l
+    f c (LetG g t1 t2) = LetG g (f c t1) (f c t2)
+    f c (If t1 t2 t3) = If (f c t1) (f c t2) (f c t3)
+    f c (Let ts t) = Let (f c <$> ts) $ f (c + 1) t
+
+substTop :: Term -> Term -> Term
+substTop by t = shift (-1) $ subst (Right 0) (shift 1 by) t
+
+fromBool :: Term -> Bool
+fromBool (Lit (I.LBool b)) = b
+fromBool _                 = error "fromBool"
+
+eval :: Term -> Term
+eval t @ Lit{} = t
+eval t @ Abs{} = t
+eval t @ Fix{} = t
+eval t @ Primitive{} = t
+eval t @ And1{} = t
+eval t @ IntCompare1{} = t
+eval (App y z) =
+  let t1 = eval y in
+  let t2 = eval z in
+  case t1 of
+    Abs t       -> substTop t2 t
+    Fix Two     -> eval $ App t2 $ Abs $ App (App (Fix Two) t2) $ Var $ variable 0
+    Fix p       -> Fix $ suc p
+    Primitive x -> prim x t2
+    And1 t      -> Lit $ I.LBool $ fromBool t && fromBool t2
+    -- TODO: IntCompare1 t -> 
+    _ -> error "not function"
+eval Var{} = error "variable"
+eval GVar{} = error "generated variable"
+eval (TmRecord r) = TmRecord $ eval <$> r
+eval (Proj t l) =
+  case eval t of
+    TmRecord r -> fromMaybe (error "unbound label") $ I.projRecord l r
+    _ -> error "not record"
+eval (LetG g t1 t2) = eval $ subst (Left g) (eval t1) t2
+eval (If t1 t2 t3) =
+  case eval t1 of
+    Lit (I.LBool b) -> if b then eval t2 else eval t3
+    _               -> error "not boolean value"
+eval (Let ts t) =
+  let xs = shift (length ts) . eval <$> ts in
+  shift (-length ts) $ foldl (\t (i, x) -> subst (Right i) x t) t $ zip [0..] $ reverse xs
+
+prim :: T.Text -> Term -> Term
+prim "and" t         = And1 t
+prim "int_compare" t = IntCompare1 t
+prim txt _           = error $ "unknown primitive: " ++ show txt
