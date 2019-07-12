@@ -47,6 +47,7 @@ import Language.Modules.Ros2018.Impl (Y(..), runMN)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
 import qualified Language.Modules.Ros2018.Internal.Erased as E
+import qualified Language.Modules.Ros2018.Internal.Erased.Dynamic as D
 import qualified Language.Modules.Ros2018.Internal.Impl as II
 import Language.Modules.Ros2018.NDList
 import Language.Modules.Ros2018.Package
@@ -175,8 +176,9 @@ instance Members PMEffs r => PM (Sem r) where
       elab (foldl z (foldl w id $ zip ups ps) xs) e
     evaluate (U t) = do
       xs <- get @[(Generated, I.Term)]
-      let t0 = foldr (\(g, t1) t2 -> E.unpack (Just g) (E.erase t1) t2) t xs
-      trace $ renderString $ layoutSmart defaultLayoutOptions $ t0 (0 :: Int)
+      let t0 = U $ foldr (\(g, t1) t2 -> E.unpack (Just g) (E.erase t1) t2) t xs
+      let _ = D.evaluate $ unU t0
+      trace $ renderString $ layoutSmart defaultLayoutOptions $ unU t0 (0 :: Int)
     getMapping path = do
       root <- ask
       mm <- traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
