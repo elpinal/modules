@@ -76,6 +76,7 @@ throwP = throw . PrettyError evidence
 
 data PMError
   = NoLib IOError
+  | NoConfigFile IOError
   | DuplicateModule (Positional Ident) RootRelativePath
   | NoSuchModule (Positional Ident) RootRelativePath
   | ListDir FilePath IOError
@@ -84,6 +85,7 @@ data PMError
 
 instance Display PMError where
   display (NoLib e)                = "no lib.1ml: " ++ show e
+  display (NoConfigFile e)         = "no config file: " ++ show e
   display (DuplicateModule id dir) = display (getPosition id) ++ ": " ++ show dir ++ ": duplicate module: " ++ display id
   display (NoSuchModule id dir)    = display (getPosition id) ++ ": " ++ show dir ++ ": no such module: " ++ display id
   display (ListDir path e)         = "cannot obtain a list of entries in " ++ show path ++ ": " ++ show e
@@ -204,8 +206,9 @@ instance Members PMEffs r => PM (Sem r) where
     emit g t = modify (++ [(g, t)])
     catchE m x = m `catch` f
       where
-        f (PrettyError EvidPM (NoLib{})) = return x -- The absence of lib.1ml is OK.
-        f e                              = throw e
+        f (PrettyError EvidPM (NoLib{}))        = return x -- The absence of lib.1ml is OK.
+        f (PrettyError EvidPM (NoConfigFile{})) = return x -- The absence of 1ml.package is OK.
+        f e                                     = throw e
 
 instance Members '[State Int, Error I.Failure, Error PrettyError] r => Elab (Sem r) where
   elab f e = do
@@ -250,8 +253,11 @@ instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
       where
         g :: forall a. IOError -> Sem r a
         g e
-          | isDoesNotExistError e = throwP $ NoLib e
-          | otherwise             = sendM $ ioError e
+          | isDoesNotExistError e && isLib e = throwP $ NoLib e
+          | isDoesNotExistError e && isCF e  = throwP $ NoConfigFile e
+          | otherwise                        = sendM $ ioError e
+        isLib e = maybe False (== "lib.1ml") $ ioeGetFileName e
+        isCF e = maybe False (== configFile) $ ioeGetFileName e
   traverseDir p path f = do
     z <- sendM $ tryIOError $ filter p <$> listDirectory path
     entries <- either g (return . Just) z

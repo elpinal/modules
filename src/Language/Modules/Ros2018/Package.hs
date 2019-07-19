@@ -111,7 +111,7 @@ mname' = extract . mname
 
 buildMain :: PM m => m ()
 buildMain = do
-  (m, ids) <- readConfig
+  (m, ids) <- readConfig `catchE` (mempty, [])
   -- tms <- mapM elaborateExternal ids
   u <- parse "main.1ml"
   let pn = mname' u
