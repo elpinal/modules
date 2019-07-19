@@ -71,11 +71,15 @@ bool = flip positional True <$> reserved "true"
 character :: Parser (Positional Char)
 character = lexeme $ between (char '\'') (char '\'') anySingle
 
+str :: Parser (Positional T.Text)
+str = lexeme $ between (char '"') (char '"') $ T.pack <$> many (satisfy (/= '"'))
+
 literal :: Parser (Positional Literal)
 literal = choice
   [ fmap LInt <$> integer
   , fmap LBool <$> bool
   , fmap LChar <$> character
+  , fmap LString <$> str
   ]
 
 baseType :: Parser (Positional I.BaseType)
@@ -83,6 +87,7 @@ baseType = choice
   [ (`positional` I.Bool) <$> reserved "bool"
   , (`positional` I.Int) <$> reserved "int"
   , (`positional` I.Char) <$> reserved "char"
+  , (`positional` I.String) <$> reserved "string"
   ]
 
 typeParser :: Parser (Positional Type)
@@ -152,6 +157,7 @@ reservedWords =
   , "bool"
   , "int"
   , "char"
+  , "string"
   , "type"
   , "fun"
   , "if"

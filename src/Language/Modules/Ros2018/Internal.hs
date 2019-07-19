@@ -251,14 +251,16 @@ data BaseType
   = Bool
   | Int
   | Char
+  | String
   deriving (Eq, Show)
   deriving Shift via Fixed BaseType
   deriving (Ftv.Ftv VProxy) via Ftv.Empty BaseType
 
 instance Display BaseType where
-  display Bool = "bool"
-  display Int  = "int"
-  display Char = "char"
+  display Bool   = "bool"
+  display Int    = "int"
+  display Char   = "char"
+  display String = "string"
 
 data Type
   = BaseType BaseType
@@ -327,6 +329,7 @@ data Literal
   = LBool Bool
   | LInt Int
   | LChar Char
+  | LString T.Text
   deriving (Eq, Show)
   deriving Shift via Fixed Literal
 
@@ -334,8 +337,9 @@ instance Display Literal where
   display (LBool b)
     | b         = "true"
     | otherwise = "false"
-  display (LInt n)   = show n
-  display (LChar ch) = show ch
+  display (LInt n)    = show n
+  display (LChar ch)  = show ch
+  display (LString s) = show s
 
 data Term
   = Lit Literal
@@ -759,9 +763,10 @@ instance SpecificError TypeError where
   evidence = EvidType
 
 typeOfLiteral :: Literal -> BaseType
-typeOfLiteral (LBool _) = Bool
-typeOfLiteral (LInt _)  = Int
-typeOfLiteral (LChar _) = Char
+typeOfLiteral (LBool _)   = Bool
+typeOfLiteral (LInt _)    = Int
+typeOfLiteral (LChar _)   = Char
+typeOfLiteral (LString _) = String
 
 instance Typed Literal where
   typeOf = return . BaseType . typeOfLiteral
