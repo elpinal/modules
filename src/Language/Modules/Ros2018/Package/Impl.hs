@@ -179,7 +179,7 @@ instance Members PMEffs r => PM (Sem r) where
     evaluate (U t) = do
       xs <- get @[(Generated, I.Term)]
       let t0 = U $ foldr (\(g, t1) t2 -> E.unpack (Just g) (E.erase t1) t2) t xs
-      let _ = D.evaluate $ unU t0
+      _ <- sendM $ D.runEffect $ D.evaluate $ unU t0
       trace $ renderString $ layoutSmart defaultLayoutOptions $ unU t0 (0 :: Int)
     getMapping path = do
       root <- ask
@@ -282,5 +282,5 @@ instance Member (State Int) r => VariableGenerator (Sem r) where
 newtype H a = H { unH :: forall m. PM m => m a }
 
 runPM :: FilePath -> H a -> IO (Either PrettyError (Either I.Failure a))
-runPM fp m = runM $ runError $ runError $ fmap snd $ runState [] $ runTraceIO $
+runPM fp m = runM $ runError $ runError $ fmap snd $ runState [] $ runIgnoringTrace $
              fmap snd $ runState (S mempty) $ fmap snd $ runState (0 :: Int) $ runReader fp $ unH m

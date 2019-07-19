@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -186,6 +187,7 @@ newtype Record a = Record { getRecord :: Map.Map Label a }
   deriving (Eq, Show)
   deriving Functor
   deriving Foldable
+  deriving Traversable
   deriving (Semigroup, Monoid) -- Left-biased
 
 instance Display a => Display (Record a) where

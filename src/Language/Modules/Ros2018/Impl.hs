@@ -94,23 +94,13 @@ instance FreshM (M k) where
     return $ name $ "?d" <> T.pack (show n)
   freshGenerated = I.generated <$> fresh
 
-primitives :: Map.Map T.Text AbstractType
-primitives =
-  [ ("and", fromBody $ bool --> bool --> bool)
-  , ("int_compare", fromBody $ ordering --&> int --> int --> tvarS 0)
-  ]
-  where
-    ordering :: AbstractType
-    ordering = quantify [I.unannotated I.Base] $ Structure
-      [ (I.label "t", AbstractType $ fromBody $ tvarS 0)
-      , (I.label "LT", tvarS 0)
-      , (I.label "EQ", tvarS 0)
-      , (I.label "GT", tvarS 0)
-      ]
-
 infixr 2 -->
 (-->) :: SemanticType -> SemanticType -> SemanticType
 ty1 --> ty2 = Function $ fromBody $ Fun ty1 Pure $ fromBody ty2
+
+infixr 2 ~~>
+(~~>) :: SemanticType -> SemanticType -> SemanticType
+ty1 ~~> ty2 = Function $ fromBody $ Fun ty1 Impure $ fromBody ty2
 
 infixr 2 --&>
 (--&>) :: Quantification f => f SemanticType -> SemanticType -> SemanticType
@@ -121,6 +111,27 @@ bool = BaseType Bool
 
 int :: SemanticType
 int = BaseType Int
+
+string :: SemanticType
+string = BaseType String
+
+unit :: SemanticType
+unit = Structure mempty
+
+primitives :: Map.Map T.Text AbstractType
+primitives =
+  [ ("and", fromBody $ bool --> bool --> bool)
+  , ("int_compare", fromBody $ ordering --&> int --> int --> tvarS 0)
+  , ("print_endline", fromBody $ string ~~> unit)
+  ]
+  where
+    ordering :: AbstractType
+    ordering = quantify [I.unannotated I.Base] $ Structure
+      [ (I.label "t", AbstractType $ fromBody $ tvarS 0)
+      , (I.label "LT", tvarS 0)
+      , (I.label "EQ", tvarS 0)
+      , (I.label "GT", tvarS 0)
+      ]
 
 insertValues :: (?env :: Env f SemanticType) => [(T.Text, SemanticType)] -> Env f SemanticType
 insertValues xs = foldl f ?env xs

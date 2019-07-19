@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -10,10 +11,14 @@
 module Language.Modules.Ros2018.Internal.Erased.Dynamic
   ( Term(..)
   , evaluate
+  , runEffect
   ) where
 
+import Control.Monad.IO.Class
 import Data.Maybe
+import qualified Data.Map.Lazy as Map
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import GHC.Generics
 
 import qualified Language.Modules.Ros2018.Internal.Erased as E
@@ -118,54 +123,72 @@ fromInt :: Term -> Int
 fromInt (Lit (I.LInt b)) = b
 fromInt _                = error "fromInt"
 
-eval :: Term -> Term
-eval t @ Lit{} = t
-eval t @ Abs{} = t
-eval t @ Fix{} = t
-eval t @ Primitive{} = t
-eval t @ And1{} = t
-eval t @ IntCompare1{} = t
-eval (App y z) =
-  let t1 = eval y in
-  let t2 = eval z in
+newtype Effect a = Effect (IO a)
+  deriving (Functor, Applicative, Monad, MonadIO)
+
+runEffect :: Effect a -> IO a
+runEffect (Effect x) = x
+
+eval :: Term -> Effect Term
+eval t @ Lit{}         = return t
+eval t @ Abs{}         = return t
+eval t @ Fix{}         = return t
+eval t @ Primitive{}   = return t
+eval t @ And1{}        = return t
+eval t @ IntCompare1{} = return t
+eval (App y z)         = do
+  t1 <- eval y
+  t2 <- eval z
   case t1 of
-    Abs t       -> substTop t2 t
+    Abs t       -> eval $ substTop t2 t
     Fix Two     -> eval $ App t2 $ Abs $ App (App (Fix Two) t2) $ Var $ variable 0
-    Fix p       -> Fix $ suc p
+    Fix p       -> return $ Fix $ suc p
     Primitive x -> prim x t2
-    And1 t      -> Lit $ I.LBool $ fromBool t && fromBool t2
+    And1 t      -> return $ Lit $ I.LBool $ fromBool t && fromBool t2
     -- TODO: IntCompare1 t -> 
     _ -> error "not function"
 eval Var{} = error "variable"
 eval GVar{} = error "generated variable"
-eval (TmRecord r) = TmRecord $ eval <$> r
-eval (Proj t l) =
-  case eval t of
-    TmRecord r -> fromMaybe (error "unbound label") $ I.projRecord l r
-    _ -> error "not record"
-eval (LetG g t1 t2) = eval $ subst (Left g) (eval t1) t2
-eval (If t1 t2 t3) =
-  case eval t1 of
+eval (TmRecord r) = TmRecord <$> mapM eval r -- Be careful about the evaluation order of records.
+eval (Proj t l) = do
+  x <- eval t
+  case x of
+    TmRecord r -> eval $ fromMaybe (error "unbound label") $ I.projRecord l r
+    _          -> error "not record"
+eval (LetG g t1 t2) = do
+  x <- eval t1
+  eval $ subst (Left g) x t2
+eval (If t1 t2 t3) = do
+  z <- eval t1
+  case z of
     Lit (I.LBool b) -> if b then eval t2 else eval t3
     _               -> error "not boolean value"
-eval (Let ts t) =
-  let xs = shift (length ts) . eval <$> ts in
-  shift (-length ts) $ foldl (\t (i, x) -> subst (Right i) x t) t $ zip [0..] $ reverse xs
+eval (Let ts t) = do
+  xs <- shift (length ts) <$> mapM eval ts
+  let x = shift (-length ts) $ foldl (\t (i, x) -> subst (Right i) x t) t $ zip [0..] $ reverse xs
+  eval x
 eval (Arith a x y) =
   let m = fromInt x in
   let n = fromInt y in
   let i = Lit . I.LInt in
-  case a of
+  return $ case a of
     Add -> i $ m + n
     Sub -> i $ m - n
     Mul -> i $ m * n
 
-prim :: T.Text -> Term -> Term
-prim "and" t         = And1 t
-prim "int_compare" t = IntCompare1 t
-prim txt _           = error $ "unknown primitive: " ++ show txt
+-- The second argument has been fully evaluated.
+prim :: T.Text -> Term -> Effect Term
+prim "and" t           = return $ And1 t
+prim "int_compare" t   = return $ IntCompare1 t
+prim "print_endline" t =
+  case t of
+    Lit (I.LString txt) -> do
+      liftIO $ TIO.putStrLn txt
+      return $ TmRecord $ I.Record Map.empty
+    _ -> error "not string"
+prim txt _ = error $ "unknown primitive: " ++ show txt
 
-evaluate :: Term -> Term
+evaluate :: Term -> Effect Term
 evaluate t = eval $ Let [f Add, f Sub, f Mul] t
   where
     f a = Abs $ Abs $ Arith a (v 1) (v 0)
