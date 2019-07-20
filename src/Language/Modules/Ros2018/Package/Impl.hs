@@ -256,8 +256,8 @@ instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
           | isDoesNotExistError e && isLib e = throwP $ NoLib e
           | isDoesNotExistError e && isCF e  = throwP $ NoConfigFile e
           | otherwise                        = sendM $ ioError e
-        isLib e = maybe False (== "lib.1ml") $ ioeGetFileName e
-        isCF e = maybe False (== configFile) $ ioeGetFileName e
+        isLib e = maybe False (== "lib.1ml") $ takeFileName <$> ioeGetFileName e
+        isCF e = maybe False (== configFile) $ takeFileName <$> ioeGetFileName e
   traverseDir p path f = do
     z <- sendM $ tryIOError $ filter p <$> listDirectory path
     entries <- either g (return . Just) z
