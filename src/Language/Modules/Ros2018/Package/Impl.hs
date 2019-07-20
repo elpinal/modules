@@ -149,66 +149,66 @@ type PMEffs =
   ]
 
 instance Members PMEffs r => PM (Sem r) where
-    parse path = do
-      root <- ask
-      txt <- readFileT $ root </> path
-      parseT path txt
-    readConfig = do
-      txt <- readFileT configFile
-      cfg <- either throwP return $ parseConfig configFile txt
-      let is = imports cfg
-      m <- buildMap is
-      return (m, g . extract <$> toList is)
-        where
-          g :: Import -> Ident
-          g (Import id _) = extract id
-    elaborate xs ts e = do
-      let ups = map (toUsePath . extract) ts
-      let lookupUsePath :: UsePath -> Sem r (Generated, AbstractType)
-          lookupUsePath up = do
-            S m <- get
-            maybe (throwP $ UnboundUsePath up $ S m) return $ Map.lookup up m
-      ps <- mapM lookupUsePath ups
-      let w f (up, (g, aty)) env = let ?env = f env in
-                                   let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
-                                   I.insertTempValueWithName (refer up) g $ getBody aty
-      let z f (id, g, aty) env = let ?env = f env in
-                                 let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
-                                 I.insertTempValueWithName (unIdent id) g $ getBody aty
-      elab (foldl z (foldl w id $ zip ups ps) xs) e
-    evaluate (U t) = do
-      xs <- get @[(Generated, I.Term)]
-      let t0 = U $ foldr (\(g, t1) t2 -> E.unpack (Just g) (E.erase t1) t2) t xs
-      _ <- sendM $ D.runEffect $ D.evaluate $ unU t0
-      trace $ renderString $ layoutSmart defaultLayoutOptions $ unU t0 (0 :: Int)
-    getMapping path = do
-      root <- ask
-      mm <- traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
-      return $ fromMaybe mempty mm
-    getFileName m dir id = do
-      let m' = Map.filter (== extract id) m
-      maybe (throwP $ NoSuchModule id dir) f $ Map.minViewWithKey m'
-        where
-          f :: forall z. ((RootRelativePath, z), FileModuleMap) -> Sem r RootRelativePath
-          f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
-    register up aty = do
-      g <- generateVar
-      modify $ \(S m) -> S $ Map.insert up (g, aty) m
-      return g
-    combine pn _ lib main = do
-      case lib of
-        Nothing  -> return $ U $ E.erase main
-        Just lib -> do
-          let l = U $ E.erase lib
-          let m = U $ E.erase main
-          g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fst $ Map.lookup (Root pn) m
-          return $ U $ E.unpack (Just g) (unU l) (unU m)
-    emit g t = modify (++ [(g, t)])
-    catchE m x = m `catch` f
+  parse path = do
+    root <- ask
+    txt <- readFileT $ root </> path
+    parseT path txt
+  readConfig = do
+    txt <- readFileT configFile
+    cfg <- either throwP return $ parseConfig configFile txt
+    let is = imports cfg
+    m <- buildMap is
+    return (m, g . extract <$> toList is)
       where
-        f (PrettyError EvidPM (NoLib{}))        = return x -- The absence of lib.1ml is OK.
-        f (PrettyError EvidPM (NoConfigFile{})) = return x -- The absence of 1ml.package is OK.
-        f e                                     = throw e
+        g :: Import -> Ident
+        g (Import id _) = extract id
+  elaborate xs ts e = do
+    let ups = map (toUsePath . extract) ts
+    let lookupUsePath :: UsePath -> Sem r (Generated, AbstractType)
+        lookupUsePath up = do
+          S m <- get
+          maybe (throwP $ UnboundUsePath up $ S m) return $ Map.lookup up m
+    ps <- mapM lookupUsePath ups
+    let w f (up, (g, aty)) env = let ?env = f env in
+                                 let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
+                                 I.insertTempValueWithName (refer up) g $ getBody aty
+    let z f (id, g, aty) env = let ?env = f env in
+                               let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
+                               I.insertTempValueWithName (unIdent id) g $ getBody aty
+    elab (foldl z (foldl w id $ zip ups ps) xs) e
+  evaluate (U t) = do
+    xs <- get @[(Generated, I.Term)]
+    let t0 = U $ foldr (\(g, t1) t2 -> E.unpack (Just g) (E.erase t1) t2) t xs
+    _ <- sendM $ D.runEffect $ D.evaluate $ unU t0
+    trace $ renderString $ layoutSmart defaultLayoutOptions $ unU t0 (0 :: Int)
+  getMapping path = do
+    root <- ask
+    mm <- traverseDirS (".1ml" `isSuffixOf`) (root </> path) $ \fp content -> parseT fp content >>= getMName
+    return $ fromMaybe mempty mm
+  getFileName m dir id = do
+    let m' = Map.filter (== extract id) m
+    maybe (throwP $ NoSuchModule id dir) f $ Map.minViewWithKey m'
+      where
+        f :: forall z. ((RootRelativePath, z), FileModuleMap) -> Sem r RootRelativePath
+        f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
+  register up aty = do
+    g <- generateVar
+    modify $ \(S m) -> S $ Map.insert up (g, aty) m
+    return g
+  combine pn _ lib main = do
+    case lib of
+      Nothing  -> return $ U $ E.erase main
+      Just lib -> do
+        let l = U $ E.erase lib
+        let m = U $ E.erase main
+        g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fst $ Map.lookup (Root pn) m
+        return $ U $ E.unpack (Just g) (unU l) (unU m)
+  emit g t = modify (++ [(g, t)])
+  catchE m x = m `catch` f
+    where
+      f (PrettyError EvidPM (NoLib{}))        = return x -- The absence of lib.1ml is OK.
+      f (PrettyError EvidPM (NoConfigFile{})) = return x -- The absence of 1ml.package is OK.
+      f e                                     = throw e
 
 instance Members '[State Int, Error I.Failure, Error PrettyError] r => Elab (Sem r) where
   elab f e = do

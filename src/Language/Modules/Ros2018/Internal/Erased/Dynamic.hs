@@ -122,7 +122,7 @@ fromBool (Lit (I.LBool b)) = b
 fromBool _                 = error "fromBool"
 
 fromInt :: Term -> Int
-fromInt (Lit (I.LInt b)) = b
+fromInt (Lit (I.LInt n)) = n
 fromInt _                = error "fromInt"
 
 fromString :: Term -> T.Text
@@ -189,16 +189,10 @@ prim :: T.Text -> Term -> Effect Term
 prim "and" t           = return $ And1 t
 prim "int_compare" t   = return $ IntCompare1 t
 prim "string_concat" t = return $ StringConcat1 t
-prim "print_endline" t =
-  case t of
-    Lit (I.LString txt) -> do
-      liftIO $ TIO.putStrLn txt
-      return $ TmRecord $ I.Record Map.empty
-    _ -> error "not string"
-prim "int_to_string" t =
-  case t of
-    Lit (I.LInt n) -> return $ Lit $ I.LString $ T.pack $ show n
-    _              -> error "not integer"
+prim "print_endline" t = do
+  liftIO $ TIO.putStrLn $ fromString t
+  return $ TmRecord $ I.Record Map.empty
+prim "int_to_string" t = return $ Lit $ I.LString $ T.pack $ show $ fromInt t
 prim txt _ = error $ "unknown primitive: " ++ show txt
 
 evaluate :: Term -> Effect Term
