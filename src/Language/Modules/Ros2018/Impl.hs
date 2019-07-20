@@ -123,6 +123,7 @@ primitives =
   [ ("and", fromBody $ bool --> bool --> bool)
   , ("int_compare", fromBody $ ordering --&> int --> int --> tvarS 0)
   , ("print_endline", fromBody $ string ~~> unit)
+  , ("int_to_string", fromBody $ int --> string)
   ]
   where
     ordering :: AbstractType

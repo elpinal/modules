@@ -186,6 +186,10 @@ prim "print_endline" t =
       liftIO $ TIO.putStrLn txt
       return $ TmRecord $ I.Record Map.empty
     _ -> error "not string"
+prim "int_to_string" t =
+  case t of
+    Lit (I.LInt n) -> return $ Lit $ I.LString $ T.pack $ show n
+    _              -> error "not integer"
 prim txt _ = error $ "unknown primitive: " ++ show txt
 
 evaluate :: Term -> Effect Term
