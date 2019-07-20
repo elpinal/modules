@@ -292,7 +292,7 @@ data ElaborateError
   | NotSubtype SemanticType SemanticType
   | NotSubpurity
   | PathMismatch Path Path
-  | MissingLabel T.Text I.Label
+  | MissingLabel T.Text I.Label [I.Label]
   | NotPure
   | ImpureType Expr
   | NotReifiedType Position SemanticType Expr
@@ -311,7 +311,7 @@ instance Display ElaborateError where
   display (NotSubtype ty1 ty2)      = display (WithName ty1) ++ " is not subtype of " ++ display (WithName ty2)
   display NotSubpurity              = "impure is not subtype of pure"
   display (PathMismatch p1 p2)      = "path mismatch: " ++ display (WithName p1) ++ " and " ++ display (WithName p2)
-  display (MissingLabel s l)        = T.unpack s ++ ": missing label: " ++ display l
+  display (MissingLabel s l ls)     = T.unpack s ++ ": missing label: " ++ display l ++ ": " ++ show ls
   display NotPure                   = "not pure"
   display (ImpureType e)            = "unexpected impure type: " ++ display e
   display (NotReifiedType p ty e)   = display p ++ ": not reified type: " ++ display (WithName ty) ++ ", which is type of " ++ display e
@@ -488,7 +488,7 @@ instance Subtype SemanticType where
     where
       f :: (RunFailureM m, ErrorM m) => I.Label -> SemanticType -> m Term
       f l ty2 = do
-        ty1 <- maybe (throwE $ MissingLabel "subtyping on structures" l) return $ projRecord l r1
+        ty1 <- maybe (throwE $ MissingLabel "subtyping on structures" l $ I.labels r1) return $ projRecord l r1
         t <- ty1 <: ty2
         return $ I.App t $ var 0 `I.Proj` l
   Function u1 <: Function u2 = do
@@ -803,7 +803,7 @@ proj (Structure r) (id : ids) =
   let l = toLabel $ coerce id in
   case projRecord l r of
     Just ty -> proj ty ids
-    Nothing -> throwE $ MissingLabel "meta-level projection" l
+    Nothing -> throwE $ MissingLabel "meta-level projection" l $ I.labels r
 proj ty _ = throwE $ NotStructure ty
 
 elaborateDecls :: Effs Decl m => (Existential (Record SemanticType), Env) -> Positional Decl -> m (Existential (Record SemanticType), Env)
@@ -939,7 +939,7 @@ instance Elaboration Expr where
     (t, aty, p) <- elaborate e
     r <- getStructure $ getBody aty
     let l = toLabel $ coerce id
-    ty <- maybe (throwE $ MissingLabel "elaborating projection" l) return $ projRecord l r
+    ty <- maybe (throwE $ MissingLabel "elaborating projection" l $ I.labels r) return $ projRecord l r
     let aty1 = qmap (const ty) aty
     return (I.unpack Nothing t (qsLen aty) $ I.pack (I.Proj (var 0) l) (I.TVar <$> enumVars aty) (getKinds aty) $ toType $ getBody aty1, aty1, p)
   elaborate (Positional p (If e1 e2 e3 ty)) = do
