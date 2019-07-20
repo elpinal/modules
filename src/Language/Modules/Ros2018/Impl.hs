@@ -124,6 +124,7 @@ primitives =
   , ("int_compare", fromBody $ ordering --&> int --> int --> tvarS 0)
   , ("print_endline", fromBody $ string ~~> unit)
   , ("int_to_string", fromBody $ int --> string)
+  , ("string_concat", fromBody $ string --> string --> string)
   ]
   where
     ordering :: AbstractType

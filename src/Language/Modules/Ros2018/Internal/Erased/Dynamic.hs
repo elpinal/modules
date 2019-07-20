@@ -61,6 +61,7 @@ data Term where
   Arith :: Arith -> Term -> Term -> Term
   And1 :: Term -> Term
   IntCompare1 :: Term -> Term
+  StringConcat1 :: Term -> Term
   deriving Generic
 
 instance Shift T.Text where
@@ -90,12 +91,13 @@ instance E.Term Term where
 subst :: Either Generated Int -> Term -> Term -> Term
 subst j by = f 0
   where
-    f _ t @ Lit{} = t
-    f _ t @ Fix{} = t
-    f _ t @ Primitive{} = t
-    f _ t @ And1{} = t
-    f _ t @ IntCompare1{} = t
-    f c (Var v) =
+    f _ t @ Lit{}           = t
+    f _ t @ Fix{}           = t
+    f _ t @ Primitive{}     = t
+    f _ t @ And1{}          = t
+    f _ t @ IntCompare1{}   = t
+    f _ t @ StringConcat1{} = t
+    f c (Var v)             =
       case j of
         Right j | variable (c + j) == v -> shift c by
         _                               -> Var v
@@ -123,6 +125,10 @@ fromInt :: Term -> Int
 fromInt (Lit (I.LInt b)) = b
 fromInt _                = error "fromInt"
 
+fromString :: Term -> T.Text
+fromString (Lit (I.LString s)) = s
+fromString _                   = error "fromString"
+
 newtype Effect a = Effect (IO a)
   deriving (Functor, Applicative, Monad, MonadIO)
 
@@ -130,21 +136,23 @@ runEffect :: Effect a -> IO a
 runEffect (Effect x) = x
 
 eval :: Term -> Effect Term
-eval t @ Lit{}         = return t
-eval t @ Abs{}         = return t
-eval t @ Fix{}         = return t
-eval t @ Primitive{}   = return t
-eval t @ And1{}        = return t
-eval t @ IntCompare1{} = return t
-eval (App y z)         = do
+eval t @ Lit{}           = return t
+eval t @ Abs{}           = return t
+eval t @ Fix{}           = return t
+eval t @ Primitive{}     = return t
+eval t @ And1{}          = return t
+eval t @ IntCompare1{}   = return t
+eval t @ StringConcat1{} = return t
+eval (App y z)           = do
   t1 <- eval y
   t2 <- eval z
   case t1 of
-    Abs t       -> eval $ substTop t2 t
-    Fix Two     -> eval $ App t2 $ Abs $ App (App (Fix Two) t2) $ Var $ variable 0
-    Fix p       -> return $ Fix $ suc p
-    Primitive x -> prim x t2
-    And1 t      -> return $ Lit $ I.LBool $ fromBool t && fromBool t2
+    Abs t           -> eval $ substTop t2 t
+    Fix Two         -> eval $ App t2 $ Abs $ App (App (Fix Two) t2) $ Var $ variable 0
+    Fix p           -> return $ Fix $ suc p
+    Primitive x     -> prim x t2
+    And1 t          -> return $ Lit $ I.LBool $ fromBool t && fromBool t2
+    StringConcat1 t -> return $ Lit $ I.LString $ fromString t <> fromString t2
     -- TODO: IntCompare1 t -> 
     _ -> error "not function"
 eval Var{} = error "variable"
@@ -180,6 +188,7 @@ eval (Arith a x y) =
 prim :: T.Text -> Term -> Effect Term
 prim "and" t           = return $ And1 t
 prim "int_compare" t   = return $ IntCompare1 t
+prim "string_concat" t = return $ StringConcat1 t
 prim "print_endline" t =
   case t of
     Lit (I.LString txt) -> do
