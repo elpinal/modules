@@ -995,6 +995,14 @@
     :url      "https://dl.acm.org/ft_gateway.cfm?id=3290323"
     :slides   "https://popl19.sigplan.org/event/popl-2019-research-papers-fully-abstract-module-compilation"}
 
+   :rfto2019
+   {:key      "RFTO2019"
+    :title    "Characterising renaming within OCaml’s module system: Theory and implementation"
+    :author   (authors "Reuben N. S. Rowe" "Hugo Férée" "Simon J. Thompson" "Scott Owens")
+    :date     2019
+    :location (proceedings-location pldi :pages '(950 965))
+    :url      "https://www.cs.kent.ac.uk/people/staff/rnsr/docs/renaming-pldi2019.pdf"}
+
    :ly
    {:key      "LY"
     :title    "Extending OCaml's open"
