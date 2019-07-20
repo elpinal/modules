@@ -17,8 +17,8 @@ data InterpretException
 instance Exception InterpretException
 
 instance Show InterpretException where
-  show (TranslateError (Failure e _ f))         = "elaboration error: " ++ f e
-  show (PrettyError_ e)                         = display e
+  show (TranslateError (Failure e _ f)) = "elaboration error: " ++ f e
+  show (PrettyError_ e)                 = display e
 
 orThrow :: (MonadThrow m, Exception x) => (e -> x) -> Either e a -> m a
 orThrow f = either (throw . f) return
@@ -37,7 +37,7 @@ parser = subparser $
 
 run :: (MonadIO m, MonadThrow m) => m ()
 run = do
-  cmd <- liftIO $ customExecParser (prefs showHelpOnEmpty) $ info (parser <**> helper) $ information
+  cmd <- liftIO $ customExecParser (prefs showHelpOnEmpty) $ info (parser <**> helper) information
   runContT (build cmd) return
 
 build :: (MonadIO m, MonadThrow m) => Command -> ContT () m ()
