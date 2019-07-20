@@ -2,7 +2,7 @@
 
 Type-theoretic analysis of ML-style modules.
 
-This repository contains <ul><li>An implementation (<a href="https://github.com/elpinal/modules/blob/master/src/Language/Modules/RRD2014.hs">RRD2014.hs</a>) of F-ing modules (<a href="https://github.com/elpinal/modules#f-ing-modules-1">Rossberg et al. 2014</a>),</li><li>[WIP] An interpreter (<a href="https://github.com/elpinal/modules/blob/master/src/Language/Modules/Ros2018.hs">Ros2018.hs</a>) of 1ML<sub>ex</sub>(<a href="https://github.com/elpinal/modules#1ml--core-and-modules-united">Rossberg 2018</a>), and</li><li>A bibliography of modules and type abstraction, which is given below.</li></ul>
+This repository contains <ul><li>An implementation (<a href="https://github.com/elpinal/modules/blob/master/src/Language/Modules/RRD2014.hs">RRD2014.hs</a>) of F-ing modules (<a href="https://github.com/elpinal/modules#f-ing-modules-1">Rossberg et al. 2014</a>),</li><li>An interpreter (<a href="https://github.com/elpinal/modules/blob/master/src/Language/Modules/Ros2018.hs">Ros2018.hs</a>) of 1ML<sub>ex</sub>(<a href="https://github.com/elpinal/modules#1ml--core-and-modules-united">Rossberg 2018</a>), and</li><li>A bibliography of modules and type abstraction, which is given below.</li></ul>
 
 ## See also
 

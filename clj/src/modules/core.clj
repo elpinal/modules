@@ -1019,7 +1019,7 @@
                                              "Rossberg et al. 2014"]
                                             "),"]
                                            [:li
-                                            "[WIP] An interpreter ("
+                                            "An interpreter ("
                                             [:a {:href "https://github.com/elpinal/modules/blob/master/src/Language/Modules/Ros2018.hs"}
                                              "Ros2018.hs"]
                                             ") of 1ML" [:sub "ex"] "("
