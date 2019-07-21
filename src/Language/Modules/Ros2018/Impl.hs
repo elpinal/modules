@@ -26,8 +26,7 @@ module Language.Modules.Ros2018.Impl
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Polysemy
-import Polysemy.Error hiding (throw)
-import qualified Polysemy.Error as E
+import Polysemy.Error
 import Polysemy.Reader
 import Polysemy.State
 
@@ -45,7 +44,7 @@ runPrim :: forall r a. Member (Error Failure) r => Sem (Prim ': r) a -> Sem r a
 runPrim = interpret f
   where
     f :: forall x m. Prim m x -> Sem r x
-    f (LookupPrim s) = maybe (E.throw @Failure $ I.fromSpecific $ I.NoSuchPrimitive s) return $ Map.lookup s primitives
+    f (LookupPrim s) = maybe (throw @Failure $ I.fromSpecific $ I.NoSuchPrimitive s) return $ Map.lookup s primitives
 
 newtype Y k = Y { unY :: forall a. k a -> Either Failure a }
 
@@ -67,10 +66,10 @@ runMN:: forall k a. Int -> Y k -> M k a -> Either Failure (Either ElaborateError
 runMN n f (M m) = run $ runError $ runError $ (\(x, y) -> (y, x)) <$> runState n (runReader f $ runPrim m)
 
 instance I.FailureM (M k) where
-  throwFailure f = M $ E.throw f
+  throwFailure f = M $ throw f
 
 instance ErrorM (M k) where
-  throwE e       = M $ E.throw e
+  throwE e       = M $ throw e
   catchE (M m) f = M $ catch m $ unM . f
 
 instance PrimAM (M k) where

@@ -206,16 +206,16 @@ instance Members PMEffs r => PM (Sem r) where
   emit g t = modify (++ [(g, t)])
   catchE m x = m `catch` f
     where
-      f (PrettyError EvidPM (NoLib{}))        = return x -- The absence of lib.1ml is OK.
-      f (PrettyError EvidPM (NoConfigFile{})) = return x -- The absence of 1ml.package is OK.
-      f e                                     = throw e
+      f (PrettyError EvidPM NoLib{})        = return x -- The absence of lib.1ml is OK.
+      f (PrettyError EvidPM NoConfigFile{}) = return x -- The absence of 1ml.package is OK.
+      f e                                   = throw e
 
 instance Members '[State Int, Error I.Failure, Error PrettyError] r => Elab (Sem r) where
   elab f e = do
     n <- get
     let ?env = f I.builtins
     let ww = runMN n (Y II.runFailure) $ R.elaborate e
-    (x, n') <- return ww >>= either (throw @I.Failure) return >>= either throwP return
+    (x, n') <- either (throw @I.Failure) return ww >>= either throwP return
     put n'
     return x
 
