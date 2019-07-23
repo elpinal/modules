@@ -70,7 +70,7 @@ instance Shift T.Text where
 
 instance Shift Term where
   shiftAbove c d (Abs t)    = Abs $ shiftAbove (c + 1) d t
-  shiftAbove c d (Let ts t) = Let ts $ shiftAbove (c + length ts) d t
+  shiftAbove c d (Let ts t) = Let (shiftAbove c d <$> ts) $ shiftAbove (c + length ts) d t
   shiftAbove c d t          = to $ gShiftAbove c d $ from t
 
 instance E.Term Term where
