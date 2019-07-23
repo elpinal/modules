@@ -187,6 +187,7 @@ eval (Arith a x y) =
     Mul -> i $ m * n
 
 -- The second argument has been fully evaluated.
+-- Returns a fully evaluated value.
 prim :: T.Text -> Term -> Effect Term
 prim "and" t           = return $ And1 t
 prim "int_compare" t   = return $ IntCompare1 t
