@@ -62,6 +62,7 @@ data Term where
   And1 :: Term -> Term
   IntCompare1 :: Term -> Term
   StringConcat1 :: Term -> Term
+  deriving (Eq, Show)
   deriving Generic
 
 instance Shift T.Text where
@@ -161,8 +162,8 @@ eval (TmRecord r) = TmRecord <$> mapM eval r -- Be careful about the evaluation 
 eval (Proj t l) = do
   x <- eval t
   case x of
-    TmRecord r -> eval $ fromMaybe (error "unbound label") $ I.projRecord l r
-    _          -> error "not record"
+    TmRecord r -> eval $ fromMaybe (error $ "unbound label: " ++ show l ++ ": in record: " ++ show r) $ I.projRecord l r
+    _          -> error $ "projecting " ++ show l ++ ": not record: " ++ show x
 eval (LetG g t1 t2) = do
   x <- eval t1
   eval $ subst (Left g) x t2
