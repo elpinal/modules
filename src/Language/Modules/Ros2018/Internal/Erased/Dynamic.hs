@@ -111,7 +111,7 @@ subst j by = f 0
     f c (Proj t l) = Proj (f c t) l
     f c (LetG g t1 t2) = LetG g (f c t1) (f c t2)
     f c (If t1 t2 t3) = If (f c t1) (f c t2) (f c t3)
-    f c (Let ts t) = Let (f c <$> ts) $ f (c + 1) t
+    f c (Let ts t) = Let (f c <$> ts) $ f (c + length ts) t
     f c (Arith a x y) = Arith a (f c x) (f c y)
 
 substTop :: Term -> Term -> Term
