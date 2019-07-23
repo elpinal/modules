@@ -82,6 +82,7 @@ instance E.Term Term where
   tmRecord = TmRecord
   proj = Proj
   poly t = Abs $ shift 1 t
+  inst x = App x $ TmRecord []
   unpack Nothing t1 t2 = E.let_ [t1] t2
   unpack (Just g) t1 t2 = LetG g t1 t2
   if_ = If

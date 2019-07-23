@@ -34,8 +34,6 @@ class Term t where
   primitive :: T.Text -> t
 
   pack x = x
-  poly x = abs_ x -- TODO: shift?
-  inst x = app x $ tmRecord []
 
 parensIf :: Bool -> Doc ann -> Doc ann
 parensIf True  = parens
