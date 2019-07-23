@@ -693,7 +693,7 @@ lookupInst p (Function u1) (Function u2)
     return $ fmap (tabs $ getKinds u2) <$> mfty
 lookupInst _ _ _ = return Nothing
 
--- Maybe assumes all of 3 arguments is in the same context.
+-- Maybe assumes all of 3 arguments are in the same context.
 lookupInsts :: [Variable] -> SemanticType -> SemanticType -> LError [Parameterized]
 lookupInsts vs ty1 ty2 = fst <$> foldrM f ([], ty2) vs
   where
