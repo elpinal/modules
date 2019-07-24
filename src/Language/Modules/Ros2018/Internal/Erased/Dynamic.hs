@@ -20,6 +20,7 @@ import qualified Data.Map.Lazy as Map
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import GHC.Generics
+import GHC.Stack
 
 import qualified Language.Modules.Ros2018.Internal.Erased as E
 import qualified Language.Modules.Ros2018.Internal as I
@@ -60,7 +61,9 @@ data Term where
   Primitive :: T.Text -> Term
   Arith :: Arith -> Term -> Term -> Term
   And1 :: Term -> Term
+  IntCompare0 :: Term
   IntCompare1 :: Term -> Term
+  IntCompare2 :: Term -> Term -> Term
   StringConcat1 :: Term -> Term
   deriving (Eq, Show)
   deriving Generic
@@ -97,7 +100,9 @@ subst j by = f 0
     f _ t @ Fix{}           = t
     f _ t @ Primitive{}     = t
     f _ t @ And1{}          = t
+    f _ t @ IntCompare0{}   = t
     f _ t @ IntCompare1{}   = t
+    f _ t @ IntCompare2{}   = t
     f _ t @ StringConcat1{} = t
     f c (Var v)             =
       case j of
@@ -123,9 +128,9 @@ fromBool :: Term -> Bool
 fromBool (Lit (I.LBool b)) = b
 fromBool _                 = error "fromBool"
 
-fromInt :: Term -> Int
+fromInt :: HasCallStack => Term -> Int
 fromInt (Lit (I.LInt n)) = n
-fromInt _                = error "fromInt"
+fromInt t                = error $ "fromInt: " ++ show t
 
 fromString :: Term -> T.Text
 fromString (Lit (I.LString s)) = s
@@ -143,20 +148,28 @@ eval t @ Abs{}           = return t
 eval t @ Fix{}           = return t
 eval t @ Primitive{}     = return t
 eval t @ And1{}          = return t
+eval t @ IntCompare0{}   = return t
 eval t @ IntCompare1{}   = return t
+eval t @ IntCompare2{}   = return t
 eval t @ StringConcat1{} = return t
 eval (App y z)           = do
   t1 <- eval y
   t2 <- eval z
   case t1 of
-    Abs t           -> eval $ substTop t2 t
-    Fix Two         -> eval $ App t2 $ Abs $ App (App (Fix Two) t2) $ Var $ variable 0
-    Fix p           -> return $ Fix $ suc p
-    Primitive x     -> prim x t2
-    And1 t          -> return $ Lit $ I.LBool $ fromBool t && fromBool t2
-    StringConcat1 t -> return $ Lit $ I.LString $ fromString t <> fromString t2
-    -- TODO: IntCompare1 t -> 
-    _ -> error "not function"
+    Abs t             -> eval $ substTop t2 t
+    Fix Two           -> eval $ App t2 $ Abs $ App (App (Fix Two) t2) $ Var $ variable 0
+    Fix p             -> return $ Fix $ suc p
+    Primitive x       -> prim x t2
+    And1 t            -> return $ Lit $ I.LBool $ fromBool t && fromBool t2
+    IntCompare0       -> return $ IntCompare1 t2
+    IntCompare1 t     -> return $ IntCompare2 t t2
+    IntCompare2 t0 t1 -> return $
+      case fromInt t1 `compare` fromInt t2 of
+        LT -> Proj t0 $ I.label "LT"
+        EQ -> Proj t0 $ I.label "EQ"
+        GT -> Proj t0 $ I.label "GT"
+    StringConcat1 t   -> return $ Lit $ I.LString $ fromString t <> fromString t2
+    _                 -> error "not function"
 eval Var{} = error "variable"
 eval GVar{} = error "generated variable"
 eval (TmRecord r) = TmRecord <$> mapM eval r -- Be careful about the evaluation order of records.
@@ -190,7 +203,7 @@ eval (Arith a x y) =
 -- Returns a fully evaluated value.
 prim :: T.Text -> Term -> Effect Term
 prim "and" t           = return $ And1 t
-prim "int_compare" t   = return $ IntCompare1 t
+prim "int_compare" _   = return IntCompare0
 prim "string_concat" t = return $ StringConcat1 t
 prim "print_endline" t = do
   liftIO $ TIO.putStrLn $ fromString t
