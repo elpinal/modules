@@ -686,10 +686,11 @@ lookupInst p1 (EmptyExistential ty) (EmptyExistential (SemanticPath p2))
 lookupInst p (Structure r1) (Structure r2) = I.foldMapIntersection (lookupInst p) r1 r2
 lookupInst p (Function u1) (Function u2)
   | isPure (getBody u1) && isPure (getBody u2) = do
-    -- FIXME: Perhaps needs shift since each set of quantifiers may has a different size.
-    ps <- lookupInsts (enumVars u1) (domain $ getBody u2) (domain $ getBody u1)
+    ps <- lookupInsts (enumVars u1) (shift (qsLen u1) $ domain $ getBody u2) (domain $ getBody $ shift (qsLen u2) u1)
     let s = fromList $ zip (map variable [0..]) ps
-    mfty <- lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) $ shift (qsLen u2) p) (applySmall s $ getBody $ codomain $ getBody u1) (getBody $ codomain $ getBody u2)
+    mfty <- lookupInst (appendPath (map (SemanticPath . fromVariable) $ enumVars u2) $ shift (qsLen u2) p)
+                       (shift (-qsLen u1) $ applySmall s $ shiftAbove (qsLen u1) (qsLen u2) $ getBody $ codomain $ getBody u1)
+                       (getBody $ codomain $ getBody u2)
     return $ fmap (tabs $ getKinds u2) <$> mfty
 lookupInst _ _ _ = return Nothing
 
