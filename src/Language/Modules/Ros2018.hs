@@ -288,7 +288,7 @@ instance Annotated Positional where
 type Env = I.Env Positional SemanticType
 
 data ElaborateError
-  = NotStructure SemanticType
+  = NotStructure Position SemanticType
   | NotSubtype SemanticType SemanticType
   | NotSubpurity
   | PathMismatch Path Path
@@ -307,7 +307,7 @@ data ElaborateError
   deriving (Eq, Show)
 
 instance Display ElaborateError where
-  display (NotStructure ty)         = "not structure type: " ++ display (WithName ty)
+  display (NotStructure p ty)       = display p ++ ": not structure type: " ++ display (WithName ty)
   display (NotSubtype ty1 ty2)      = display (WithName ty1) ++ " is not subtype of " ++ display (WithName ty2)
   display NotSubpurity              = "impure is not subtype of pure"
   display (PathMismatch p1 p2)      = "path mismatch: " ++ display (WithName p1) ++ " and " ++ display (WithName p2)
@@ -459,9 +459,9 @@ applyPath s (Path v tys) =
 appendPath :: [SemanticType] -> Path -> Path
 appendPath tys' (Path v tys) = Path v $ tys ++ tys'
 
-getStructure :: ErrorM m => SemanticType -> m (Record SemanticType)
-getStructure (Structure r) = return r
-getStructure ty            = throwE $ NotStructure ty
+getStructure :: ErrorM m => Position -> SemanticType -> m (Record SemanticType)
+getStructure _ (Structure r) = return r
+getStructure p ty            = throwE $ NotStructure p ty
 
 class Subtype a where
   type Coercion a
@@ -764,10 +764,10 @@ instance Elaboration Type where
   elaborate (Positional _ (Sig ds)) = do
     (aty, _) <- foldlM elaborateDecls (fromBody [], ?env) ds
     return $ Structure <$> aty
-  elaborate (Positional _ (Where ty1 ids ty2)) = do
+  elaborate (Positional p (Where ty1 ids ty2)) = do
     aty1 <- elaborate ty1
     aty2 <- elaborate ty2
-    ty <- proj (getBody aty1) ids
+    ty <- proj p (getBody aty1) ids
     let vs = ftv ty
     let (vs12, vs11) = (`Set.member` vs) `Set.partition` (fromList $ enumVars aty1)
     let a = zip (Set.toAscList vs12) [0..]
@@ -798,14 +798,14 @@ restrict vs ks =
   let m = Map.fromList $ zip (map variable [0..]) ks in
   Map.elems $ Map.restrictKeys m vs
 
-proj :: ErrorM m => SemanticType -> [Ident] -> m SemanticType
-proj ty []                    = return ty
-proj (Structure r) (id : ids) =
+proj :: ErrorM m => Position -> SemanticType -> [Ident] -> m SemanticType
+proj _ ty []                    = return ty
+proj p (Structure r) (id : ids) =
   let l = toLabel $ coerce id in
   case projRecord l r of
-    Just ty -> proj ty ids
+    Just ty -> proj p ty ids
     Nothing -> throwE $ MissingLabel "meta-level projection" l $ I.labels r
-proj ty _ = throwE $ NotStructure ty
+proj p ty _ = throwE $ NotStructure p ty
 
 elaborateDecls :: Effs Decl m => (Existential (Record SemanticType), Env) -> Positional Decl -> m (Existential (Record SemanticType), Env)
 elaborateDecls (acc, env) d = do
@@ -840,7 +840,7 @@ instance Elaboration Decl where
       _  -> elaborate $ positional p $ spec id $ arrowsP ps ty
   elaborate (Positional p (AbsTypeSpec id ps))    = elaborate $ positional p $ spec id $ arrowsP ps $ positional p TypeType -- TODO: Handle positions correctly.
   elaborate (Positional p (ManTypeSpec id ps ty)) = elaborate $ positional p $ spec id $ arrowsP ps $ positional (getPosition ty) (Singleton $ positional (getPosition ty) $ Type ty) -- TODO: Handle positions correctly.
-  elaborate (Positional _ (DInclude ty))          = elaborate ty >>= qfmap getStructure
+  elaborate (Positional _ (DInclude ty))          = elaborate ty >>= qfmap (getStructure $ getPosition ty)
 
 withExplicitType :: ErrorM m => Positional Expr -> m ()
 withExplicitType (Positional p e) =
@@ -938,7 +938,7 @@ instance Elaboration Expr where
         elaborate $ positional p $ Let [positional (getPosition e1) $ val id1 e1, positional (getPosition e2) $ val id2 e2] $ positional p $ App (positional (getPosition e1) $ Id id1) (positional (getPosition e2) $ Id id2)
   elaborate (Positional _ (Proj e id)) = do
     (t, aty, p) <- elaborate e
-    r <- getStructure $ getBody aty
+    r <- getStructure (getPosition e) $ getBody aty
     let l = toLabel $ coerce id
     ty <- maybe (throwE $ MissingLabel "elaborating projection" l $ I.labels r) return $ projRecord l r
     let aty1 = qmap (const ty) aty
@@ -1077,12 +1077,12 @@ instance Elaboration Binding where
 
   elaborate (Positional _ (Include e)) = do
     (t, aty, p) <- elaborate e
-    r <- getStructure $ getBody aty
+    r <- getStructure (getPosition e) $ getBody aty
     return (t, quantify (getAnnotatedKinds aty) r, p)
 
   elaborate (Positional _ (Open e)) = do
     (t, aty, p) <- elaborate e
-    r <- getStructure $ getBody aty
+    r <- getStructure (getPosition e) $ getBody aty
     return (t, quantify (getAnnotatedKinds aty) r, p)
 
   -- TODO: Handle positions correctly.
