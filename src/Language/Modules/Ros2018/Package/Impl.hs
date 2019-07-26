@@ -246,7 +246,7 @@ toAbsolute = T.unpack
 instance Member (Error PrettyError) r => Parser (Sem r) where
   parseT fp txt = either throwP return $ parseUnit whileParser fp txt
 
-instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
+instance Members '[Error PrettyError, Reader FilePath, Lift IO] r => FileSystem (Sem r) where
   readFileT path = do
     x <- sendM $ tryIOError $ TIO.readFile path
     either g return x
@@ -261,11 +261,12 @@ instance Members '[Error PrettyError, Lift IO] r => FileSystem (Sem r) where
   traverseDir p path f = do
     z <- sendM $ tryIOError $ filter p <$> listDirectory path
     entries <- either g (return . Just) z
+    root <- ask
     case entries of
       Nothing -> return Nothing
       Just entries -> do
-        xs <- sendM $ forM entries $ \e -> do
-          let rpath = makeRelative path e
+        xs <- sendM $ forM ((path </>) <$> entries) $ \e -> do
+          let rpath = makeRelative root e
           (,) rpath . f rpath <$> TIO.readFile e
         return $ Just $ Map.fromList xs
       where
