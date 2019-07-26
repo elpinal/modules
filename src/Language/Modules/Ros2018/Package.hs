@@ -34,7 +34,7 @@ import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import GHC.Exts (IsList(..))
-import System.FilePath (takeDirectory)
+import System.FilePath (takeDirectory, normalise)
 
 import Language.Modules.Ros2018 (Env, Expr, Ident, AbstractType, Purity)
 import qualified Language.Modules.Ros2018.Internal as I
@@ -149,6 +149,6 @@ build id p = do
   ps <- mapM (getFileName m (stripExt p) . coerce . extract) $ toList sms
   xs <- mapM (build id) ps
   (t, aty, _) <- elaborate xs ts $ body u
-  g <- register (UsePath id (takeDirectory p) $ mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
+  g <- register (UsePath id (normalise $ takeDirectory p) $ mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
   emit g t
   return (mname' u, g, aty)
