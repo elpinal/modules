@@ -134,8 +134,10 @@ toUsePath txt =
           w <> ('/' `T.cons` s' :: T.Text)
 
 newtype S = S (Map.Map UsePath (Generated, AbstractType))
-  deriving newtype Show
   deriving Eq
+
+instance Show S where
+  show (S m) = show $ Map.keysSet m
 
 type PMEffs =
  '[ Error I.Failure
