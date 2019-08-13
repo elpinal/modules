@@ -7,6 +7,7 @@ module Language.Modules.Ros2018Spec where
 import Test.Hspec
 
 import Control.Monad.Freer
+import GHC.Exts
 
 import Language.Modules.Ros2018
 import Language.Modules.Ros2018.Position
@@ -14,6 +15,7 @@ import Language.Modules.Ros2018.Impl
 import Language.Modules.Ros2018.Internal (emptyEnv, var, tvar, variable, label, record, insertType, Literal(..), BaseType(..), Failure(..))
 import qualified Language.Modules.Ros2018.Internal as I
 import qualified Language.Modules.Ros2018.Internal.Impl as II
+import Language.Modules.Ros2018.Shift
 
 shouldBeRight :: (HasCallStack, Eq a, Show a) => Either Failure a -> a -> Expectation
 shouldBeRight (Left (Failure err _ f)) _ = expectationFailure $ "error: " ++ f err
@@ -99,7 +101,42 @@ spec = do
 
   describe "applySmall" $
     it "performs parallel substitution" $ do
-      applySmall [(variable 0, Parameterized [I.Base] $ SemanticPath $ fromVariable $ variable 0)] (SemanticPath $ Path (variable 0) [BaseType Int]) `shouldBe` BaseType Int
+      let i2sp = SemanticPath . fromVariable . variable
+
+      applySmall [(variable 0, Parameterized [I.Base] $ i2sp 0)] (SemanticPath $ Path (variable 0) [BaseType Int]) `shouldBe` BaseType Int
+
+      let z f = Function $ quantify [dummyP $ I.Base] $
+                Fun (AbstractType $ fromBody $ i2sp 0) Pure $ fromBody $
+                AbstractType $ fromBody $ SemanticPath $ f $ Path (variable 1) [i2sp 0]
+      let zid = z id
+      let f _ = Path (variable 2) [i2sp 1, i2sp 0]
+      let b2b = I.KFun I.Base I.Base
+
+      let ty = Function $ quantify [dummyP $ b2b] $ Fun zid Pure $ fromBody zid
+      let aty = quantify [dummyP $ I.KFun b2b b2b] $ Function $ quantify [dummyP $ b2b] $ Fun zid Pure $ fromBody $ z f :: AbstractType
+
+      let tys = [Parameterized [b2b, I.Base] $ SemanticPath $ Path (variable 1) [i2sp 0]]
+
+      lookupInsts (enumVars aty) (shift (qsLen aty) ty) (getBody aty) `shouldBe` return tys
+
+      applyPath [(variable 1, Parameterized [I.Base] $ i2sp 0)]
+        (Path (variable 1) [i2sp 0]) `shouldBe` i2sp 0
+
+      I.lookupSubst (variable 2) [(variable 2, Parameterized [b2b] $ i2sp 0)] `shouldBe` Just (Parameterized [b2b] $ i2sp 0)
+
+      applyPath [(variable 2, Parameterized [b2b] $ i2sp 0)]
+        (Path (variable 2) [i2sp 1, i2sp 0]) `shouldBe`
+          (SemanticPath $ Path (variable 1) [i2sp 0])
+
+      applySmall [(variable 2, Parameterized [b2b] $ i2sp 0)]
+        (AbstractType $ fromBody $ SemanticPath $ Path (variable 2) [i2sp 1, i2sp 0]) `shouldBe`
+          (AbstractType $ fromBody $ SemanticPath $ Path (variable 1) [i2sp 0])
+
+      applySmall [(variable 2, Parameterized [b2b, I.Base] $ SemanticPath $ Path (variable 1) [i2sp 0])]
+        (AbstractType $ fromBody $ SemanticPath $ Path (variable 2) [i2sp 1, i2sp 0]) `shouldBe`
+          (AbstractType $ fromBody $ SemanticPath $ Path (variable 1) [i2sp 0])
+
+      shift (-qsLen aty) (applySmall (fromList $ zip (enumVars aty) tys) $ getBody aty) `shouldBe` ty
 
   describe "applyPath" $
     it "performs parallel substitution on paths" $ do

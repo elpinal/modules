@@ -311,3 +311,8 @@ spec = do
             type t = char;
           end;
           |] `shouldBeRight` ()
+
+        integration [r|
+          type T = (a : type -> type) -> type -> type;
+          t : T = fun (a : type -> type) b => a b;
+          |] `shouldBeRight` ()

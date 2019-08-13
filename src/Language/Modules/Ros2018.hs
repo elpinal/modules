@@ -449,11 +449,11 @@ applyPath s (Path v tys) =
       | otherwise               -> error $ "ill-formed semantic path: " ++ show (ks, tys)
   where
     f :: [IKind] -> SemanticType -> SemanticType
-    f ks ty = shift (-length ks) $ applySmall (fromList $ zip (map variable [0..length ks-1]) $ map parameterized $ reverse $ shift (length ks) tys) ty
+    f ks ty = shift (-length ks) $ applySmall (fromList $ zip (map variable [0..length ks-1]) $ map parameterized $ reverse $ shift (length ks) $ applySmall s tys) ty
 
     -- I.Base is used here because we ignore kinds for substitution, so we can choose an arbitrary kind.
     g :: Int -> [IKind] -> SemanticType -> SemanticType
-    g n ks (SemanticPath p) = f (replicate n I.Base ++ ks) $ SemanticPath $ appendPath (map (SemanticPath . fromVariable . variable) $ reverse $ take n [length ks..]) $ shiftAbove (length ks) n p
+    g n ks (SemanticPath p) = f (replicate n I.Base ++ ks) $ SemanticPath $ appendPath (map (SemanticPath . fromVariable . variable) $ reverse $ take n [0..]) $ shift n p
     g _ _ _                 = error "ill-formed semantic path"
 
 appendPath :: [SemanticType] -> Path -> Path
@@ -662,6 +662,7 @@ instance ToType a => ToType (Record a) where
 toTerm :: AbstractType -> Term
 toTerm aty = I.Abs (toType aty) $ I.TmRecord $ record []
 
+-- In the body, the variable 0 denotes the argument which is lastly passed to.
 data Parameterized = Parameterized [IKind] SemanticType
   deriving (Eq, Show)
 
