@@ -413,6 +413,8 @@ instance DisplayName SemanticType where
   displaysWithName _ (Wrapped aty) = showString "[" . displaysWithName 0 aty . showString "]"
 
 class SubstitutionSmall a where
+  -- @applySmall s@ is not always idempotent.
+  -- For example, elaboration of "where" or function types involves non-idempotent substitution.
   applySmall :: SubstP Parameterized -> a -> a
 
 instance SubstitutionSmall SemanticType where
@@ -699,6 +701,7 @@ lookupInst _ _ _ = return Nothing
 lookupInsts :: [Variable] -> SemanticType -> SemanticType -> LError [Parameterized]
 lookupInsts vs ty1 ty2 = fst <$> foldrM f ([], ty2) vs
   where
+    -- If `ty1` does not contain type variables less than @length vs@, @applySmall [(v, r)]@ will be idempotent.
     f :: Variable -> ([Parameterized], SemanticType) -> LError ([Parameterized], SemanticType)
     f v (tys, ty) = (\r -> (r : tys, applySmall [(v, r)] ty)) <$> res
       where
@@ -745,7 +748,7 @@ instance Elaboration Type where
         let aty1' = shift (qsLen aty2) aty1
         let a = zip (enumVars aty2) $ map (\v -> parameterized $ SemanticPath $ Path v $ SemanticPath . fromVariable <$> enumVars aty1) $ shift (qsLen aty1) $ enumVars aty2
         let b = zip (shift (qsLen aty2) $ enumVars aty1) $ parameterized . SemanticPath . fromVariable <$> enumVars aty1
-        let s = fromList $ a ++ b
+        let s = fromList $ a ++ b -- @applySmall s@ is not idempotent.
         let aty2' = quantify (fmap (\k -> foldr I.KFun k $ getKinds aty1) <$> getAnnotatedKinds aty2) $ applySmall s $ getBody aty2
         return $ qmap (\ty2 -> Function $ qmap (\ty1 -> Fun ty1 Pure $ fromBody ty2) $ toUniversal aty1') aty2'
   elaborate (Positional p (Expr e)) = do
