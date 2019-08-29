@@ -181,13 +181,35 @@ identifier = lexeme $ try $ p >>= check
         then fail $ "keyword " ++ show x ++ " is not an identifier"
         else return $ ident x
 
+bindingOperator :: Parser Ident
+bindingOperator = ident <$> do
+  string "let"
+  choice $ string <$>
+    [ "+"
+    , "*"
+    , "&"
+    ]
+
+escapedBindingOperator :: Parser (Positional Ident)
+escapedBindingOperator = lexeme $ do
+  char '`'
+  op <- bindingOperator
+  char '`'
+  return op
+
+identifierBindingOperator :: Parser (Positional Ident)
+identifierBindingOperator = choice
+  [ identifier
+  , escapedBindingOperator
+  ]
+
 getPos :: Param -> Position
 getPos (Param id ty) = connect (getPosition id) (getPosition ty) -- Perhaps `Param` data constructor should have its position including surrounding parentheses.
 getPos (Omit id)     = getPosition id
 
 decl :: Parser (Positional Decl)
 decl = choice
-  [ (\id ps ty -> connecting id ty $ Spec (fromPositional id) ps ty) <$> identifier <*> many param <*> (symbol ":" >> typeParser)
+  [ (\id ps ty -> connecting id ty $ Spec (fromPositional id) ps ty) <$> identifierBindingOperator <*> many param <*> (symbol ":" >> typeParser)
   , try $ (\p id ps ty -> positional (connect p $ getPosition ty) $ ManTypeSpec (fromPositional id) ps ty) <$> reserved "type" <*> identifier <*> many param <*> (symbol "=" >> typeParser)
   , (\p id ps -> positional (connect p $ getLast $ sconcat $ coerce $ (:|) (getPosition id) $ getPos <$> ps) $ AbsTypeSpec (fromPositional id) ps) <$> reserved "type" <*> identifier <*> many param
   , (\pos ty -> positional (connect pos $ getPosition ty) $ DInclude ty) <$> reserved "include" <*> typeParser
@@ -252,6 +274,7 @@ expression' = exp_ <|> choice
   , (\p ty -> positional (p `connect` getPosition ty) $ Type ty) <$> reserved "type" <*> typeParser
   , (\p ps e -> positional (connect p $ getPosition e) $ Abs ps e) <$> reserved "fun" <*> params <*> (symbol "=>" >> expression)
   , (\p e0 e1 e2 ty -> positional (connect p $ getPosition ty) $ If e0 e1 e2 ty) <$> reserved "if" <*> expression <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
+  , (\op id ty e1 e2 -> connecting op e2 $ LetOp op id ty e1 e2) <$> try (lexeme bindingOperator) <*> identifier <*> (symbol ":" >> typeParser) <*> (symbol "=" >> expression) <*> (reserved "in" >> expression)
   , (\p bs e -> positional (connect p $ getPosition e) $ Let bs e) <$> reserved "let" <*> bindings <*> (reserved "in" >> expression)
   , flip positional Fix <$> reserved "fix"
   ]
@@ -293,7 +316,7 @@ param = choice
 
 binding :: Parser (Positional Binding)
 binding = choice
-  [ (\id ps asc e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) ps asc e) <$> identifier <*> many param <*> optional ascription <*> (symbol "=" >> expression)
+  [ (\id ps asc e -> positional (getPosition id `connect` getPosition e) $ Val (fromPositional id) ps asc e) <$> identifierBindingOperator <*> many param <*> optional ascription <*> (symbol "=" >> expression)
   , (\p id ps ty -> positional (p `connect` getPosition ty) $ TypeBinding (fromPositional id) ps ty) <$> reserved "type" <*> identifier <*> many param <*> (symbol "=" >> typeParser)
   , (\pos e -> positional (connect pos $ getPosition e) $ Include e) <$> reserved "include" <*> expression
   , (\pos e -> positional (connect pos $ getPosition e) $ Open e) <$> reserved "open" <*> expression

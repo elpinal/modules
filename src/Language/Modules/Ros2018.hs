@@ -259,24 +259,26 @@ data Expr
   | Wrap (Positional Expr) (Positional Type)
   | Unwrap (Positional Expr) (Positional Type)
   | Let [Positional Binding] (Positional Expr)
+  | LetOp (Positional Ident) (Positional Ident) (Positional Type) (Positional Expr) (Positional Expr)
   | Fix
   deriving (Eq, Show)
 
 instance Display Expr where
-  displaysPrec _ (Lit l)               = displays l
-  displaysPrec _ (Id id)               = displays id
-  displaysPrec _ (Struct bs)           = showString "struct " . displaysBindings bs . showString "end"
-  displaysPrec n (Type ty)             = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
-  displaysPrec n (Seal e ty)           = showParen (4 <= n) $ displaysPrec 9 e . showString " :> " . displaysPrec 4 ty
-  displaysPrec n (TransparentAsc e ty) = showParen (4 <= n) $ displaysPrec 9 e . showString " : " . displaysPrec 4 ty
-  displaysPrec n (Abs params e)        = showParen (4 <= n) $ showString "fun " . displaysParams params . showString " => " . displaysPrec 3 e
-  displaysPrec n (App e1 e2)           = showParen (4 <= n) $ displaysPrec 4 e1 . showChar ' ' . displaysPrec 5 e2
-  displaysPrec _ (Proj e id)           = displaysPrec 4 e . showChar '.' . displays id
-  displaysPrec n (If e0 e1 e2 ty)      = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
-  displaysPrec n (Wrap e ty)           = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
-  displaysPrec n (Unwrap e ty)         = showParen (4 <= n) $ showString "unwrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
-  displaysPrec n (Let bs e)            = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
-  displaysPrec _ Fix                   = showString "fix"
+  displaysPrec _ (Lit l)                = displays l
+  displaysPrec _ (Id id)                = displays id
+  displaysPrec _ (Struct bs)            = showString "struct " . displaysBindings bs . showString "end"
+  displaysPrec n (Type ty)              = showParen (4 <= n) $ showString "type " . displaysPrec 5 ty
+  displaysPrec n (Seal e ty)            = showParen (4 <= n) $ displaysPrec 9 e . showString " :> " . displaysPrec 4 ty
+  displaysPrec n (TransparentAsc e ty)  = showParen (4 <= n) $ displaysPrec 9 e . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Abs params e)         = showParen (4 <= n) $ showString "fun " . displaysParams params . showString " => " . displaysPrec 3 e
+  displaysPrec n (App e1 e2)            = showParen (4 <= n) $ displaysPrec 4 e1 . showChar ' ' . displaysPrec 5 e2
+  displaysPrec _ (Proj e id)            = displaysPrec 4 e . showChar '.' . displays id
+  displaysPrec n (If e0 e1 e2 ty)       = showParen (4 <= n) $ showString "if " . displays e0 . showString " then " . displays e1 . showString " else " . displays e2 . showString " end : " . displays ty
+  displaysPrec n (Wrap e ty)            = showParen (4 <= n) $ showString "wrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Unwrap e ty)          = showParen (4 <= n) $ showString "unwrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
+  displaysPrec n (Let bs e)             = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
+  displaysPrec n (LetOp op id ty e1 e2) = showParen (4 <= n) $ displays op . showString " " . displays id . showString " : " . displaysPrec 0 ty . showString " = " . displaysPrec 0 e1 . showString "in " . displaysPrec 4 e2
+  displaysPrec _ Fix                    = showString "fix"
 
 displaysBindings :: [Positional Binding] -> ShowS
 displaysBindings bs = appEndo (mconcat $ coerce $ intersperse (showString "; ") $ map (displays . fromPositional) bs) . showSpace (not $ null bs)
@@ -991,6 +993,10 @@ instance Elaboration Expr where
     id <- coerce <$> freshName
     -- TODO: Handle positions correctly.
     elaborate $ positional p $ Proj (positional p $ Struct $ bs ++ [positional p $ val id e]) id
+  elaborate (Positional p (LetOp op id ty e1 e2)) = do
+    -- TODO: Handle positions correctly.
+    let k = App (connecting op ty $ App (Id <$> op) $ positional (getPosition ty) $ Type ty) e1
+    elaborate $ positional p $ App (connecting op e1 k) $ positional (getPosition e2) $ Abs [Param id ty] e2
   elaborate (Positional p Fix) = do
     id1 <- coerce <$> freshName
     id2 <- coerce <$> freshName
