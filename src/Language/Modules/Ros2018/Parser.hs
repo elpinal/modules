@@ -276,6 +276,7 @@ expression' = exp_ <|> choice
   , (\p e0 e1 e2 ty -> positional (connect p $ getPosition ty) $ If e0 e1 e2 ty) <$> reserved "if" <*> expression <*> (reserved "then" >> expression) <*> (reserved "else" >> expression) <*> (reserved "end" >> symbol ":" >> typeParser)
   , (\op id ty e1 e2 -> connecting op e2 $ LetOp op id ty e1 e2) <$> try (lexeme bindingOperator) <*> identifier <*> (symbol ":" >> typeParser) <*> (symbol "=" >> expression) <*> (reserved "in" >> expression)
   , (\p bs e -> positional (connect p $ getPosition e) $ Let bs e) <$> reserved "let" <*> bindings <*> (reserved "in" >> expression)
+  , (\p e1 e2 -> positional (connect p $ getPosition e2) $ OpenE e1 e2) <$> reserved "open" <*> expression <*> (reserved "in" >> expression)
   , flip positional Fix <$> reserved "fix"
   ]
 

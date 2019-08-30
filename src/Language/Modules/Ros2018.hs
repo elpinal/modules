@@ -260,6 +260,7 @@ data Expr
   | Unwrap (Positional Expr) (Positional Type)
   | Let [Positional Binding] (Positional Expr)
   | LetOp (Positional Ident) (Positional Ident) (Positional Type) (Positional Expr) (Positional Expr)
+  | OpenE (Positional Expr) (Positional Expr)
   | Fix
   deriving (Eq, Show)
 
@@ -278,6 +279,7 @@ instance Display Expr where
   displaysPrec n (Unwrap e ty)          = showParen (4 <= n) $ showString "unwrap " . displaysPrec 4 e  . showString " : " . displaysPrec 4 ty
   displaysPrec n (Let bs e)             = showParen (4 <= n) $ showString "let " . displaysBindings bs . showString "in " . displaysPrec 4 e
   displaysPrec n (LetOp op id ty e1 e2) = showParen (4 <= n) $ displays op . showString " " . displays id . showString " : " . displaysPrec 0 ty . showString " = " . displaysPrec 0 e1 . showString "in " . displaysPrec 4 e2
+  displaysPrec n (OpenE e1 e2)          = showParen (4 <= n) $ showString "open " . displays e1 . showString "in " . displaysPrec 4 e2
   displaysPrec _ Fix                    = showString "fix"
 
 displaysBindings :: [Positional Binding] -> ShowS
@@ -997,6 +999,9 @@ instance Elaboration Expr where
     -- TODO: Handle positions correctly.
     let k = App (connecting op ty $ App (Id <$> op) $ positional (getPosition ty) $ Type ty) e1
     elaborate $ positional p $ App (connecting op e1 k) $ positional (getPosition e2) $ Abs [Param id ty] e2
+  elaborate (Positional p (OpenE e1 e2)) = do
+    -- TODO: Handle positions correctly.
+    elaborate $ positional p $ Let [positional (getPosition e1) $ Include e1] e2
   elaborate (Positional p Fix) = do
     id1 <- coerce <$> freshName
     id2 <- coerce <$> freshName
