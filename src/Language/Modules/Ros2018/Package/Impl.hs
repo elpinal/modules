@@ -55,6 +55,7 @@ import Language.Modules.Ros2018.Package.Config
 import Language.Modules.Ros2018.Package.UnitParser
 import Language.Modules.Ros2018.Parser (whileParser)
 import Language.Modules.Ros2018.Position
+import Language.Modules.Ros2018.Shift
 
 data Evidence e where
   EvidPM :: Evidence PMError
@@ -133,11 +134,15 @@ toUsePath txt =
           let s' = if T.null s then "." else s in
           w <> ('/' `T.cons` s' :: T.Text)
 
-newtype S = S (Map.Map UsePath (Generated, AbstractType))
+-- @Int@ represents the number of abstract types (including their own abstract types) in the environment when the module is elaborated.
+newtype S = S (Map.Map UsePath (Generated, SemanticType, Int))
   deriving Eq
 
 instance Show S where
   show (S m) = show $ Map.keysSet m
+
+newtype Q = Q [Positional I.Kind]
+  deriving Eq
 
 type PMEffs =
  '[ Error I.Failure
@@ -146,6 +151,7 @@ type PMEffs =
   , Reader FilePath
   , State Int
   , State S
+  , State Q
   , State [(Generated, I.Term)]
   , Trace
   ]
@@ -166,18 +172,19 @@ instance Members PMEffs r => PM (Sem r) where
         g (Import id _) = extract id
   elaborate xs ts e = do
     let ups = map (toUsePath . extract) ts
-    let lookupUsePath :: UsePath -> Sem r (Generated, AbstractType)
+    let lookupUsePath :: UsePath -> Sem r (Generated, SemanticType, Int)
         lookupUsePath up = do
           S m <- get
           maybe (throwP $ UnboundUsePath up $ S m) return $ Map.lookup up m
     ps <- mapM lookupUsePath ups
-    let w f (up, (g, aty)) env = let ?env = f env in
-                                 let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
-                                 I.insertTempValueWithName (refer up) g $ getBody aty
-    let z f (id, g, aty) env = let ?env = f env in
-                               let ?env = I.insertTypes $ reverse $ getAnnotatedKinds aty in
-                               I.insertTempValueWithName (unIdent id) g $ getBody aty
-    elab (foldl z (foldl w id $ zip ups ps) xs) e
+    Q ks <- get
+    let exs env = let ?env = env in
+                  I.insertTypes $ reverse ks
+    let w f (up, (g, ty, n)) env = let ?env = f env in
+                                   I.insertTempValueWithName (refer up) g $ shift (length ks - n) ty
+    let z f (id, g, ty, n) env = let ?env = f env in
+                                 I.insertTempValueWithName (unIdent id) g $ shift (length ks - n) ty
+    elab (foldl z (foldl w exs $ zip ups ps) xs) e
   evaluate (U t) = do
     xs <- get @[(Generated, I.Term)]
     let t0 = U $ foldr (\(g, t1) t2 -> E.unpack (Just g) (E.erase t1) t2) t xs
@@ -195,15 +202,19 @@ instance Members PMEffs r => PM (Sem r) where
         f ((path, _), rest) = if Map.null rest then return path else throwP $ DuplicateModule id dir
   register up aty = do
     g <- generateVar
-    modify $ \(S m) -> S $ Map.insert up (g, aty) m
-    return g
+    Q ks <- get
+    let n = length ks + length (getKinds aty)
+    modify $ \(S m) -> S $ Map.insert up (g, getBody aty, n) m
+    modify $ \(Q ks) -> Q $ getAnnotatedKinds aty ++ ks
+    return (g, n)
   combine pn _ lib main = do
     case lib of
       Nothing  -> return $ U $ E.erase main
       Just lib -> do
         let l = U $ E.erase lib
         let m = U $ E.erase main
-        g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fst $ Map.lookup (Root pn) m
+        let fs (x, _, _) = x
+        g <- gets $ \(S m) -> maybe (error "unexpected error: no lib") fs $ Map.lookup (Root pn) m
         return $ U $ E.unpack (Just g) (unU l) (unU m)
   emit g t = modify (++ [(g, t)])
   catchE m x = m `catch` f
@@ -286,4 +297,5 @@ newtype H a = H { unH :: forall m. PM m => m a }
 
 runPM :: FilePath -> H a -> IO (Either PrettyError (Either I.Failure a))
 runPM fp m = runM $ runError $ runError $ fmap snd $ runState [] $ runIgnoringTrace $
-             fmap snd $ runState (S mempty) $ fmap snd $ runState (0 :: Int) $ runReader fp $ unH m
+             fmap snd $ runState (Q mempty) $ fmap snd $ runState (S mempty) $
+             fmap snd $ runState (0 :: Int) $ runReader fp $ unH m

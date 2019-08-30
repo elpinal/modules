@@ -36,7 +36,7 @@ import qualified Data.Text as T
 import GHC.Exts (IsList(..))
 import System.FilePath (takeDirectory, normalise)
 
-import Language.Modules.Ros2018 (Env, Expr, Ident, AbstractType, Purity)
+import Language.Modules.Ros2018 (Env, Expr, Ident, AbstractType, SemanticType, Purity, getBody)
 import qualified Language.Modules.Ros2018.Internal as I
 import Language.Modules.Ros2018.Internal (Generated)
 import qualified Language.Modules.Ros2018.Internal.Erased as E
@@ -77,7 +77,7 @@ data UsePath
 class Monad m => PM m where
   parse :: RootRelativePath -> m Unit
   readConfig :: m (ImportMap, [Ident])
-  elaborate :: [(Ident, Generated, AbstractType)] -> [Positional T.Text] -> Positional Expr -> m (I.Term, AbstractType, Purity)
+  elaborate :: [(Ident, Generated, SemanticType, Int)] -> [Positional T.Text] -> Positional Expr -> m (I.Term, AbstractType, Purity)
   evaluate :: U -> m ()
   -- Returns not necessarily injective, filename-to-module-identifier mapping.
   getMapping :: RootRelativePath -> m FileModuleMap
@@ -86,7 +86,8 @@ class Monad m => PM m where
   -- resolveExternal :: ImportMap -> Positional T.Text -> m I.Term
   -- elaborateExternal :: Ident -> m I.Term
   combine :: PackageName -> [I.Term] -> Maybe I.Term -> I.Term -> m U
-  register :: UsePath -> AbstractType -> m Generated
+  -- The @Int@ in the second component of the result is the number of the abstract types in the context.
+  register :: UsePath -> AbstractType -> m (Generated, Int)
   emit :: Generated -> I.Term -> m ()
   catchE :: m a -> a -> m a
 
@@ -130,7 +131,7 @@ buildLib id = do
   ps <- mapM (getFileName m "." . coerce . extract) $ toList sms
   xs <- mapM (build id) ps
   (t, aty, _) <- elaborate xs ts $ body u
-  _ <- register (Root id) aty -- TODO: Perhaps no need to register if the module is marked as "private".
+  (_, _) <- register (Root id) aty -- TODO: Perhaps no need to register if the module is marked as "private".
   return t
 
 -- TODO
@@ -140,7 +141,7 @@ stripExt p =
     then take (length p - 4) p
     else error "stripExt"
 
-build :: PM m => PackageName -> RootRelativePath -> m (Ident, Generated, AbstractType)
+build :: PM m => PackageName -> RootRelativePath -> m (Ident, Generated, SemanticType, Int)
 build id p = do
   u <- parse p
   let ts = uses u
@@ -149,6 +150,6 @@ build id p = do
   ps <- mapM (getFileName m (stripExt p) . coerce . extract) $ toList sms
   xs <- mapM (build id) ps
   (t, aty, _) <- elaborate xs ts $ body u
-  g <- register (UsePath id (normalise $ takeDirectory p) $ mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
+  (g, n) <- register (UsePath id (normalise $ takeDirectory p) $ mname' u) aty -- TODO: Perhaps no need to register if the module is marked as "private".
   emit g t
-  return (mname' u, g, aty)
+  return (mname' u, g, getBody aty, n)
