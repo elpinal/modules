@@ -183,7 +183,7 @@ identifier = lexeme $ try $ p >>= check
 
 bindingOperator :: Parser Ident
 bindingOperator = ident <$> do
-  string "let"
+  _ <- string "let"
   choice $ string <$>
     [ "+"
     , "*"
@@ -192,9 +192,9 @@ bindingOperator = ident <$> do
 
 escapedBindingOperator :: Parser (Positional Ident)
 escapedBindingOperator = lexeme $ do
-  char '`'
+  _ <- char '`'
   op <- bindingOperator
-  char '`'
+  _ <- char '`'
   return op
 
 identifierBindingOperator :: Parser (Positional Ident)
@@ -328,9 +328,9 @@ binding = choice
 text :: Parser (Positional T.Text)
 text = do
   start <- getSourcePos
-  char '"'
+  _ <- char '"'
   t <- takeWhileP Nothing (/= '"')
-  symbol "\""
+  _ <- symbol "\""
   end <- getSourcePos
   return $ positional (position start end) t
 
