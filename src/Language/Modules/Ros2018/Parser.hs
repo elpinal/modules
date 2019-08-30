@@ -172,14 +172,27 @@ reservedWords =
   , "primitive"
   ]
 
-identifier :: Parser (Positional Ident)
-identifier = lexeme $ try $ p >>= check
+identifierBase :: Parser T.Text
+identifierBase = fmap T.pack $ (:) <$> letterChar <*> many (alphaNumChar <|> char '_')
+
+identifier_ :: Parser (Positional Ident)
+identifier_ = lexeme $ try $ identifierBase >>= check
   where
-    p = fmap T.pack $ (:) <$> letterChar <*> many (alphaNumChar <|> char '_')
     check x =
       if x `elem` reservedWords
         then fail $ "keyword " ++ show x ++ " is not an identifier"
         else return $ ident x
+
+rawIdentifier :: Parser (Positional Ident)
+rawIdentifier = lexeme $ try $ do
+  _ <- string "r#"
+  ident <$> identifierBase
+
+identifier :: Parser (Positional Ident)
+identifier = choice
+  [ rawIdentifier
+  , identifier_
+  ]
 
 bindingOperator :: Parser Ident
 bindingOperator = ident <$> do
