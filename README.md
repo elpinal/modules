@@ -7,7 +7,15 @@ This repository contains <ul><li>An implementation (<a href="https://github.com/
 ## See also
 
 - [elpinal/modules-rs](https://github.com/elpinal/modules-rs)
-contains another implementation of F-ing modules in Rust.
+contains another implementation of F-ing modules in Rust (with more bugs fixed than Haskell implementation here).
+
+## 1ML interpreter
+
+`stack install` installs `1mlex`, which is an interpreter of 1ML *without* type inference.
+
+Status: All parts of [Rossberg 2018], except type inference, are implemented. There are few known bugs.
+
+- [elpinal/1ml-vim](https://github.com/elpinal/1ml-vim) is a Vim plugin providing syntax highlighting for 1ML.
 
 ## Bibliography of Modules and Type Abstraction
 
