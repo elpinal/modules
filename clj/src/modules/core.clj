@@ -1045,5 +1045,5 @@
                              "Status: All parts of [Rossberg 2018], except type inference, are implemented. There are few known bugs.\n\n"
                              "- [elpinal/1ml-vim](https://github.com/elpinal/1ml-vim) is a Vim plugin providing syntax highlighting for 1ML."
                              "\n\n"
-"## Bibliography of Modules and Type Abstraction\n\n"
+"## Bibliography of Modules and Data Abstraction\n\n"
                              (html-entries (vals entries)))))
