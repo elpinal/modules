@@ -771,6 +771,14 @@
     :url      "https://people.mpi-sws.org/~dreyer/papers/infmod/main-short.pdf"
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/infmod/main-long.pdf"}
 
+   :nak2007
+   {:key      "Nak2007"
+    :title    "A module system with applicative functors and recursive path references"
+    :author   nakata
+    :date     2007
+    :location (dissertation-location :institution "Kyoto University" :degree "PhD")
+    :url      "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1583.pdf"}
+
    :ng2007
    {:key      "NG2007"
     :title    "Path resolution for recursive nested modules is undecidable"
