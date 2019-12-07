@@ -589,6 +589,14 @@
     :location (techrpt-location :institution "Carnegie Mellon University School of Computer Science" :number "CMU-CS-01-112")
     :url      "https://www.cs.cmu.edu/~rwh/papers/ttrm/rmtr.pdf"}
 
+   :sew2001
+   {:key      "Sew2001"
+    :title    "Modules, abstract types, and distributed versioning"
+    :author   "Peter Sewell"
+    :date     2001
+    :location (proceedings-location popl :pages '(236 247))
+    :url      "https://www.cl.cam.ac.uk/~pes20/versions-popl.pdf"}
+
    :hl2002
    {:key      "HL2002"
     :title    "Mixin modules in a call-by-value setting"
