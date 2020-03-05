@@ -1052,7 +1052,7 @@
                                             [:a {:href "https://github.com/elpinal/modules#1ml--core-and-modules-united"}
                                              "Rossberg 2018"]
                                             "), and"]
-                                           [:li "A bibliography of modules and type abstraction, which is given below."]])
+                                           [:li "A bibliography of modules and data abstraction, which is given below."]])
                              "\n\n"
                              "## See also\n\n"
                              "- [elpinal/modules-rs](https://github.com/elpinal/modules-rs)\n"
