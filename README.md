@@ -19,6 +19,8 @@ Status: All parts of [Rossberg 2018], except type inference, are implemented. Th
 
 ## Bibliography of Modules and Data Abstraction
 
+_DISCLAIMER: There is no warranty of accuracy._
+
 <div><h4>Types, abstraction and parametric polymorphism</h4><p>J. C. Reynolds</p><p>Information Processing, pp. 513–523, 1983</p><p>Available at <a href="http://www.cse.chalmers.se/edu/year/2010/course/DAT140_Types/Reynolds_typesabpara.pdf">http://www.cse.chalmers.se/edu/year/2010/course/DAT140_Types/Reynolds_typesabpara.pdf</a></p></div>
 <div><h4>A kernel language for abstract data types and modules</h4><p>R. Burstall and B. Lampson</p><p>Semantics of Data Types, pp. 1–50, 1984</p><p>Available at <a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf">https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf</a></p></div>
 <div><h4>Modules for Standard ML</h4><p>David B. MacQueen</p><p>ACM Conference on LISP and Functional Programming, pp. 198–207, 1984</p><p>Available at <a href="https://www.researchgate.net/profile/David_Macqueen/publication/221252232_Modules_for_Standard_ML/links/0f317532689526bea1000000/Modules-for-Standard-ML.pdf">https://www.researchgate.net/profile/David_Macqueen/publication/221252232_Modules_for_Standard_ML/links/0f317532689526bea1000000/Modules-for-Standard-ML.pdf</a></p></div>
