@@ -335,8 +335,8 @@
    :bis1995
    {:key      "Bis1995"
     :title    "Higher-order functors with transparent signatures"
-    :author   "S. K. Biswas"
-    :date     "1995"
+    :author   "Sandip K. Biswas"
+    :date     1995
     :location (proceedings-location popl :pages '(154 163))
     :url      "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.9123&rep=rep1&type=pdf"}
 
