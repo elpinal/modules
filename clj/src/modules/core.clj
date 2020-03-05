@@ -727,7 +727,8 @@
     :author   (authors "Keiko Nakata" "Jacques Garrigue")
     :date     "2006"
     :location (proceedings-location icfp :pages '(74 86))
-    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/nakata-icfp2006.pdf"}
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/nakata-icfp2006.pdf"
+    :tr-url   "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1546.pdf"}
 
    :of2006
    {:key      "OF2006"
