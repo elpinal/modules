@@ -21,6 +21,7 @@
 (def cardelli "Luca Cardelli")
 (def crary "Karl Crary")
 (def dreyer "Derek Dreyer")
+(def flatt "Matthew Flatt")
 (def frisch "Alain Frisch")
 (def garrigue "Jacques Garrigue")
 (def harper "Robert Harper")
@@ -464,7 +465,7 @@
    :ff1998a
    {:key      "FF1998a"
     :title    "Modular object-oriented programming with units and mixins"
-    :author   (authors "R. B. Findler" "M. Flatt")
+    :author   (authors "Robert Bruce Findler" flatt)
     :date     "1998"
     :location (proceedings-location icfp :pages '(94 104))
     :url      "https://www2.ccs.neu.edu/racket/pubs/icfp98-ff.pdf"}
@@ -472,7 +473,7 @@
    :ff1998b
    {:key      "FF1998b"
     :title    "Units: Cool modules for HOT languages"
-    :author   (authors "Matthew Flatt" "Matthias Felleisen")
+    :author   (authors flatt "Matthias Felleisen")
     :date     "1998"
     :location (proceedings-location pldi :pages '(236 248))
     :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"}
@@ -733,7 +734,7 @@
    :of2006
    {:key      "OF2006"
     :title    "From structures and functors to modules and units"
-    :author   (authors "Scott Owens" "Matthew Flatt")
+    :author   (authors "Scott Owens" flatt)
     :date     "2006"
     :location (proceedings-location icfp :pages '(87 98))
     :url      "http://www.cs.utah.edu/plt/publications/icfp06-of.pdf"}
