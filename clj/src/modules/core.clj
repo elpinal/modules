@@ -472,7 +472,7 @@
    :ff1998b
    {:key      "FF1998b"
     :title    "Units: Cool modules for HOT languages"
-    :author   (authors "M. Flatt" "M. Felleisen")
+    :author   (authors "Matthew Flatt" "Matthias Felleisen")
     :date     "1998"
     :location (proceedings-location pldi :pages '(236 248))
     :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"}
