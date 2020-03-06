@@ -53,7 +53,7 @@
 (defn paren [s] (str "(" s ")"))
 
 (defn render
-  [{:keys [key title author date location url tr-url tr-with tr-date slides appendix]}]
+  [{:keys [key title author date location doi url tr-url tr-with tr-date slides appendix]}]
   [:div
    [:h4 title]
    [:p author]
@@ -61,6 +61,9 @@
               (apply str (interpose ", " (map #(hiccup/html %) location)))
               location)
             (if location ", ") date)]
+   (if doi
+     [:p "DOI: "
+      [:a {:href (str "https://doi.org/" doi)} doi]])
    (if url
      (into [] (concat
                [:p "Available at "
@@ -339,6 +342,7 @@
     :author   "Sandip K. Biswas"
     :date     1995
     :location (proceedings-location popl :pages '(154 163))
+    :doi      "10.1145/199448.199478"
     :url      "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.9123&rep=rep1&type=pdf"}
 
    :ler1995
