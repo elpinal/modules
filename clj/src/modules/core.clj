@@ -605,8 +605,8 @@
    :hl2002
    {:key      "HL2002"
     :title    "Mixin modules in a call-by-value setting"
-    :author   (authors "T. Hirschowitz" leroy)
-    :date     "2002"
+    :author   (authors "Tom Hirschowitz" leroy)
+    :date     2002
     :location (proceedings-location esop :pages '(6 20))
     :url      "https://xavierleroy.org/publi/mixins-cbv-esop2002.pdf"}
 
