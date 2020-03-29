@@ -726,6 +726,15 @@
     :location (proceedings-location icfp)
     :url      "http://henning.makholm.net/papers/icfp2005.pdf"}
 
+   :hl2005
+   {:key      "HL2005"
+    :title    "Mixin modules in a call-by-value setting"
+    :author   (authors "Tom Hirschowitz" leroy)
+    :date     2005
+    :location (proceedings-location toplas :pages '(857 881))
+    :doi      "10.1145/1086642.1086644"
+    :url      "https://xavierleroy.org/publi/mixins-cbv-toplas.pdf"}
+
    :ng2006
    {:key      "NG2006"
     :title    "Recursive modules for programming"
