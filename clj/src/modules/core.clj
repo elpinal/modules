@@ -722,6 +722,14 @@
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"
     :ext-url  "http://www.kurims.kyoto-u.ac.jp/~keiko/papers/room_ext.pdf"}
 
+   :nak2005
+   {:key      "Nak2005"
+    :title    "Recursion for structured modules"
+    :author   nakata
+    :date     2005
+    :location (proceedings-location "JSSST Workshop on Programming and Programming Languages")
+    :url      "http://www.kurims.kyoto-u.ac.jp/~keiko/papers/ppl05.pdf"}
+
    :mw2005
    {:key      "MW2005"
     :title    "Type inference, principal typings, and let-polymorphism for first-class mixin modules"
