@@ -855,6 +855,22 @@
     :url      "http://gallium.inria.fr/~remy/modules/oat.pdf"
     :slides   "http://gallium.inria.fr/~remy/modules/fzip@msr2008.pdf"}
 
+   :nak2008a
+   {:key      "Nak2008a"
+    :title    "Lazy mixins and disciplined effects"
+    :author   nakata
+    :date     2008
+    :month    "July"
+    :url      "http://cs.ioc.ee/~keiko/papers/Lyre08.pdf"}
+
+   :nak2008b
+   {:key      "Nak2008b"
+    :title    "Lazy modules: A lazy evaluation strategy for more recursive initialization patterns"
+    :author   nakata
+    :date     2008
+    :month    "September"
+    :url      "http://cs.ioc.ee/~keiko/papers/OsanLong.pdf"}
+
    :mr2009
    {:key      "MR2009"
     :title    "Modeling abstract types in modules with open existential types"
