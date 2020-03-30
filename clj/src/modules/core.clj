@@ -913,7 +913,7 @@
 
    :gn2012
    {:key      "GN2012"
-    :title    "Path resolution for recursive nested modules"
+    :title    "Path resolution for nested recursive modules"
     :author   (authors garrigue nakata)
     :date     2012
     :location (journal-location "Higher-Order and Symbolic Computation" :volume 24 :number 3 :pages '(207 237))
