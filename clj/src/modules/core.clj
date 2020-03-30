@@ -747,11 +747,20 @@
     :doi      "10.1145/1086642.1086644"
     :url      "https://xavierleroy.org/publi/mixins-cbv-toplas.pdf"}
 
+   :nak2006
+   {:key      "Nak2006"
+    :title    "Path resolution for recursive modules"
+    :author   nakata
+    :date     2006
+    :location (techrpt-location :institution "Kyoto University" :number "RIMS-1545")
+    :url      "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1545.pdf"}
+    ; or "http://www.kurims.kyoto-u.ac.jp/~keiko/papers/RIMS-1545.pdf"
+
    :ng2006
    {:key      "NG2006"
     :title    "Recursive modules for programming"
-    :author   (authors "Keiko Nakata" "Jacques Garrigue")
-    :date     "2006"
+    :author   (authors nakata garrigue)
+    :date     2006
     :location (proceedings-location icfp :pages '(74 86))
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/nakata-icfp2006.pdf"
     :tr-url   "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1546.pdf"}
