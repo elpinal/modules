@@ -53,7 +53,7 @@
 (defn paren [s] (str "(" s ")"))
 
 (defn render
-  [{:keys [key title author date location doi url tr-url tr-with tr-date slides appendix]}]
+  [{:keys [key title author date location doi url tr-url tr-with tr-date slides ext-url appendix]}]
   [:div
    [:h4 title]
    [:p author]
@@ -77,6 +77,9 @@
    (if slides
      [:p "Slides: "
       [:a {:href slides} slides]])
+   (if ext-url
+     [:p "Extended version: "
+      [:a {:href ext-url} ext-url]])
    (if appendix
      [:p "Appendix: "
       [:a {:href appendix} appendix]])])
@@ -716,7 +719,8 @@
     :author   (authors nakata "Akira Ito" garrigue)
     :date     2005
     :location (proceedings-location fool)
-    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"}
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"
+    :ext-url  "http://www.kurims.kyoto-u.ac.jp/~keiko/papers/room_ext.pdf"}
 
    :mw2005
    {:key      "MW2005"
