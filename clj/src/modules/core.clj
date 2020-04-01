@@ -212,6 +212,7 @@
     :author   (authors mitchell "G. D. Plotkin")
     :date     1988
     :location (proceedings-location toplas :pages '(470 502))
+    :doi      "10.1145/44501.45065"
     :url      "https://theory.stanford.edu/~jcm/papers/mitch-plotkin-88.pdf"}
 
    :car1988
