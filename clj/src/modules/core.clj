@@ -425,9 +425,11 @@
    :cou1997
    {:key      "Cou1997"
     :title    "An applicative module calculus"
-    :author   "Judicäel Courant"
+    :author   "Judicaël Courant"
     :date     "1997"
-    :location (proceedings-location tapsoft)}
+    :location (proceedings-location tapsoft)
+    :doi      "10.1007/BFb0030630"
+    :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0030630.pdf"}
 
    :lil1997
    {:key      "Lil1997"
