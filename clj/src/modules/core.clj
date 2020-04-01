@@ -163,7 +163,8 @@
     :title    "Abstract types have existential types"
     :author   (authors mitchell "G. D. Plotkin")
     :date     1985
-    :location (proceedings-location popl :pages '(37 51))}
+    :location (proceedings-location popl :pages '(37 51))
+    :doi      "10.1145/318593.318606"}
 
    :cw1985
    {:key      "CW1985"
