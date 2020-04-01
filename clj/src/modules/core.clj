@@ -177,8 +177,9 @@
    {:key      "Mit1986"
     :title    "Representation independence and data abstraction"
     :author   mitchell
-    :date     "1986"
-    :location (proceedings-location popl)}
+    :date     1986
+    :location (proceedings-location popl :pages '(263 276))
+    :doi      "10.1145/512644.512669"}
 
    :mac1986
    {:key      "Mac1986"
