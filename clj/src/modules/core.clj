@@ -940,6 +940,7 @@
     :author   (authors im nakata garrigue "Sungwoo Park")
     :date     2011
     :location (proceedings-location oopsla)
+    :doi      "10.1145/2048066.2048141"
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/oopsla2011.pdf"}
 
    :gn2012
