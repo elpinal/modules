@@ -25,6 +25,7 @@
 (def frisch "Alain Frisch")
 (def garrigue "Jacques Garrigue")
 (def harper "Robert Harper")
+(def im "Hyeonseung Im")
 (def leroy "Xavier Leroy")
 (def macqueen "David B. MacQueen")
 (def makholm "Henning Makholm")
@@ -936,7 +937,7 @@
    :ingp2011
    {:key      "INGP2011"
     :title    "A syntactic type system for recursive modules"
-    :author   (authors "Hyonseung Im" nakata garrigue "Sungwoo Park")
+    :author   (authors im nakata garrigue "Sungwoo Park")
     :date     2011
     :location (proceedings-location oopsla)
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/oopsla2011.pdf"}
@@ -960,7 +961,7 @@
    :inp2013
    {:key      "INP2013"
     :title    "Contractive signatures with recursive types, type parameters, and abstract types"
-    :author   (authors "Hyeonseung Im" nakata "Sungwoo Park")
+    :author   (authors im nakata "Sungwoo Park")
     :date     2013
     :location (proceedings-location icalp)
     :url      "http://pl.postech.ac.kr/~gla/paper/icalp2013.pdf"}
