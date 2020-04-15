@@ -34,6 +34,7 @@
 (def montagu "Benoît Montagu")
 (def mp-jones "Mark P. Jones")
 (def nakata "Keiko Nakata")
+(def plotkin "Gordon D. Plotkin")
 (def rossberg "Andreas Rossberg")
 (def russo "Claudio V. Russo")
 (def stone "Christopher Stone")
@@ -162,7 +163,7 @@
    :mp1985
    {:key      "MP1985"
     :title    "Abstract types have existential types"
-    :author   (authors mitchell "G. D. Plotkin")
+    :author   (authors mitchell plotkin)
     :date     1985
     :location (proceedings-location popl :pages '(37 51))
     :doi      "10.1145/318593.318606"}
@@ -210,7 +211,7 @@
    :mp1988
    {:key      "MP1988"
     :title    "Abstract types have existential type"
-    :author   (authors mitchell "G. D. Plotkin")
+    :author   (authors mitchell plotkin)
     :date     1988
     :location (proceedings-location toplas :pages '(470 502))
     :doi      "10.1145/44501.45065"
