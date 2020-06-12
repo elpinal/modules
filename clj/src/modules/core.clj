@@ -160,6 +160,15 @@
     :location (proceedings-location "ACM Conference on LISP and Functional Programming" :pages '(198 207))
     :url      "https://www.researchgate.net/profile/David_Macqueen/publication/221252232_Modules_for_Standard_ML/links/0f317532689526bea1000000/Modules-for-Standard-ML.pdf"}
 
+   :mac1985
+   {:key      "Mac1985"
+    :title    "Modules for Standard ML"
+    :author   macqueen
+    :date     1985
+    :month    "October"
+    :location (journal-location "Polymorphism Newsletter" :volume "II" :number 2 :pages '(35 71))
+    :url      "http://lucacardelli.name/Papers/Polymorphism%20Vol%20II,%20No%202.pdf"}
+
    :mp1985
    {:key      "MP1985"
     :title    "Abstract types have existential types"
