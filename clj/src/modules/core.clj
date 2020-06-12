@@ -158,6 +158,7 @@
     :date     1984
     :month    "August"
     :location (proceedings-location "ACM Conference on LISP and Functional Programming" :pages '(198 207))
+    :doi      "10.1145/800055.802036"
     :url      "https://www.researchgate.net/profile/David_Macqueen/publication/221252232_Modules_for_Standard_ML/links/0f317532689526bea1000000/Modules-for-Standard-ML.pdf"}
 
    :mac1985
