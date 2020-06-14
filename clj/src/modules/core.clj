@@ -355,6 +355,14 @@
     :location (proceedings-location "Programming Languages and Systems – ESOP ’94" :pages '(409 423))
     :url      "https://rd.springer.com/content/pdf/10.1007%2F3-540-57880-3_27.pdf"}
 
+   :tof1994
+   {:key      "Tof1994"
+    :title    "Principal signatures for higher-order program modules"
+    :author   tofte
+    :date     1994
+    :location (journal-location jfp :volume 4 :number 3 :pages '(285 335))
+    :doi      "10.1017/S0956796800001088"}
+
    :bis1995
    {:key      "Bis1995"
     :title    "Higher-order functors with transparent signatures"
