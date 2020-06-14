@@ -303,8 +303,9 @@
    {:key      "Tof1992"
     :title    "Principal signatures for higher-order program modules"
     :author   tofte
-    :date     "1992"
-    :location (proceedings-location popl :pages '(189 199))}
+    :date     1992
+    :location (proceedings-location popl :pages '(189 199))
+    :doi      "10.1145/143165.143206"}
 
    :apo1993
    {:key      "Apo1993"
