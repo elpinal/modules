@@ -291,6 +291,14 @@
     :location (techrpt-location :institution "University of Utah" :number "UUCS-91-017")
     :url      "http://www.bracha.org/modularity-meets-inheritance.ps"}
 
+   :bl1992
+   {:key      "BL1992"
+    :title    "Modularity meets inheritance"
+    :author   (authors bracha "Gary Lindstrom")
+    :date     1992
+    :location (proceedings-location "International Conference on Computer Languages" :pages '(282 290))
+    :doi      "10.1109/ICCL.1992.185492"}
+
    :bra1992
    {:key      "Bra1992"
     :title    "The programming language JIGSAW: Mixins, modularity and multiple inheritance"
