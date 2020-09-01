@@ -437,6 +437,14 @@
     :location (proceedings-location plilp :pages '(334 346))
     :url      "http://www.dicosmo.org/Articles/1996-AponteDiCosmo-PLILP.pdf"}
 
+   :rus1996
+   {:key      "Rus1996"
+    :title    "Standard ML type generativity as existential quantification"
+    :author   russo
+    :date     1996
+    :location (techrpt-location :institution "University of Edinburgh" :number "ECS-LFCS-96-344")
+    :url      "http://www.dcs.ed.ac.uk/home/cvr/ECS-LFCS-96-344.pdf"}
+
    :asp1997
    {:key      "Asp1997"
     :title    "Type systems for modular programs and specifications"
