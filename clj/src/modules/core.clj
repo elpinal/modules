@@ -235,6 +235,14 @@
     :location "Manuscript"
     :url      "http://lucacardelli.name/Papers/PhaseDistinctions.A4.pdf"}
 
+   :mh1988
+   {:key      "MH1988"
+    :title    "The essence of ML"
+    :author   (authors mitchell harper)
+    :date     1988
+    :location (proceedings-location popl :pages '(28 46))
+    :doi      "10.1145/73560.73563"}
+
    :mog1989
    {:key      "Mog1989"
     :title    "A category-theoretic account of program modules"
