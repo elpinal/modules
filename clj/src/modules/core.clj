@@ -1122,13 +1122,14 @@
     :location (proceedings-location pldi :pages '(950 965))
     :url      "https://www.cs.kent.ac.uk/people/staff/rnsr/docs/renaming-pldi2019.pdf"}
 
-   :ly
-   {:key      "LY"
+   :ly2019
+   {:key      "LY2019"
     :title    "Extending OCaml's open"
     :author   (authors "Runhang Li" "Jeremy Yallop")
-    :date     "to appear" ; 2019
-    :location (proceedings-location "ML & OCaml 2017 post-proceedings")
-    :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open-draft.pdf"}
+    :date     2019
+    :location (proceedings-location "ML & OCaml 2017 post-proceedings" :pages '(1 14))
+    :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open-draft.pdf"
+    :doi      "10.4204/EPTCS.294.1"}
    ))
 
 (defn -main
