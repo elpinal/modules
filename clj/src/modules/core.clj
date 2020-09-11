@@ -1130,6 +1130,23 @@
     :location (proceedings-location "ML & OCaml 2017 post-proceedings" :pages '(1 14))
     :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open-draft.pdf"
     :doi      "10.4204/EPTCS.294.1"}
+
+   :cra2020
+   {:key      "Cra2020"
+    :title    "A focused solution to the avoidance problem"
+    :author   crary
+    :date     2020
+    :location (journal-location jfp :volume 30 :pages "e24")
+    :url      "http://www.cs.cmu.edu/~crary/papers/2020/exsig.pdf"
+    :doi      "10.1017/S0956796820000222"}
+
+   :sh2020
+   {:key      "SH2020"
+    :title    "Logical relations as types: Proof-relevant parametricity for program modules"
+    :author   (authors "Jonathan Sterling" harper)
+    :date     2020
+    :location "Draft"
+    :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"}
    ))
 
 (defn -main
