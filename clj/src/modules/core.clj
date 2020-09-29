@@ -840,6 +840,15 @@
     :location "Manuscript"
     :url      "http://homes.soic.indiana.edu/ccshan/xlate/xlate.pdf"}
 
+   :lch2006
+   {:key      "LCH2006"
+    :title    "Mechanizing the metatheory of Standard ML"
+    :author   (authors lee crary harper)
+    :date     2006
+    :location (techrpt-location :institution "Carnegie Mellon University, School of Computer Science" :number "CMU-CS-06-138")
+    :url      "http://www.cs.cmu.edu/~dklee/papers/tslf.pdf"
+    :slides   "https://www.seas.upenn.edu/~sweirich/wmm/wmm06/lee-talk.pdf"}
+
    :lch2007
    {:key      "LCH2007"
     :title    "Towards a mechanized metatheory of Standard ML"
