@@ -26,6 +26,7 @@
 (def garrigue "Jacques Garrigue")
 (def harper "Robert Harper")
 (def im "Hyeonseung Im")
+(def lee "Daniel K. Lee")
 (def leroy "Xavier Leroy")
 (def macqueen "David B. MacQueen")
 (def makholm "Henning Makholm")
@@ -838,6 +839,16 @@
     :date     "May 15, 2006"
     :location "Manuscript"
     :url      "http://homes.soic.indiana.edu/ccshan/xlate/xlate.pdf"}
+
+   :lch2007
+   {:key      "LCH2007"
+    :title    "Towards a mechanized metatheory of Standard ML"
+    :author   (authors lee crary harper)
+    :date     2007
+    :month    "January"
+    :location (proceedings-location popl :pages '(173 184))
+    :url      "http://www.cs.cmu.edu/~dklee/papers/tslf-popl.pdf"
+    :doi      "10.1145/1190216.1190245"}
 
    :dre2007a
    {:key      "Dre2007a"
