@@ -1038,7 +1038,8 @@
     :date     2014
     :month    "September"
     :location (journal-location jfp :volume 24 :number 5)
-    :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing-jfp.pdf"}
+    :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing-jfp.pdf"
+    :doi      "10.1017/S0956796814000264"}
 
    :kdpm2014
    {:key      "KDPM2014"
@@ -1048,7 +1049,8 @@
     :location (proceedings-location popl :pages '(19 31))
     :url      "https://people.mpi-sws.org/~dreyer/papers/backpack/paper.pdf"
     :appendix "https://people.mpi-sws.org/~dreyer/papers/backpack/appendix.pdf"
-    :slides   "https://plv.mpi-sws.org/backpack/backpack-popl.pdf"}
+    :slides   "https://plv.mpi-sws.org/backpack/backpack-popl.pdf"
+    :doi      "10.1145/2535838.2535884"}
 
    :gw2014
    {:key      "GW2014"
@@ -1065,9 +1067,10 @@
     :title    "1ML — Core and modules united (F-ing first-class modules)"
     :author   rossberg
     :date     2015
-    :location (proceedings-location icfp)
+    :location (proceedings-location icfp :pages '(35 47))
     :url      "https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf"
-    :tr-url   "https://people.mpi-sws.org/~rossberg/1ml/1ml-extended.pdf"}
+    :tr-url   "https://people.mpi-sws.org/~rossberg/1ml/1ml-extended.pdf"
+    :doi      "10.1145/2784731.2784738"}
 
    :ros2016
    {:key      "Ros2016"
@@ -1075,7 +1078,8 @@
     :author   rossberg
     :date     2016
     :location "In WadlerFest"
-    :url      "https://people.mpi-sws.org/~rossberg/1ml/1ml-effects.pdf"}
+    :url      "https://people.mpi-sws.org/~rossberg/1ml/1ml-effects.pdf"
+    :doi      "10.1007/978-3-319-30936-1_18"}
 
    :pykd2016
    {:key      "PYKD2016"
@@ -1106,8 +1110,9 @@
     :title    "Modules, abstraction, and parametric polymorphism"
     :author   crary
     :date     "2017"
-    :location (proceedings-location popl)
-    :url      "http://www.cs.cmu.edu/~crary/papers/2017/mapp.pdf"}
+    :location (proceedings-location popl :pages '(100 113))
+    :url      "http://www.cs.cmu.edu/~crary/papers/2017/mapp.pdf"
+    :doi      "10.1145/3009837.3009892"}
 
    :ehao2018
    {:key      "EHAO2018"
@@ -1115,7 +1120,8 @@
     :author   (authors "Martin Elsman" "Troels Henriksen" "Danil Annenkov" "Cosmin E. Oancea")
     :date     2018
     :location (proceedings-location icfp :pages '(1 30))
-    :url      "https://futhark-lang.org/publications/icfp18.pdf"}
+    :url      "https://futhark-lang.org/publications/icfp18.pdf"
+    :doi      "10.1145/3236792"}
 
    :ros2018
    {:key      "Ros2018"
@@ -1123,7 +1129,8 @@
     :author   rossberg
     :date     2018
     :location (journal-location jfp :volume 28 :pages "e22")
-    :url      "https://people.mpi-sws.org/~rossberg/papers/Rossberg%20-%201ML%20--%20Core%20and%20modules%20united%20[JFP].pdf"}
+    :url      "https://people.mpi-sws.org/~rossberg/papers/Rossberg%20-%201ML%20--%20Core%20and%20modules%20united%20[JFP].pdf"
+    :doi      "10.1017/S0956796818000205"}
 
    :cra2019
    {:key      "Cra2019"
@@ -1132,7 +1139,8 @@
     :date     2019
     :location (journal-location popl :volume 3 :number "POPL" :pages '("10:1" "10:29"))
     :url      "https://dl.acm.org/ft_gateway.cfm?id=3290323"
-    :slides   "https://popl19.sigplan.org/event/popl-2019-research-papers-fully-abstract-module-compilation"}
+    :slides   "https://popl19.sigplan.org/event/popl-2019-research-papers-fully-abstract-module-compilation"
+    :doi      "10.1145/3290323"}
 
    :rfto2019
    {:key      "RFTO2019"
@@ -1140,7 +1148,8 @@
     :author   (authors "Reuben N. S. Rowe" "Hugo Férée" "Simon J. Thompson" "Scott Owens")
     :date     2019
     :location (proceedings-location pldi :pages '(950 965))
-    :url      "https://www.cs.kent.ac.uk/people/staff/rnsr/docs/renaming-pldi2019.pdf"}
+    :url      "https://www.cs.kent.ac.uk/people/staff/rnsr/docs/renaming-pldi2019.pdf"
+    :doi      "10.1145/3314221.3314600"}
 
    :ly2019
    {:key      "LY2019"
