@@ -206,10 +206,11 @@
    :hmt1987
    {:key      "HMT1987"
     :title    "A type discipline for program modules"
-    :author   (authors harper "R. Milner" tofte)
-    :date     "1987"
-    :location (proceedings-location tapsoft)
-    :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0014988.pdf"}
+    :author   (authors harper "Robin Milner" tofte)
+    :date     1987
+    :location (proceedings-location tapsoft :pages '(308 319))
+    :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0014988.pdf"
+    :doi      "10.1007/BFb0014988"}
 
    :cm1988
    {:key      "CM1988"
