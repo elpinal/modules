@@ -340,14 +340,6 @@
     :location (proceedings-location toplas :pages '(211 252))
     :url      "https://crypto.stanford.edu/~jcm/papers/harper-mitch-TOPLAS-93.pdf"}
 
-   :mg1993
-   {:key      "MG1993"
-    :title    "Studying the ML module system in HOL"
-    :author   (authors "Savi Maharaj" "Elsa Gunter")
-    :date     "1993"
-    :location (journal-location "The Computer Journal" :volume 36 :number 5)
-    :url      "http://www.cs.stir.ac.uk/~sma/publications/HOLML.ps"}
-
    :hl1994
    {:key      "HL1994"
     :title    "A type-theoretic approach to higher-order modules with sharing"
@@ -379,6 +371,24 @@
     :date     1994
     :location (journal-location jfp :volume 4 :number 3 :pages '(285 335))
     :doi      "10.1017/S0956796800001088"}
+
+   :mg1994
+   {:key      "MG1994"
+    :title    "Studying the ML module system in HOL"
+    :author   (authors "Savi Maharaj" "Elsa Gunter")
+    :date     1994
+    :location (proceedings-location "Higher Order Logic Theorem Proving and Its Applications" :pages '(346 361))
+    :url      "http://www.cs.stir.ac.uk/~sma/publications/HOLML.ps"
+    :doi      "10.1007/3-540-58450-1_53"}
+
+   :gm1995
+   {:key      "GM1995"
+    :title    "Studying the ML module system in HOL"
+    :author   (authors "Elsa Gunter" "Savi Maharaj")
+    :date     1995
+    :location (journal-location "The Computer Journal" :volume 38 :number 2 :pages '(142 151))
+    :url      "http://www.cs.stir.ac.uk/~sma/publications/CJ.ps"
+    :doi      "10.1093/comjnl/38.2.142"}
 
    :bis1995
    {:key      "Bis1995"
