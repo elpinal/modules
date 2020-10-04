@@ -225,7 +225,7 @@
     :title    "Abstract types have existential type"
     :author   (authors mitchell plotkin)
     :date     1988
-    :location (proceedings-location toplas :pages '(470 502))
+    :location (journal-location toplas :volume 10 :number 3 :pages '(470 502))
     :doi      "10.1145/44501.45065"
     :url      "https://theory.stanford.edu/~jcm/papers/mitch-plotkin-88.pdf"}
 
@@ -806,7 +806,7 @@
     :title    "Mixin modules in a call-by-value setting"
     :author   (authors "Tom Hirschowitz" leroy)
     :date     2005
-    :location (proceedings-location toplas :pages '(857 881))
+    :location (journal-location toplas :volume 27 :number 5 :pages '(857 881))
     :doi      "10.1145/1086642.1086644"
     :url      "https://xavierleroy.org/publi/mixins-cbv-toplas.pdf"}
 
@@ -1028,12 +1028,13 @@
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/path-resolution-1205.pdf"}
 
    :rd2013
-   {:key      "DR2013"
+   {:key      "RD2013"
     :title    "Mixin’ up the ML module system"
     :author   (authors rossberg dreyer)
     :date     2013
-    :location (proceedings-location toplas)
-    :url      "https://people.mpi-sws.org/~rossberg/mixml/mixml-toplas.pdf"}
+    :location (journal-location toplas :volume 35 :number 1)
+    :url      "https://people.mpi-sws.org/~rossberg/mixml/mixml-toplas.pdf"
+    :doi      "10.1145/2450136.2450137"}
 
    :inp2013
    {:key      "INP2013"
