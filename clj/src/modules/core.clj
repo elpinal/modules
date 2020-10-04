@@ -335,11 +335,12 @@
 
    :hm1993
    {:key      "HM1993"
-    :title    "On the type structure of standard ML"
+    :title    "On the type structure of Standard ML"
     :author   (authors harper mitchell)
     :date     1993
-    :location (proceedings-location toplas :pages '(211 252))
-    :url      "https://crypto.stanford.edu/~jcm/papers/harper-mitch-TOPLAS-93.pdf"}
+    :location (journal-location toplas :volume 15 :number 2 :pages '(211 252))
+    :url      "https://crypto.stanford.edu/~jcm/papers/harper-mitch-TOPLAS-93.pdf"
+    :doi      "10.1145/169701.169696"}
 
    :hl1994
    {:key      "HL1994"
