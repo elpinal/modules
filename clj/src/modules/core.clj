@@ -766,7 +766,8 @@
     :author   dreyer
     :date     2005
     :location (proceedings-location icfp :pages '(41 53))
-    :url      "https://people.mpi-sws.org/~dreyer/papers/dps/main.pdf"}
+    :url      "https://people.mpi-sws.org/~dreyer/papers/dps/main.pdf"
+    :doi      "10.1145/1086365.1086372"}
 
    :gov2005
    {:key      "Gov2005"
@@ -834,15 +835,17 @@
     :date     2006
     :location (proceedings-location icfp :pages '(74 86))
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/nakata-icfp2006.pdf"
-    :tr-url   "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1546.pdf"}
+    :tr-url   "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1546.pdf"
+    :doi      "10.1145/1159803.1159813"}
 
    :of2006
    {:key      "OF2006"
     :title    "From structures and functors to modules and units"
     :author   (authors "Scott Owens" flatt)
-    :date     "2006"
+    :date     2006
     :location (proceedings-location icfp :pages '(87 98))
-    :url      "http://www.cs.utah.edu/plt/publications/icfp06-of.pdf"}
+    :url      "http://www.cs.utah.edu/plt/publications/icfp06-of.pdf"
+    :doi      "10.1145/1159803.1159815"}
 
    :dre2006
    {:key      "Dre2006"
@@ -883,10 +886,11 @@
    {:key      "Dre2007a"
     :title    "A type system for recursive modules"
     :author   dreyer
-    :date     "2007"
-    :location (proceedings-location icfp)
+    :date     2007
+    :location (proceedings-location icfp :pages '(289 302))
     :url      "https://people.mpi-sws.org/~dreyer/papers/recmod/main-short.pdf"
-    :tr-url   "https://people.mpi-sws.org/~dreyer/papers/recmod/main-long.pdf"}
+    :tr-url   "https://people.mpi-sws.org/~dreyer/papers/recmod/main-long.pdf"
+    :doi      "10.1145/1291151.1291196"}
 
    :dre2007b
    {:key      "Dre2007b"
@@ -894,16 +898,18 @@
     :author   dreyer
     :date     2007 ; earlier version: ICFP 2005
     :location (journal-location jfp :volume 17 :number "4&5" :pages '(433 471))
-    :url      "https://people.mpi-sws.org/~dreyer/papers/dps/jfp.pdf"}
+    :url      "https://people.mpi-sws.org/~dreyer/papers/dps/jfp.pdf"
+    :doi      "10.1017/S0956796807006429"}
 
    :db2007
    {:key      "DB2007"
     :title    "Principal type schemes for modular programs"
     :author   (authors dreyer "Matthias Blume")
     :date     2007
-    :location (proceedings-location esop)
+    :location (proceedings-location esop :pages '(441 457))
     :url      "https://people.mpi-sws.org/~dreyer/papers/infmod/main-short.pdf"
-    :tr-url   "https://people.mpi-sws.org/~dreyer/papers/infmod/main-long.pdf"}
+    :tr-url   "https://people.mpi-sws.org/~dreyer/papers/infmod/main-long.pdf"
+    :doi      "10.1007/978-3-540-71316-6_30"}
 
    :nak2007
    {:key      "Nak2007"
@@ -925,10 +931,11 @@
    {:key      "DR2008"
     :title    "Mixin’ up the ML module system"
     :author   (authors dreyer rossberg)
-    :date     "2008"
+    :date     2008
     :location (proceedings-location icfp :pages '(307 320))
     :url      "https://people.mpi-sws.org/~rossberg/mixml/mixml-icfp08.pdf"
-    :tr-url   "https://people.mpi-sws.org/~rossberg/mixml/mixml-icfp08-extended.pdf"}
+    :tr-url   "https://people.mpi-sws.org/~rossberg/mixml/mixml-icfp08-extended.pdf"
+    :doi      "10.1145/1411204.1411248"}
 
    :mr2008a
    {:key      "MR2008a"
@@ -967,7 +974,8 @@
     :author   (authors "Benoît Montagu" "Didier Rémy")
     :date     2009
     :location (proceedings-location popl :pages '(354 365))
-    :url      "http://gallium.inria.fr/~remy/modules/Montagu-Remy@popl09:fzip.pdf"}
+    :url      "http://gallium.inria.fr/~remy/modules/Montagu-Remy@popl09:fzip.pdf"
+    :doi      "10.1145/1480881.1480926"}
 
    :km2009
    {:key      "KM2009"
@@ -975,7 +983,8 @@
     :author   (authors "George Kuan" macqueen)
     :date     2009
     :location (proceedings-location ifl :pages '(218 235))
-    :url      "https://www.researchgate.net/profile/David_Macqueen/publication/226219412_Engineering_Higher-Order_Modules_in_SMLNJ/links/0912f50a29752482c0000000.pdf"}
+    :url      "https://www.researchgate.net/profile/David_Macqueen/publication/226219412_Engineering_Higher-Order_Modules_in_SMLNJ/links/0912f50a29752482c0000000.pdf"
+    :doi      "10.1007/978-3-642-16478-1_13"}
 
    :kua2010
    {:key      "Kua2010"
@@ -999,15 +1008,17 @@
     :author   (authors "Liu Bochao" "Atsushi Ohori")
     :date     2010
     :location (journal-location "Information and Media Technologies" :volume 5 :number 1 :pages '(58 76))
-    :url      "https://www.jstage.jst.go.jp/article/imt/5/1/5_1_58/_pdf/-char/en"}
+    :url      "https://www.jstage.jst.go.jp/article/imt/5/1/5_1_58/_pdf/-char/en"
+    :doi      "10.11185/imt.5.58"}
 
    :rrd2010
    {:key      "RRD2010"
     :title    "F-ing modules"
     :author   (authors rossberg russo dreyer)
     :date     2010
-    :location (proceedings-location tldi)
-    :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf"}
+    :location (proceedings-location tldi :pages '(89 102))
+    :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf"
+    :doi      "10.1145/1708016.1708028"}
 
    :fg2010
    {:key      "FG2010"
@@ -1031,9 +1042,10 @@
    {:key      "GN2012"
     :title    "Path resolution for nested recursive modules"
     :author   (authors garrigue nakata)
-    :date     2012
+    :date     2012 ; Issue date is 2011
     :location (journal-location "Higher-Order and Symbolic Computation" :volume 24 :number 3 :pages '(207 237))
-    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/path-resolution-1205.pdf"}
+    :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/path-resolution-1205.pdf"
+    :doi      "10.1007/s10990-012-9083-6"}
 
    :rd2013
    {:key      "RD2013"
@@ -1049,8 +1061,9 @@
     :title    "Contractive signatures with recursive types, type parameters, and abstract types"
     :author   (authors im nakata "Sungwoo Park")
     :date     2013
-    :location (proceedings-location icalp)
-    :url      "http://pl.postech.ac.kr/~gla/paper/icalp2013.pdf"}
+    :location (proceedings-location icalp :pages '(299 311))
+    :url      "http://pl.postech.ac.kr/~gla/paper/icalp2013.pdf"
+    :doi      "10.1007/978-3-642-39212-2_28"}
 
    :rrd2014
    {:key      "RRD2014"
