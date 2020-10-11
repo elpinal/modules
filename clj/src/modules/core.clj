@@ -212,6 +212,14 @@
     :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0014988.pdf"
     :doi      "10.1007/BFb0014988"}
 
+   :tofte1988
+   {:key      "Tof1988"
+    :title    "Operational semantics and polymorphic type inference"
+    :author   tofte
+    :date     1988
+    :location (dissertation-location :institution "University of Edinburgh" :degree "PhD")
+    :url      "https://era.ed.ac.uk/handle/1842/6606"}
+
    :cm1988
    {:key      "CM1988"
     :title    "Persistence and type abstraction"
