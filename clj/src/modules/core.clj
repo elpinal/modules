@@ -740,7 +740,7 @@
 
    :djh2002
    {:key      "DJH2002"
-    :title    "A formal specification for the Haskell 98 module system"
+    :title    "A formal specification of the Haskell 98 module system"
     :author   (authors "Iavor S. Diatchki" mp-jones "Thomas Hallgren")
     :date     2002
     :month    "October"
