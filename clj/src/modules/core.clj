@@ -150,7 +150,8 @@
     :author   (authors "R. Burstall" "B. Lampson")
     :date     "1984"
     :location (proceedings-location "Semantics of Data Types" :pages '(1 50))
-    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf"}
+    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf"
+    :doi      "10.1007/3-540-13346-1_1"}
 
    :mac1984
    {:key      "Mac1984"
@@ -201,7 +202,8 @@
     :author   macqueen
     :date     "1986"
     :location (proceedings-location popl :pages '(277 286))
-    :url      "https://www.researchgate.net/profile/David_Macqueen/publication/2385295_Using_Dependent_Types_to_Express_Modular_Structure/links/09e415148bbf0d4470000000.pdf"}
+    :url      "https://www.researchgate.net/profile/David_Macqueen/publication/2385295_Using_Dependent_Types_to_Express_Modular_Structure/links/09e415148bbf0d4470000000.pdf"
+    :doi      "10.1145/512644.512670"}
 
    :hmt1987
    {:key      "HMT1987"
@@ -225,8 +227,9 @@
     :title    "Persistence and type abstraction"
     :author   (authors cardelli macqueen)
     :date     "1988. First appeared in 1985"
-    :location "Data types and persistence, Springer-Verlag"
-    :url      "http://lucacardelli.name/Papers/Persistence%20and%20Type%20Abstraction.pdf"}
+    :location (proceedings-location "Data types and persistence" :pages '(31 41))
+    :url      "http://lucacardelli.name/Papers/Persistence%20and%20Type%20Abstraction.pdf"
+    :doi      "10.1007/978-3-642-61556-6_3"}
 
    :mp1988
    {:key      "MP1988"
@@ -259,7 +262,8 @@
     :author   moggi
     :date     "1989"
     :location (proceedings-location "Category Theory and Computer Science" :pages '(101 117))
-    :url      "https://www.disi.unige.it/person/MoggiE/ftp/mscs91.pdf"}
+    :url      "https://www.disi.unige.it/person/MoggiE/ftp/mscs91.pdf"
+    :doi      "10.1007/BFb0018347"}
 
    :hmm1990
    {:key      "HMM1990"
@@ -267,7 +271,8 @@
     :author   (authors harper mitchell moggi)
     :date     "1990"
     :location (proceedings-location popl :pages '(341 354))
-    :url      "https://www.disi.unige.it/person/MoggiE/ftp/popl90.pdf"}
+    :url      "https://www.disi.unige.it/person/MoggiE/ftp/popl90.pdf"
+    :doi      "10.1145/96709.96744"}
 
    :cl1990
    {:key      "CL1990"
@@ -282,8 +287,9 @@
     :title    "Mixin-based inheritance"
     :author   (authors bracha "William Cook")
     :date     "1990"
-    :location (proceedings-location "OOPSLA/ECOOP")
-    :url      "http://www.bracha.org/oopsla90.ps"}
+    :location (proceedings-location "OOPSLA/ECOOP" :pages '(303 311))
+    :url      "http://www.bracha.org/oopsla90.ps"
+    :doi      "10.1145/97945.97982"}
 
    :car1991
    {:key      "Car1991"
@@ -292,6 +298,7 @@
     :date     "1991"
     :location (proceedings-location "Formal Description of Programming Concepts")
     :url      "http://lucacardelli.name/Papers/TypefulProg.A4.pdf"}
+    ; publisher's site: https://www.springer.com/gp/book/9783540539612
 
    :mmm1991
    {:key      "MMM1991"
@@ -299,7 +306,8 @@
     :author   (authors mitchell "Sigurd Meldal" "Neel Madhav")
     :date     "1991"
     :location (proceedings-location popl :pages '(270 278))
-    :url      "https://www.researchgate.net/publication/2815527_An_extension_of_Standard_ML_modules_with_subtyping_and_inheritance"}
+    :url      "https://www.researchgate.net/publication/2815527_An_extension_of_Standard_ML_modules_with_subtyping_and_inheritance"
+    :doi      "10.1145/99583.99620"}
 
    :bl1991
    {:key      "BL1991"
@@ -339,7 +347,8 @@
     :author   "María Virginia Aponte"
     :date     "1993"
     :location (proceedings-location popl :pages '(465 478))
-    :url      "https://www.researchgate.net/publication/2416181_Extending_Record_typing_to_type_parametric_modules_with_sharing"}
+    :url      "https://www.researchgate.net/publication/2416181_Extending_Record_typing_to_type_parametric_modules_with_sharing"
+    :doi      "10.1145/158511.158704"}
 
    :hm1993
    {:key      "HM1993"
@@ -356,7 +365,8 @@
     :author   (authors harper "Mark Lillibridge")
     :date     "1994"
     :location (proceedings-location popl :pages '(123 137))
-    :url      "https://www.cs.cmu.edu/~rwh/papers/sharing/popl94.pdf"}
+    :url      "https://www.cs.cmu.edu/~rwh/papers/sharing/popl94.pdf"
+    :doi      "10.1145/174675.176927"}
 
    :ler1994
    {:key      "Ler1994"
@@ -364,7 +374,8 @@
     :author   leroy
     :date     "1994"
     :location (proceedings-location popl :pages '(109 122))
-    :url      "https://xavierleroy.org/publi/manifest-types-popl.pdf"}
+    :url      "https://xavierleroy.org/publi/manifest-types-popl.pdf"
+    :doi      "10.1145/174675.176926"}
 
    :mt1994
    {:key      "MT1994"
@@ -372,7 +383,8 @@
     :author   (authors macqueen tofte)
     :date     "1994"
     :location (proceedings-location "Programming Languages and Systems – ESOP ’94" :pages '(409 423))
-    :url      "https://rd.springer.com/content/pdf/10.1007%2F3-540-57880-3_27.pdf"}
+    :url      "https://rd.springer.com/content/pdf/10.1007%2F3-540-57880-3_27.pdf"
+    :doi      "10.1007/3-540-57880-3_27"}
 
    :tof1994
    {:key      "Tof1994"
@@ -415,7 +427,8 @@
     :author   leroy
     :date     "1995"
     :location (proceedings-location popl :pages '(142 153))
-    :url      "https://xavierleroy.org/publi/applicative-functors.pdf"}
+    :url      "https://xavierleroy.org/publi/applicative-functors.pdf"
+    :doi      "10.1145/199448.199476"}
 
    :jon1995
    {:key      "Jon1995"
@@ -432,7 +445,8 @@
     :author   (authors "Dominic Duggan" "Constantinos Sourelis")
     :date     "1996"
     :location (proceedings-location icfp :pages '(262 273))
-    :url      "https://www.cs.tufts.edu/~nr/cs257/archive/dominic-duggan/Mixin%20Modules.pdf"}
+    :url      "https://www.cs.tufts.edu/~nr/cs257/archive/dominic-duggan/Mixin%20Modules.pdf"
+    :doi      "10.1145/232627.232654"}
 
    :jon1996
    {:key      "Jon1996"
@@ -440,15 +454,17 @@
     :author   "Mark P. Jones"
     :date     1996
     :location (proceedings-location popl :pages '(66 78))
-    :url      "https://web.cecs.pdx.edu/~mpj/pubs/paramsig.pdf"}
+    :url      "https://web.cecs.pdx.edu/~mpj/pubs/paramsig.pdf"
+    :doi      "10.1145/237721.237731"}
 
    :ler1996
    {:key      "Ler1996"
     :title    "A syntactic theory of type generativity and sharing"
     :author   leroy
     :date     "1996"
-    :location (journal-location jfp :number 5 :volume 6 :pages '(667 698))
-    :url      "https://xavierleroy.org/publi/syntactic-generativity.pdf"}
+    :location (journal-location jfp :volume 6 :number 5 :pages '(667 698))
+    :url      "https://xavierleroy.org/publi/syntactic-generativity.pdf"
+    :doi      "10.1017/S0956796800001933"}
 
    :nj1996
    {:key      "NJ1996"
@@ -464,7 +480,8 @@
     :author   (authors "María-Virginia Aponte" "Roberto Di Cosmo")
     :date     1996
     :location (proceedings-location plilp :pages '(334 346))
-    :url      "http://www.dicosmo.org/Articles/1996-AponteDiCosmo-PLILP.pdf"}
+    :url      "http://www.dicosmo.org/Articles/1996-AponteDiCosmo-PLILP.pdf"
+    :doi      "10.1007/3-540-61756-6_95"}
 
    :rus1996
    {:key      "Rus1996"
@@ -489,7 +506,8 @@
     :date     1997
     :month    "January"
     :location (proceedings-location popl :pages '(266 277))
-    :url      "http://lucacardelli.name/Papers/Linking.A4.pdf"}
+    :url      "http://lucacardelli.name/Papers/Linking.A4.pdf"
+    :doi      "10.1145/263699.263735"}
 
    :cou1997
    {:key      "Cou1997"
@@ -531,14 +549,16 @@
     :date     "1998"
     :location (proceedings-location icfp :pages '(141 152))
     :url      "http://flint.cs.yale.edu/flint/publications/tcc.pdf"
-    :tr-url   "http://flint.cs.yale.edu/flint/publications/tcc-tr.pdf"}
+    :tr-url   "http://flint.cs.yale.edu/flint/publications/tcc-tr.pdf"
+    :doi      "10.1145/289423.289436"}
 
    :ds1998
    {:key      "DS1998"
     :title    "Parameterized modules, recursive modules and mixin modules"
     :author   (authors "Dominic Duggan" "Constantinos Sourelis")
     :date     "1998"
-    :location "In ACM SIGPLAN Workshop on ML, pages 87–96, Baltimore, MA, USA, September 1998"}
+    :month    "September"
+    :location "In ACM SIGPLAN Workshop on ML, pages 87–96, Baltimore, MA, USA"}
 
    :ff1998a
    {:key      "FF1998a"
@@ -546,7 +566,8 @@
     :author   (authors "Robert Bruce Findler" flatt)
     :date     "1998"
     :location (proceedings-location icfp :pages '(94 104))
-    :url      "https://www2.ccs.neu.edu/racket/pubs/icfp98-ff.pdf"}
+    :url      "https://www2.ccs.neu.edu/racket/pubs/icfp98-ff.pdf"
+    :doi      "10.1145/289423.289432"}
 
    :ff1998b
    {:key      "FF1998b"
@@ -554,28 +575,32 @@
     :author   (authors flatt "Matthias Felleisen")
     :date     "1998"
     :location (proceedings-location pldi :pages '(236 248))
-    :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"}
+    :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"
+    :doi      "10.1145/277650.277730"}
 
    :az1998a
    {:key      "AZ1998a"
     :title    "A theory of mixin modules: Basic and derived operators"
     :author   (authors ancona zucca)
     :date     "1998"
-    :location (journal-location "Mathematical Structures in Computer Science" :volume 8 :number 4 :pages '(401 446))}
+    :location (journal-location "Mathematical Structures in Computer Science" :volume 8 :number 4 :pages '(401 446))
+    :doi      "10.1017/S0960129598002576"}
 
    :az1998b
    {:key      "AZ1998b"
     :title    "An algebra of mixin modules"
     :author   (authors ancona zucca)
     :date     "1998"
-    :location "In 12th Workshop on Algebraic Development Techniques - Selected Papers, pp. 92–106"}
+    :location "In 12th Workshop on Algebraic Development Techniques - Selected Papers, pp. 92–106"
+    :doi      "10.1007/3-540-64299-4_28"}
 
    :az1999
    {:key      "AZ1999"
     :title    "A primitive calculus for module systems"
     :author   (authors ancona zucca)
     :date     "1999"
-    :location (proceedings-location ppdp :pages '(62 79))}
+    :location (proceedings-location ppdp :pages '(62 79))
+    :doi      "10.1007/10704567_4"}
 
    :chp1999
    {:key      "CHP1999"
@@ -583,7 +608,8 @@
     :author   (authors crary harper "Sidd Puri")
     :date     "1999"
     :location (proceedings-location pldi :pages '(50 63))
-    :url      "http://www.cs.cmu.edu/~crary/papers/1999/recmod/recmod.ps.gz"}
+    :url      "http://www.cs.cmu.edu/~crary/papers/1999/recmod/recmod.ps.gz"
+    :doi      "10.1145/301618.301641"}
 
    :rus1999
    {:key      "Rus1999"
@@ -591,7 +617,8 @@
     :author   russo
     :date     "1999"
     :location (proceedings-location ppdp :pages '(80 97))
-    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1999/09/Non-Dependent-Types-for-Standard-ML-Modules.pdf"}
+    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1999/09/Non-Dependent-Types-for-Standard-ML-Modules.pdf"
+    :doi      "10.1007/10704567_5"}
 
    :sha1999
    {:key      "Sha1999"
@@ -600,7 +627,8 @@
     :date     "1999"
     :location (proceedings-location icfp :pages '(220 232))
     :url      "http://flint.cs.yale.edu/flint/publications/fullsig.pdf"
-    :tr-url   "http://flint.cs.yale.edu/flint/publications/fullsig-tr.pdf"}
+    :tr-url   "http://flint.cs.yale.edu/flint/publications/fullsig-tr.pdf"
+    :doi      "10.1145/317636.317801"}
 
    :els1999a
    {:key      "Els1999a"
@@ -617,48 +645,55 @@
     :author   "Martin Elsman"
     :date     1999
     :month    "September"
-    :location (proceedings-location icfp)
-    :url      "https://elsman.com/pdf/icfp99.pdf"}
+    :location (proceedings-location icfp :pages '(208 219))
+    :url      "https://elsman.com/pdf/icfp99.pdf"
+    :doi      "10.1145/317636.317800"}
 
    :wv2000
    {:key      "WV2000"
     :title    "Equational reasoning for linking with first-class primitive modules"
-    :author   (authors "J. B. Wells" "R. Vestergaard")
-    :date     "2000"
+    :author   (authors "J. B. Wells" "René Vestergaard")
+    :date     2000
     :location (proceedings-location "Programming Languages and Systems" :pages '(412 428))
-    :url      "http://www.macs.hw.ac.uk/~jbw/papers/Wells+Vestergaard:Equational-Reasoning-for-Linking-with-First-Class-Primitive-Modules:ESOP-2000.ps.gz"}
+    :url      "http://www.macs.hw.ac.uk/~jbw/papers/Wells+Vestergaard:Equational-Reasoning-for-Linking-with-First-Class-Primitive-Modules:ESOP-2000.ps.gz"
+    :doi      "10.1007/3-540-46425-5_27"}
 
    :hs2000
    {:key      "HS2000"
     :title    "A type-theoretic interpretation of Standard ML"
     :author   (authors harper stone)
     :date     2000
+    :month    "May"
     :location (book-location "Proof, language, and interaction: Essays in honor of robin milner" :publisher "MIT Press")
     :url      "https://www.cs.cmu.edu/~rwh/papers/ttisml/ttisml.pdf"}
+    ; publisher's site: https://mitpress.mit.edu/books/proof-language-and-interaction
 
    :ler2000
    {:key      "Ler2000"
     :title    "A modular module system"
     :author   leroy
-    :date     "2000"
+    :date     2000
     :location (journal-location jfp :volume 10 :number 3 :pages '(269 303))
-    :url      "https://xavierleroy.org/publi/modular-modules-jfp.pdf"}
+    :url      "https://xavierleroy.org/publi/modular-modules-jfp.pdf"
+    :doi      "10.1017/S0956796800003683"}
 
    :rus2000
    {:key      "Rus2000"
     :title    "First-class structures for Standard ML"
     :author   russo
-    :date     "2000"
+    :date     2000
     :location (proceedings-location esop :pages '(336 350))
-    :url      "https://link.springer.com/content/pdf/10.1007%2F3-540-46425-5_22.pdf"}
+    :url      "https://link.springer.com/content/pdf/10.1007%2F3-540-46425-5_22.pdf"
+    :doi      "10.1007/3-540-46425-5_22"}
 
    :rus2001
    {:key      "Rus2001"
     :title    "Recursive structures for Standard ML"
     :author   russo
-    :date     "2001"
+    :date     2001
     :location (proceedings-location icfp :pages '(50 61))
-    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2001/09/Recursive-Structures-for-Standard-ML.pdf"}
+    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2001/09/Recursive-Structures-for-Standard-ML.pdf"
+    :doi      "10.1145/507635.507644"}
 
    :dhc2001
    {:key      "DHC2001"
@@ -674,7 +709,8 @@
     :author   "Peter Sewell"
     :date     2001
     :location (proceedings-location popl :pages '(236 247))
-    :url      "https://www.cl.cam.ac.uk/~pes20/versions-popl.pdf"}
+    :url      "https://www.cl.cam.ac.uk/~pes20/versions-popl.pdf"
+    :doi      "10.1145/360204.360225"}
 
    :hl2002
    {:key      "HL2002"
@@ -682,14 +718,17 @@
     :author   (authors "Tom Hirschowitz" leroy)
     :date     2002
     :location (proceedings-location esop :pages '(6 20))
-    :url      "https://xavierleroy.org/publi/mixins-cbv-esop2002.pdf"}
+    :url      "https://xavierleroy.org/publi/mixins-cbv-esop2002.pdf"
+    :doi      "10.1007/3-540-45927-8_2"}
 
    :az2002
    {:key      "AZ2002"
     :title    "A calculus of module systems"
     :author   (authors ancona zucca)
-    :date     "2002"
-    :location (journal-location jfp :volume 12 :number 2 :pages '(91 132))}
+    :date     2002
+    :month    "March"
+    :location (journal-location jfp :volume 12 :number 2 :pages '(91 132))
+    :doi      "10.1017/S0956796801004257"}
 
    :sp2002
    {:key      "SP2002"
@@ -705,16 +744,18 @@
     :author   (authors "Iavor S. Diatchki" mp-jones "Thomas Hallgren")
     :date     2002
     :month    "October"
-    :location (proceedings-location "ACM SIGPLAN 2002 Haskell Workshop")
-    :url      "http://web.cecs.pdx.edu/~mpj/pubs/hsmods.pdf"}
+    :location (proceedings-location "ACM SIGPLAN 2002 Haskell Workshop" :pages '(17 28))
+    :url      "http://web.cecs.pdx.edu/~mpj/pubs/hsmods.pdf"
+    :doi      "10.1145/581690.581692"}
 
    :afmz2003
    {:key      "AFMZ2003"
     :title    "Mixin modules and computational effects"
     :author   (authors ancona "Sonia Fagorzi" moggi zucca)
-    :date     "2003"
+    :date     2003
     :location (proceedings-location icalp :pages '(224 238))
-    :url      "https://www.disi.unige.it/person/MoggiE/ftp/icalp03.pdf"}
+    :url      "https://www.disi.unige.it/person/MoggiE/ftp/icalp03.pdf"
+    :doi      "10.1007/3-540-45061-0_20"}
 
    :ler2003
    {:key      "Ler2003"
@@ -729,9 +770,10 @@
     :title    "A type system for higher-order modules"
     :author   (authors dreyer crary harper)
     :date     "2003"
-    :location (proceedings-location popl)
+    :location (proceedings-location popl :pages '(236 249))
     :url      "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms.pdf"
-    :tr-url   "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms-tr.pdf"}
+    :tr-url   "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms-tr.pdf"
+    :doi      "10.1145/604131.604151"}
 
    :rus2003
    {:key      "Rus2003"
@@ -739,7 +781,8 @@
     :author   russo
     :date     2003
     :location (journal-location "Electronic Notes in Theoretical Computer Science" :volume 60)
-    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1998/03/Types-for-Modules.pdf"}
+    :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1998/03/Types-for-Modules.pdf"
+    :doi      "10.1016/S1571-0661(05)82621-0"}
 
    :dre2004
    {:key      "Dre2004"
@@ -750,7 +793,8 @@
     :url      "https://people.mpi-sws.org/~dreyer/papers/recursion/popl.pdf"
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/recursion/tr/main.pdf"
     :tr-with  (authors harper crary)
-    :tr-date  2003}
+    :tr-date  2003
+    :doi      "10.1145/964001.964026"}
 
    :dre2005a
    {:key      "Dre2005a"
@@ -783,7 +827,8 @@
     :author   (authors "Norman Ramsey" "Kathleen Fisher" "Paul Govereau")
     :date     2005
     :location (proceedings-location icfp :pages '(27 40))
-    :url      "https://www.cs.tufts.edu/~nr/pubs/els.pdf"}
+    :url      "https://www.cs.tufts.edu/~nr/pubs/els.pdf"
+    :doi      "10.1145/1086365.1086371"}
 
    :nig2005
    {:key      "NIG2005"
@@ -807,8 +852,9 @@
     :title    "Type inference, principal typings, and let-polymorphism for first-class mixin modules"
     :author   (authors makholm wells)
     :date     2005
-    :location (proceedings-location icfp)
-    :url      "http://henning.makholm.net/papers/icfp2005.pdf"}
+    :location (proceedings-location icfp :pages '(156 167))
+    :url      "http://henning.makholm.net/papers/icfp2005.pdf"
+    :doi      "10.1145/1086365.1086386"}
 
    :hl2005
    {:key      "HL2005"
