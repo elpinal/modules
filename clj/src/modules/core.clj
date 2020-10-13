@@ -563,7 +563,7 @@
    :cra1998a
    {:key      "Cra1998a"
     :title    "Type-theoretic methodology for practical programming languages"
-    :author   crary
+    :author   "Karl Fredrick Crary"
     :date     1998
     :location (dissertation-location :institution "Cornell University" :degree "PhD")
     :url      "http://www.cs.cmu.edu/~crary/papers/1998/thesis/thesis.ps.gz"}
