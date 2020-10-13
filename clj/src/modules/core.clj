@@ -560,6 +560,24 @@
     :month    "September"
     :location "In ACM SIGPLAN Workshop on ML, pages 87–96, Baltimore, MA, USA"}
 
+   :cra1998a
+   {:key      "Cra1998a"
+    :title    "Type-theoretic methodology for practical programming languages"
+    :author   crary
+    :date     1998
+    :location (dissertation-location :institution "Cornell University" :degree "PhD")
+    :url      "http://www.cs.cmu.edu/~crary/papers/1998/thesis/thesis.ps.gz"}
+
+   :cra1998b
+   {:key      "Cra1998b"
+    :title    "Programming language semantics in foundational type theory"
+    :author   crary
+    :date     1998
+    :location (proceedings-location "International Conference on Programming Concepts and Methods" :pages '(107 125))
+    :url      "http://www.cs.cmu.edu/~crary/papers/1998/tt-semant/tt-semant.ps.gz"
+    :tr-url   "http://www.cs.cmu.edu/~crary/papers/1998/tt-semant/tt-semant-tr.ps.gz"
+    :doi      "10.1007/978-0-387-35358-6_11"}
+
    :ff1998a
    {:key      "FF1998a"
     :title    "Modular object-oriented programming with units and mixins"
