@@ -262,7 +262,6 @@
     :author   moggi
     :date     "1989"
     :location (proceedings-location "Category Theory and Computer Science" :pages '(101 117))
-    :url      "https://www.disi.unige.it/person/MoggiE/ftp/mscs91.pdf"
     :doi      "10.1007/BFb0018347"}
 
    :hmm1990
@@ -290,6 +289,15 @@
     :location (proceedings-location "OOPSLA/ECOOP" :pages '(303 311))
     :url      "http://www.bracha.org/oopsla90.ps"
     :doi      "10.1145/97945.97982"}
+
+   :mog1991
+   {:key      "Mog1991"
+    :title    "A category-theoretic account of program modules"
+    :author   moggi
+    :date     1991
+    :location (journal-location "Mathematical Structures in Computer Science" :volume 1 :number 1 :pages '(103 139))
+    :url      "https://www.disi.unige.it/person/MoggiE/ftp/mscs91.pdf"
+    :doi      "10.1017/S0960129500000074"}
 
    :car1991
    {:key      "Car1991"
