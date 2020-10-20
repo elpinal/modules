@@ -268,9 +268,15 @@
    {:key      "HMM1990"
     :title    "Higher-order modules and the phase distinction"
     :author   (authors harper mitchell moggi)
-    :date     "1990"
+    :date     1990
     :location (proceedings-location popl :pages '(341 354))
-    :url      "https://www.disi.unige.it/person/MoggiE/ftp/popl90.pdf"
+    :url      "http://theory.stanford.edu/people/jcm/papers/harper-mm-90.pdf"
+    :tr-url   "http://www.lfcs.inf.ed.ac.uk/reports/90/ECS-LFCS-90-112/ECS-LFCS-90-112.pdf"
+    ; tr(CMU-CS-89-197, 1989): http://www.cs.cmu.edu/~rwh/papers/phase/tr.pdf
+    ; same: http://www.cs.cmu.edu/afs/cs.cmu.edu/project/fox/mosaic/papers/rwh-phase.ps
+    ; tr: https://www.lfcs.inf.ed.ac.uk/reports/90/ECS-LFCS-90-112/ECS-LFCS-90-112_revised.ps
+    ; same: "https://www.disi.unige.it/person/MoggiE/ftp/popl90.pdf"
+    ;   CMU-CS-89-197 -> ECS-LFCS-90-112 -> POPL90 -> ECS-LFCS-90-112_revised?
     :doi      "10.1145/96709.96744"}
 
    :cl1990
