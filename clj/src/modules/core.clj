@@ -548,6 +548,14 @@
     :location (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-97-147")
     :url      "https://www.cs.cmu.edu/Groups/fox/papers/sml96-v3.ps"}
 
+   :az1997
+   {:key      "AZ1997"
+    :title    "An algebra of mixin modules"
+    :author   (authors ancona zucca)
+    :date     1997
+    :location (proceedings-location "International Workshop on Algebraic Development Techniques" :pages '(92 106))
+    :doi      "10.1007/3-540-64299-4_28"}
+
    :rus1998
    {:key      "Rus1998"
     :title    "Types for modules"
@@ -610,21 +618,13 @@
     :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"
     :doi      "10.1145/277650.277730"}
 
-   :az1998a
-   {:key      "AZ1998a"
+   :az1998
+   {:key      "AZ1998"
     :title    "A theory of mixin modules: Basic and derived operators"
     :author   (authors ancona zucca)
     :date     "1998"
     :location (journal-location "Mathematical Structures in Computer Science" :volume 8 :number 4 :pages '(401 446))
     :doi      "10.1017/S0960129598002576"}
-
-   :az1998b
-   {:key      "AZ1998b"
-    :title    "An algebra of mixin modules"
-    :author   (authors ancona zucca)
-    :date     "1998"
-    :location "In 12th Workshop on Algebraic Development Techniques - Selected Papers, pp. 92–106"
-    :doi      "10.1007/3-540-64299-4_28"}
 
    :az1999
    {:key      "AZ1999"
