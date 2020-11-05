@@ -729,10 +729,10 @@
 
    :dhc2001
    {:key      "DHC2001"
-    :title    "Towards a practical type theory for recursive modules"
+    :title    "Toward a practical type theory for recursive modules"
     :author   (authors dreyer harper crary)
     :date     2001
-    :location (techrpt-location :institution "Carnegie Mellon University School of Computer Science" :number "CMU-CS-01-112")
+    :location (techrpt-location :institution "Carnegie Mellon University, School of Computer Science" :number "CMU-CS-01-112")
     :url      "https://www.cs.cmu.edu/~rwh/papers/ttrm/rmtr.pdf"}
 
    :sew2001
