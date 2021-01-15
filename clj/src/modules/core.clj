@@ -989,6 +989,19 @@
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/infmod/main-long.pdf"
     :doi      "10.1007/978-3-540-71316-6_30"}
 
+   :dhc2007
+   {:key      "DHC2007"
+    :title    "Modular type classes"
+    :author   (authors dreyer harper "Manuel M. T. Chakravarty")
+    :date     2007
+    :location (proceedings-location popl :pages '(63 70))
+    :url      "https://people.mpi-sws.org/~dreyer/papers/mtc/main-short.pdf"
+    :tr-url   "https://newtraell.cs.uchicago.edu/files/tr_authentic/TR-2006-09.pdf"
+              ; which supersedes https://newtraell.cs.uchicago.edu/files/tr_authentic/TR-2006-03.pdf
+    :tr-with  "Gabriele Keller"
+    :tr-date  2006
+    :doi      "https://doi.org/10.1145/1190216.1190229"}
+
    :nak2007
    {:key      "Nak2007"
     :title    "A module system with applicative functors and recursive path references"
