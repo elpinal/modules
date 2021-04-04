@@ -690,6 +690,47 @@
     :url      "http://www.macs.hw.ac.uk/~jbw/papers/Wells+Vestergaard:Equational-Reasoning-for-Linking-with-First-Class-Primitive-Modules:ESOP-2000.ps.gz"
     :doi      "10.1007/3-540-46425-5_27"}
 
+   :sh2000
+   {:key      "SH2000"
+    :title    "Deciding type equivalence in a language with singleton kinds"
+    :author   (authors stone harper)
+    :date     2000
+    :month    "Jan"
+    :location (proceedings-location popl :pages '(214 227))
+    :url      "http://www.cs.cmu.edu/~rwh/papers/singletons/popl99.pdf"
+    :doi      "10.1145/325694.325724"
+    :tr-url   "http://reports-archive.adm.cs.cmu.edu/anon/1999/CMU-CS-99-155.pdf"
+    :tr-date  1999}
+
+   :cra2000
+   {:key      "Cra2000"
+    :title    "Sound and complete elimination of singleton kinds"
+    :author   crary
+    :date     2000
+    :month    "Sep"
+    :location (proceedings-location "Workshop on Types in Compilation" :pages '(1 25))
+    :url      "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-161D.pdf"
+    :doi      "10.1007/3-540-45332-6"
+    :tr-url   "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-104.pdf"}
+
+   :sto2000
+   {:key      "Sto2000"
+    :title    "Singleton kinds and singleton types"
+    :author   stone
+    :date     2000
+    :month    "Aug"
+    :location (dissertation-location :institution "Carnegie Mellon University" :degree "PhD")
+    :url      "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-153.pdf"}
+
+   :pchs2000
+   {:key      "PCHS2000"
+    :title    "Implementing the TILT internal language"
+    :author   (authors "Leaf Petersen" "Perry Cheng" harper stone)
+    :date     2000
+    :month    "Dec"
+    :location (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-00-180")
+    :url      "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-180.pdf"}
+
    :hs2000
    {:key      "HS2000"
     :title    "A type-theoretic interpretation of Standard ML"
@@ -941,6 +982,15 @@
     :location "Manuscript"
     :url      "http://homes.soic.indiana.edu/ccshan/xlate/xlate.pdf"}
 
+   :sh2006
+   {:key      "SH2006"
+    :title    "Extensional equivalence and singleton types"
+    :author   (authors stone harper)
+    :date     2006
+    :location (journal-location "Transactions on Computational Logic" :volume 7 :number 4 :pages '(676 722))
+    :url      "http://www.cs.cmu.edu/~rwh/papers/singletons/tocl.pdf"
+    :doi      "10.1145/1183278.1183281"}
+
    :lch2006
    {:key      "LCH2006"
     :title    "Mechanizing the metatheory of Standard ML"
@@ -959,6 +1009,15 @@
     :location (proceedings-location popl :pages '(173 184))
     :url      "http://www.cs.cmu.edu/~dklee/papers/tslf-popl.pdf"
     :doi      "10.1145/1190216.1190245"}
+
+   :cra2007
+   {:key      "Cra2007"
+    :title    "Sound and complete elimination of singleton kinds"
+    :author   crary
+    :date     2007
+    :location (journal-location "Transactions on Computational Logic" :volume 8 :number 2)
+    :url      "https://www.cs.cmu.edu/~crary/papers/2005/singelim.pdf"
+    :doi      "10.1145/1227839.1227840"}
 
    :dre2007a
    {:key      "Dre2007a"
@@ -1067,6 +1126,15 @@
     :location (proceedings-location popl :pages '(354 365))
     :url      "http://gallium.inria.fr/~remy/modules/Montagu-Remy@popl09:fzip.pdf"
     :doi      "10.1145/1480881.1480926"}
+
+   :cra2009
+   {:key      "Cra2009"
+    :title    "A syntactic account of singleton types via hereditary substitution"
+    :author   crary
+    :date     2009
+    :location (proceedings-location "Workshop on Logical Frameworks and Meta-Languages: Theory and Practice" :pages '(21 29))
+    :url      "https://www.cs.cmu.edu/~crary/papers/2009/synsing.pdf"
+    :doi      "10.1145/1577824.1577829"}
 
    :km2009
    {:key      "KM2009"
