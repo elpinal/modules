@@ -548,6 +548,14 @@
     :location (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-97-147")
     :url      "https://www.cs.cmu.edu/Groups/fox/papers/sml96-v3.ps"}
 
+   :sto1997
+   {:key      "Sto1997"
+    :title    "Elaboration and phase-splitting in the TIL/ML compiler"
+    :author   stone
+    :date     1997
+    :location "IC Research Symposium"
+    :url      "http://www.cs.cmu.edu/~fox/foxnet/people/cstone/papers/ic97.ps"}
+
    :az1997
    {:key      "AZ1997"
     :title    "An algebra of mixin modules"
