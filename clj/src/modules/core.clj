@@ -505,6 +505,14 @@
     :location (techrpt-location :institution "University of Edinburgh" :number "ECS-LFCS-96-344")
     :url      "http://www.dcs.ed.ac.uk/home/cvr/ECS-LFCS-96-344.pdf"}
 
+   :pet1996
+   {:key      "Pet1996"
+    :title    "A module system for LOOM"
+    :author   "Leaf Eames Petersen"
+    :date     1996
+    :location (dissertation-location :institution "Williams College" :degree "Undergraduate")
+    :url      "http://www.leafpetersen.com/leaf/publications/loom_thesis/thesis.pdf"}
+
    :asp1997
    {:key      "Asp1997"
     :title    "Type systems for modular programs and specifications"
@@ -945,6 +953,15 @@
     :location (journal-location toplas :volume 27 :number 5 :pages '(857 881))
     :doi      "10.1145/1086642.1086644"
     :url      "https://xavierleroy.org/publi/mixins-cbv-toplas.pdf"}
+
+   :pet2005
+   {:key      "Pet2005"
+    :title    "Certifying compilation for Standard ML in a type analysis framework"
+    :author   "Leaf Eames Petersen"
+    :date     2005
+    :location (dissertation-location :institution "Carnegie Mellon University" :degree "PhD")
+    :url      "http://www.leafpetersen.com/leaf/publications/thesis/main.pdf"}
+    ; http://reports-archive.adm.cs.cmu.edu/anon/2005/abstracts/05-135.html
 
    :nak2006
    {:key      "Nak2006"
