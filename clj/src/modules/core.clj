@@ -408,6 +408,14 @@
     :location (journal-location jfp :volume 4 :number 3 :pages '(285 335))
     :doi      "10.1017/S0956796800001088"}
 
+   :cm1994
+   {:key      "CM1994"
+    :title    "An implementation of higher-order functors"
+    :author   (authors "Pierre Crégut" macqueen)
+    :date     1994
+    :location (proceedings-location "ACM SIGPLAN Workshop on ML and its Applications") ; :pages '(13 22)
+    :url      "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.32.1516&rep=rep1&type=pdf"}
+
    :mg1994
    {:key      "MG1994"
     :title    "Studying the ML module system in HOL"
