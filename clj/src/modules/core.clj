@@ -1402,6 +1402,14 @@
     :date     2020
     :location "Draft"
     :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"}
+
+   :sh-draft
+   {:key      "SH"
+    :title    "A metalanguage for multi-phase modularity"
+    :author   (authors "Jonathan Sterling" harper)
+    :date     2021
+    :location "Draft"
+    :url      "https://www.jonmsterling.com/pdfs/phml.pdf"}
    ))
 
 (defn -main
