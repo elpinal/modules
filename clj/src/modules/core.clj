@@ -1395,12 +1395,12 @@
     :url      "http://www.cs.cmu.edu/~crary/papers/2020/exsig.pdf"
     :doi      "10.1017/S0956796820000222"}
 
-   :sh2020
-   {:key      "SH2020"
+   :sh2021
+   {:key      "SH2021"
     :title    "Logical relations as types: Proof-relevant parametricity for program modules"
     :author   (authors "Jonathan Sterling" harper)
-    :date     2020
-    :location "Draft"
+    :date     "To appear"
+    :location (journal-location "Journal of the ACM")
     :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"}
 
    :sh-draft
