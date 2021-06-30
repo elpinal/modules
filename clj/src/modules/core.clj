@@ -78,8 +78,10 @@
                     (str "Technical Report" (if tr-date (str " " (paren tr-date))) ": "))
                   [:a {:href tr-url} tr-url]]))))
    (if slides
-     [:p "Slides: "
-      [:a {:href slides} slides]])
+     (if (sequential? slides)
+       (map-indexed (fn [i x] [:p "Slides " (+ i 1) ": " [:a {:href x} x]]) slides)
+       [:p "Slides: "
+        [:a {:href slides} slides]]))
    (if ext-url
      [:p "Extended version: "
       [:a {:href ext-url} ext-url]])
@@ -1401,7 +1403,9 @@
     :author   (authors "Jonathan Sterling" harper)
     :date     "To appear"
     :location (journal-location "Journal of the ACM")
-    :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"}
+    :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"
+    :slides   ["https://www.cs.cmu.edu/~rwh/talks/paramstr.pdf"
+               "http://www.jonmsterling.com/pdfs/au-ccs-lrat.pdf"]}
 
    :sh-draft
    {:key      "SH"
