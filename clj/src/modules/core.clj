@@ -1397,8 +1397,17 @@
     :url      "http://www.cs.cmu.edu/~crary/papers/2020/exsig.pdf"
     :doi      "10.1017/S0956796820000222"}
 
-   :sh2021
-   {:key      "SH2021"
+   :sh2021a
+   {:key      "SH2021a"
+    :title    "A metalanguage for multi-phase modularity"
+    :author   (authors "Jonathan Sterling" harper)
+    :date     2021
+    :location "ML Family Workshop"
+    :url      "https://www.jonmsterling.com/pdfs/phml.pdf"
+    :slides   "https://www.jonmsterling.com/pdfs/ml21.pdf"}
+
+   :sh2021b
+   {:key      "SH2021b"
     :title    "Logical relations as types: Proof-relevant parametricity for program modules"
     :author   (authors "Jonathan Sterling" harper)
     :date     "To appear"
@@ -1406,14 +1415,6 @@
     :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"
     :slides   ["https://www.cs.cmu.edu/~rwh/talks/paramstr.pdf"
                "http://www.jonmsterling.com/pdfs/au-ccs-lrat.pdf"]}
-
-   :sh-draft
-   {:key      "SH"
-    :title    "A metalanguage for multi-phase modularity"
-    :author   (authors "Jonathan Sterling" harper)
-    :date     2021
-    :location "Draft"
-    :url      "https://www.jonmsterling.com/pdfs/phml.pdf"}
    ))
 
 (defn -main
