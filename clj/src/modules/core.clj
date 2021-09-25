@@ -55,20 +55,23 @@
 
 (defn paren [s] (str "(" s ")"))
 
-(defn authors
+(defn str-and
   ([x] x)
   ([x & ys]
    (let [l (last (cons x ys))
          xs (butlast (cons x ys))]
      (str (apply str (interpose ", " xs)) " and " l))))
 
+(defn apply-str-and [x]
+  (if (sequential? x)
+    (apply str-and x)
+    x))
+
 (defn render
   [{:keys [key title author date location doi url tr-url tr-with tr-date slides ext-url appendix]}]
   [:div
    [:h4 title]
-   [:p (if (sequential? author)
-         (apply authors author)
-         author)]
+   [:p (apply-str-and author)]
    [:p (str (if (sequential? location)
               (apply str (interpose ", " (map #(hiccup/html %) location)))
               location)
@@ -83,7 +86,7 @@
                (if tr-url ; Technical Report URL
                  [[:br]
                   (if tr-with
-                    (str "Technical Report (with " (if (sequential? tr-with) (apply authors tr-with) tr-with) (if tr-date (prepend-comma tr-date)) "): ")
+                    (str "Technical Report (with " (apply-str-and tr-with) (if tr-date (prepend-comma tr-date)) "): ")
                     (str "Technical Report" (if tr-date (str " " (paren tr-date))) ": "))
                   [:a {:href tr-url} tr-url]]))))
    (if slides
