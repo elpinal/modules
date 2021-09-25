@@ -142,7 +142,7 @@
    {:key      "Rey1983"
     :title    "Types, abstraction and parametric polymorphism"
     :author   "J. C. Reynolds"
-    :date     "1983"
+    :date     1983
     :location (proceedings-location "Information Processing" :pages '(513 523))
     :url      "http://www.cse.chalmers.se/edu/year/2010/course/DAT140_Types/Reynolds_typesabpara.pdf"}
 
@@ -150,7 +150,7 @@
    {:key      "BL1984"
     :title    "A kernel language for abstract data types and modules"
     :author   (authors "R. Burstall" "B. Lampson")
-    :date     "1984"
+    :date     1984
     :location (proceedings-location "Semantics of Data Types" :pages '(1 50))
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf"
     :doi      "10.1007/3-540-13346-1_1"}
@@ -186,7 +186,7 @@
    {:key      "CW1985"
     :title    "On understanding types, data abstraction, and polymorphism"
     :author   (authors cardelli "P. Wegner")
-    :date     "1985"
+    :date     1985
     :location (techrpt-location :institution "Brown University" :number "CS-85-14")
     :url      "http://lucacardelli.name/Papers/OnUnderstanding.A4.pdf"}
 
@@ -202,7 +202,7 @@
    {:key      "Mac1986"
     :title    "Using dependent types to express modular structure"
     :author   macqueen
-    :date     "1986"
+    :date     1986
     :location (proceedings-location popl :pages '(277 286))
     :url      "https://www.researchgate.net/profile/David_Macqueen/publication/2385295_Using_Dependent_Types_to_Express_Modular_Structure/links/09e415148bbf0d4470000000.pdf"
     :doi      "10.1145/512644.512670"}
@@ -246,7 +246,7 @@
    {:key      "Car1988"
     :title    "Phase distinctions in type theory"
     :author   cardelli
-    :date     "1988"
+    :date     1988
     :location "Manuscript"
     :url      "http://lucacardelli.name/Papers/PhaseDistinctions.A4.pdf"}
 
@@ -262,7 +262,7 @@
    {:key      "Mog1989"
     :title    "A category-theoretic account of program modules"
     :author   moggi
-    :date     "1989"
+    :date     1989
     :location (proceedings-location "Category Theory and Computer Science" :pages '(101 117))
     :doi      "10.1007/BFb0018347"}
 
@@ -285,7 +285,7 @@
    {:key      "CL1990"
     :title    "Abstract types and the dot notation"
     :author   (authors cardelli leroy)
-    :date     "1990"
+    :date     1990
     :location (proceedings-location "IFIP TC2 working conference on programming concepts and methods" :pages '(479 504))
     :url      "https://xavierleroy.org/publi/abstract-types-dot-notation.pdf"}
 
@@ -293,7 +293,7 @@
    {:key      "BC1990"
     :title    "Mixin-based inheritance"
     :author   (authors bracha "William Cook")
-    :date     "1990"
+    :date     1990
     :location (proceedings-location "OOPSLA/ECOOP" :pages '(303 311))
     :url      "http://www.bracha.org/oopsla90.ps"
     :doi      "10.1145/97945.97982"}
@@ -311,7 +311,7 @@
    {:key      "Car1991"
     :title    "Typeful programming"
     :author   cardelli
-    :date     "1991"
+    :date     1991
     :location (proceedings-location "Formal Description of Programming Concepts")
     :url      "http://lucacardelli.name/Papers/TypefulProg.A4.pdf"}
     ; publisher's site: https://www.springer.com/gp/book/9783540539612
@@ -320,7 +320,7 @@
    {:key      "MMM1991"
     :title    "An extension of Standard ML modules with subtyping and inheritance"
     :author   (authors mitchell "Sigurd Meldal" "Neel Madhav")
-    :date     "1991"
+    :date     1991
     :location (proceedings-location popl :pages '(270 278))
     :url      "https://www.researchgate.net/publication/2815527_An_extension_of_Standard_ML_modules_with_subtyping_and_inheritance"
     :doi      "10.1145/99583.99620"}
@@ -345,7 +345,7 @@
    {:key      "Bra1992"
     :title    "The programming language JIGSAW: Mixins, modularity and multiple inheritance"
     :author   bracha
-    :date     "1992"
+    :date     1992
     :location (dissertation-location :institution "University of Utah" :degree "PhD")
     :url      "http://www.bracha.org/jigsaw.pdf"}
 
@@ -361,7 +361,7 @@
    {:key      "Apo1993"
     :title    "Extending record typing to type parametric modules with sharing"
     :author   "María Virginia Aponte"
-    :date     "1993"
+    :date     1993
     :location (proceedings-location popl :pages '(465 478))
     :url      "https://www.researchgate.net/publication/2416181_Extending_Record_typing_to_type_parametric_modules_with_sharing"
     :doi      "10.1145/158511.158704"}
@@ -379,7 +379,7 @@
    {:key      "HL1994"
     :title    "A type-theoretic approach to higher-order modules with sharing"
     :author   (authors harper "Mark Lillibridge")
-    :date     "1994"
+    :date     1994
     :location (proceedings-location popl :pages '(123 137))
     :url      "https://www.cs.cmu.edu/~rwh/papers/sharing/popl94.pdf"
     :doi      "10.1145/174675.176927"}
@@ -388,7 +388,7 @@
    {:key      "Ler1994"
     :title    "Manifest types, modules, and separate compilation"
     :author   leroy
-    :date     "1994"
+    :date     1994
     :location (proceedings-location popl :pages '(109 122))
     :url      "https://xavierleroy.org/publi/manifest-types-popl.pdf"
     :doi      "10.1145/174675.176926"}
@@ -397,7 +397,7 @@
    {:key      "MT1994"
     :title    "A semantics for higher-order functors"
     :author   (authors macqueen tofte)
-    :date     "1994"
+    :date     1994
     :location (proceedings-location "Programming Languages and Systems – ESOP ’94" :pages '(409 423))
     :url      "https://rd.springer.com/content/pdf/10.1007%2F3-540-57880-3_27.pdf"
     :doi      "10.1007/3-540-57880-3_27"}
@@ -449,7 +449,7 @@
    {:key      "Ler1995"
     :title    "Applicative functors and fully transparent higher-order modules"
     :author   leroy
-    :date     "1995"
+    :date     1995
     :location (proceedings-location popl :pages '(142 153))
     :url      "https://xavierleroy.org/publi/applicative-functors.pdf"
     :doi      "10.1145/199448.199476"}
@@ -467,7 +467,7 @@
    {:key      "DS1996"
     :title    "Mixin modules"
     :author   (authors "Dominic Duggan" "Constantinos Sourelis")
-    :date     "1996"
+    :date     1996
     :location (proceedings-location icfp :pages '(262 273))
     :url      "https://www.cs.tufts.edu/~nr/cs257/archive/dominic-duggan/Mixin%20Modules.pdf"
     :doi      "10.1145/232627.232654"}
@@ -485,7 +485,7 @@
    {:key      "Ler1996"
     :title    "A syntactic theory of type generativity and sharing"
     :author   leroy
-    :date     "1996"
+    :date     1996
     :location (journal-location jfp :volume 6 :number 5 :pages '(667 698))
     :url      "https://xavierleroy.org/publi/syntactic-generativity.pdf"
     :doi      "10.1017/S0956796800001933"}
@@ -494,7 +494,7 @@
    {:key      "NJ1996"
     :title    "An exploration of modular programs"
     :author   (authors "Jan Nicklish" "Simon Peyton Jones")
-    :date     "1996"
+    :date     1996
     :location "In The Glasgow Workshop on Functional Programming"
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1996/01/Nicklisch-modules.pdf"}
 
@@ -527,7 +527,7 @@
    {:key      "Asp1997"
     :title    "Type systems for modular programs and specifications"
     :author   "David R. Aspinall"
-    :date     "1997"
+    :date     1997
     :location (dissertation-location :institution "Edinburgh University, Edinburgh, Scotland" :degree "PhD")
     :url      "https://www.era.lib.ed.ac.uk/handle/1842/11587"}
 
@@ -545,7 +545,7 @@
    {:key      "Cou1997"
     :title    "An applicative module calculus"
     :author   "Judicaël Courant"
-    :date     "1997"
+    :date     1997
     :location (proceedings-location tapsoft)
     :doi      "10.1007/BFb0030630"
     :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0030630.pdf"}
@@ -586,7 +586,7 @@
    {:key      "Rus1998"
     :title    "Types for modules"
     :author   russo
-    :date     "1998"
+    :date     1998
     :location (dissertation-location :institution "University of Edinburgh, UK" :degree "PhD")
     :url      "http://www.dcs.ed.ac.uk/home/cvr/ECS-LFCS-98-389.pdf"}
 
@@ -594,7 +594,7 @@
    {:key      "Sha1998"
     :title    "Typed cross-module compilation"
     :author   "Zhong Shao"
-    :date     "1998"
+    :date     1998
     :location (proceedings-location icfp :pages '(141 152))
     :url      "http://flint.cs.yale.edu/flint/publications/tcc.pdf"
     :tr-url   "http://flint.cs.yale.edu/flint/publications/tcc-tr.pdf"
@@ -604,7 +604,7 @@
    {:key      "DS1998"
     :title    "Parameterized modules, recursive modules and mixin modules"
     :author   (authors "Dominic Duggan" "Constantinos Sourelis")
-    :date     "1998"
+    :date     1998
     :month    "September"
     :location "In ACM SIGPLAN Workshop on ML, pages 87–96, Baltimore, MA, USA"}
 
@@ -630,7 +630,7 @@
    {:key      "FF1998a"
     :title    "Modular object-oriented programming with units and mixins"
     :author   (authors "Robert Bruce Findler" flatt)
-    :date     "1998"
+    :date     1998
     :location (proceedings-location icfp :pages '(94 104))
     :url      "https://www2.ccs.neu.edu/racket/pubs/icfp98-ff.pdf"
     :doi      "10.1145/289423.289432"}
@@ -639,7 +639,7 @@
    {:key      "FF1998b"
     :title    "Units: Cool modules for HOT languages"
     :author   (authors flatt "Matthias Felleisen")
-    :date     "1998"
+    :date     1998
     :location (proceedings-location pldi :pages '(236 248))
     :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"
     :doi      "10.1145/277650.277730"}
@@ -648,7 +648,7 @@
    {:key      "AZ1998"
     :title    "A theory of mixin modules: Basic and derived operators"
     :author   (authors ancona zucca)
-    :date     "1998"
+    :date     1998
     :location (journal-location "Mathematical Structures in Computer Science" :volume 8 :number 4 :pages '(401 446))
     :doi      "10.1017/S0960129598002576"}
 
@@ -656,7 +656,7 @@
    {:key      "AZ1999"
     :title    "A primitive calculus for module systems"
     :author   (authors ancona zucca)
-    :date     "1999"
+    :date     1999
     :location (proceedings-location ppdp :pages '(62 79))
     :doi      "10.1007/10704567_4"}
 
@@ -664,7 +664,7 @@
    {:key      "CHP1999"
     :title    "What is a recursive module?"
     :author   (authors crary harper "Sidd Puri")
-    :date     "1999"
+    :date     1999
     :location (proceedings-location pldi :pages '(50 63))
     :url      "http://www.cs.cmu.edu/~crary/papers/1999/recmod/recmod.ps.gz"
     :doi      "10.1145/301618.301641"}
@@ -673,7 +673,7 @@
    {:key      "Rus1999"
     :title    "Non-dependent types for Standard ML modules"
     :author   russo
-    :date     "1999"
+    :date     1999
     :location (proceedings-location ppdp :pages '(80 97))
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1999/09/Non-Dependent-Types-for-Standard-ML-Modules.pdf"
     :doi      "10.1007/10704567_5"}
@@ -682,7 +682,7 @@
    {:key      "Sha1999"
     :title    "Transparent modules with fully syntactic signatures"
     :author   "Zhong Shao"
-    :date     "1999"
+    :date     1999
     :location (proceedings-location icfp :pages '(220 232))
     :url      "http://flint.cs.yale.edu/flint/publications/fullsig.pdf"
     :tr-url   "http://flint.cs.yale.edu/flint/publications/fullsig-tr.pdf"
@@ -860,7 +860,7 @@
    {:key      "Ler2003"
     :title    "A proposal for recursive modules in Objective Caml"
     :author   leroy
-    :date     "2003"
+    :date     2003
     :location "Unpublished"
     :url      "http://caml.inria.fr/pub/papers/xleroy-recursive_modules-03.pdf"}
 
@@ -868,7 +868,7 @@
    {:key      "DCH2003"
     :title    "A type system for higher-order modules"
     :author   (authors dreyer crary harper)
-    :date     "2003"
+    :date     2003
     :location (proceedings-location popl :pages '(236 249))
     :url      "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms.pdf"
     :tr-url   "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms-tr.pdf"
@@ -899,7 +899,7 @@
    {:key      "Dre2005a"
     :title    "Understanding and evolving the ML module system"
     :author   dreyer
-    :date     "2005"
+    :date     2005
     :location (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")
     :url      "https://people.mpi-sws.org/~dreyer/thesis/main.pdf"}
 
@@ -1005,7 +1005,7 @@
    {:key      "Dre2006"
     :title    "Practical type theory for recursive modules"
     :author   dreyer
-    :date     "2006"
+    :date     2006
     :location (techrpt-location :institution "University of Chicago, Department of Computer Science" :number "TR-2006-07")
     :url      "https://people.mpi-sws.org/~dreyer/papers/bimod/main.pdf"}
 
@@ -1337,7 +1337,7 @@
    {:key      "Cra2017"
     :title    "Modules, abstraction, and parametric polymorphism"
     :author   crary
-    :date     "2017"
+    :date     2017
     :location (proceedings-location popl :pages '(100 113))
     :url      "http://www.cs.cmu.edu/~crary/papers/2017/mapp.pdf"
     :doi      "10.1145/3009837.3009892"}
