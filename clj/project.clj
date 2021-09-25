@@ -4,5 +4,6 @@
   :license {:name "MIT"
             :url ""}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [hiccup "1.0.5"]]
+                 [hiccup "1.0.5"]
+                 [org.clojure/data.json "2.4.0"]]
   :main modules.core)
