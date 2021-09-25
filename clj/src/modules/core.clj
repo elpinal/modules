@@ -1,5 +1,6 @@
 (ns modules.core
-  (:require [hiccup.core :as hiccup]))
+  (:require [hiccup.core :as hiccup]
+            [clojure.spec.alpha :as spec]))
 
 (def esop "European Symposium on Programming")
 (def fool "Foundations of Object-Oriented Languages")
@@ -62,7 +63,14 @@
          xs (butlast (cons x ys))]
      (str (apply str (interpose ", " xs)) " and " l))))
 
+(spec/def :modules/strings
+  (spec/or
+   :single string?
+   :multi (spec/coll-of string?)))
+
 (defn apply-str-and [x]
+  {:pre [(spec/valid? :modules/strings x)]
+   :post [(spec/valid? string? %)]}
   (if (sequential? x)
     (apply str-and x)
     x))
