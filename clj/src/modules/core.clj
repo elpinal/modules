@@ -55,11 +55,20 @@
 
 (defn paren [s] (str "(" s ")"))
 
+(defn authors
+  ([x] x)
+  ([x & ys]
+   (let [l (last (cons x ys))
+         xs (butlast (cons x ys))]
+     (str (apply str (interpose ", " xs)) " and " l))))
+
 (defn render
   [{:keys [key title author date location doi url tr-url tr-with tr-date slides ext-url appendix]}]
   [:div
    [:h4 title]
-   [:p author]
+   [:p (if (sequential? author)
+         (apply authors author)
+         author)]
    [:p (str (if (sequential? location)
               (apply str (interpose ", " (map #(hiccup/html %) location)))
               location)
@@ -74,7 +83,7 @@
                (if tr-url ; Technical Report URL
                  [[:br]
                   (if tr-with
-                    (str "Technical Report (with " tr-with (if tr-date (prepend-comma tr-date)) "): ")
+                    (str "Technical Report (with " (if (sequential? tr-with) (apply authors tr-with) tr-with) (if tr-date (prepend-comma tr-date)) "): ")
                     (str "Technical Report" (if tr-date (str " " (paren tr-date))) ": "))
                   [:a {:href tr-url} tr-url]]))))
    (if slides
@@ -92,13 +101,6 @@
 (defn html-entries
   [xs]
   (apply str (interpose "\n" (map #(hiccup/html (render %)) xs))))
-
-(defn authors
-  ([x] x)
-  ([x & ys]
-   (let [l (last (cons x ys))
-         xs (butlast (cons x ys))]
-     (str (apply str (interpose ", " xs)) " and " l))))
 
 (defn str-pages
   [pages]
@@ -149,7 +151,7 @@
    :bl1984
    {:key      "BL1984"
     :title    "A kernel language for abstract data types and modules"
-    :author   (authors "R. Burstall" "B. Lampson")
+    :author   ["R. Burstall" "B. Lampson"]
     :date     1984
     :location (proceedings-location "Semantics of Data Types" :pages '(1 50))
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf"
@@ -177,7 +179,7 @@
    :mp1985
    {:key      "MP1985"
     :title    "Abstract types have existential types"
-    :author   (authors mitchell plotkin)
+    :author   [mitchell plotkin]
     :date     1985
     :location (proceedings-location popl :pages '(37 51))
     :doi      "10.1145/318593.318606"}
@@ -185,7 +187,7 @@
    :cw1985
    {:key      "CW1985"
     :title    "On understanding types, data abstraction, and polymorphism"
-    :author   (authors cardelli "P. Wegner")
+    :author   [cardelli "P. Wegner"]
     :date     1985
     :location (techrpt-location :institution "Brown University" :number "CS-85-14")
     :url      "http://lucacardelli.name/Papers/OnUnderstanding.A4.pdf"}
@@ -210,7 +212,7 @@
    :hmt1987
    {:key      "HMT1987"
     :title    "A type discipline for program modules"
-    :author   (authors harper "Robin Milner" tofte)
+    :author   [harper "Robin Milner" tofte]
     :date     1987
     :location (proceedings-location tapsoft :pages '(308 319))
     :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0014988.pdf"
@@ -227,7 +229,7 @@
    :cm1988
    {:key      "CM1988"
     :title    "Persistence and type abstraction"
-    :author   (authors cardelli macqueen)
+    :author   [cardelli macqueen]
     :date     "1988. First appeared in 1985"
     :location (proceedings-location "Data types and persistence" :pages '(31 41))
     :url      "http://lucacardelli.name/Papers/Persistence%20and%20Type%20Abstraction.pdf"
@@ -236,7 +238,7 @@
    :mp1988
    {:key      "MP1988"
     :title    "Abstract types have existential type"
-    :author   (authors mitchell plotkin)
+    :author   [mitchell plotkin]
     :date     1988
     :location (journal-location toplas :volume 10 :number 3 :pages '(470 502))
     :doi      "10.1145/44501.45065"
@@ -253,7 +255,7 @@
    :mh1988
    {:key      "MH1988"
     :title    "The essence of ML"
-    :author   (authors mitchell harper)
+    :author   [mitchell harper]
     :date     1988
     :location (proceedings-location popl :pages '(28 46))
     :doi      "10.1145/73560.73563"}
@@ -269,7 +271,7 @@
    :hmm1990
    {:key      "HMM1990"
     :title    "Higher-order modules and the phase distinction"
-    :author   (authors harper mitchell moggi)
+    :author   [harper mitchell moggi]
     :date     1990
     :location (proceedings-location popl :pages '(341 354))
     :url      "http://theory.stanford.edu/people/jcm/papers/harper-mm-90.pdf"
@@ -284,7 +286,7 @@
    :cl1990
    {:key      "CL1990"
     :title    "Abstract types and the dot notation"
-    :author   (authors cardelli leroy)
+    :author   [cardelli leroy]
     :date     1990
     :location (proceedings-location "IFIP TC2 working conference on programming concepts and methods" :pages '(479 504))
     :url      "https://xavierleroy.org/publi/abstract-types-dot-notation.pdf"}
@@ -292,7 +294,7 @@
    :bc1990
    {:key      "BC1990"
     :title    "Mixin-based inheritance"
-    :author   (authors bracha "William Cook")
+    :author   [bracha "William Cook"]
     :date     1990
     :location (proceedings-location "OOPSLA/ECOOP" :pages '(303 311))
     :url      "http://www.bracha.org/oopsla90.ps"
@@ -319,7 +321,7 @@
    :mmm1991
    {:key      "MMM1991"
     :title    "An extension of Standard ML modules with subtyping and inheritance"
-    :author   (authors mitchell "Sigurd Meldal" "Neel Madhav")
+    :author   [mitchell "Sigurd Meldal" "Neel Madhav"]
     :date     1991
     :location (proceedings-location popl :pages '(270 278))
     :url      "https://www.researchgate.net/publication/2815527_An_extension_of_Standard_ML_modules_with_subtyping_and_inheritance"
@@ -328,7 +330,7 @@
    :bl1991
    {:key      "BL1991"
     :title    "Modularity meets inheritance"
-    :author   (authors bracha "Gary Lindstrom")
+    :author   [bracha "Gary Lindstrom"]
     :date     1991
     :location (techrpt-location :institution "University of Utah" :number "UUCS-91-017")
     :url      "http://www.bracha.org/modularity-meets-inheritance.ps"}
@@ -336,7 +338,7 @@
    :bl1992
    {:key      "BL1992"
     :title    "Modularity meets inheritance"
-    :author   (authors bracha "Gary Lindstrom")
+    :author   [bracha "Gary Lindstrom"]
     :date     1992
     :location (proceedings-location "International Conference on Computer Languages" :pages '(282 290))
     :doi      "10.1109/ICCL.1992.185492"}
@@ -369,7 +371,7 @@
    :hm1993
    {:key      "HM1993"
     :title    "On the type structure of Standard ML"
-    :author   (authors harper mitchell)
+    :author   [harper mitchell]
     :date     1993
     :location (journal-location toplas :volume 15 :number 2 :pages '(211 252))
     :url      "https://crypto.stanford.edu/~jcm/papers/harper-mitch-TOPLAS-93.pdf"
@@ -378,7 +380,7 @@
    :hl1994
    {:key      "HL1994"
     :title    "A type-theoretic approach to higher-order modules with sharing"
-    :author   (authors harper "Mark Lillibridge")
+    :author   [harper "Mark Lillibridge"]
     :date     1994
     :location (proceedings-location popl :pages '(123 137))
     :url      "https://www.cs.cmu.edu/~rwh/papers/sharing/popl94.pdf"
@@ -396,7 +398,7 @@
    :mt1994
    {:key      "MT1994"
     :title    "A semantics for higher-order functors"
-    :author   (authors macqueen tofte)
+    :author   [macqueen tofte]
     :date     1994
     :location (proceedings-location "Programming Languages and Systems – ESOP ’94" :pages '(409 423))
     :url      "https://rd.springer.com/content/pdf/10.1007%2F3-540-57880-3_27.pdf"
@@ -413,7 +415,7 @@
    :cm1994
    {:key      "CM1994"
     :title    "An implementation of higher-order functors"
-    :author   (authors "Pierre Crégut" macqueen)
+    :author   ["Pierre Crégut" macqueen]
     :date     1994
     :location (proceedings-location "ACM SIGPLAN Workshop on ML and its Applications") ; :pages '(13 22)
     :url      "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.32.1516&rep=rep1&type=pdf"}
@@ -421,7 +423,7 @@
    :mg1994
    {:key      "MG1994"
     :title    "Studying the ML module system in HOL"
-    :author   (authors "Savi Maharaj" "Elsa Gunter")
+    :author   ["Savi Maharaj" "Elsa Gunter"]
     :date     1994
     :location (proceedings-location "Higher Order Logic Theorem Proving and Its Applications" :pages '(346 361))
     :url      "http://www.cs.stir.ac.uk/~sma/publications/HOLML.ps"
@@ -430,7 +432,7 @@
    :gm1995
    {:key      "GM1995"
     :title    "Studying the ML module system in HOL"
-    :author   (authors "Elsa Gunter" "Savi Maharaj")
+    :author   ["Elsa Gunter" "Savi Maharaj"]
     :date     1995
     :location (journal-location "The Computer Journal" :volume 38 :number 2 :pages '(142 151))
     :url      "http://www.cs.stir.ac.uk/~sma/publications/CJ.ps"
@@ -466,7 +468,7 @@
    :ds1996
    {:key      "DS1996"
     :title    "Mixin modules"
-    :author   (authors "Dominic Duggan" "Constantinos Sourelis")
+    :author   ["Dominic Duggan" "Constantinos Sourelis"]
     :date     1996
     :location (proceedings-location icfp :pages '(262 273))
     :url      "https://www.cs.tufts.edu/~nr/cs257/archive/dominic-duggan/Mixin%20Modules.pdf"
@@ -493,7 +495,7 @@
    :nj1996
    {:key      "NJ1996"
     :title    "An exploration of modular programs"
-    :author   (authors "Jan Nicklish" "Simon Peyton Jones")
+    :author   ["Jan Nicklish" "Simon Peyton Jones"]
     :date     1996
     :location "In The Glasgow Workshop on Functional Programming"
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1996/01/Nicklisch-modules.pdf"}
@@ -501,7 +503,7 @@
    :ad1996
    {:key      "AD1996"
     :title    "Type isomorphisms for module signatures"
-    :author   (authors "María-Virginia Aponte" "Roberto Di Cosmo")
+    :author   ["María-Virginia Aponte" "Roberto Di Cosmo"]
     :date     1996
     :location (proceedings-location plilp :pages '(334 346))
     :url      "http://www.dicosmo.org/Articles/1996-AponteDiCosmo-PLILP.pdf"
@@ -561,7 +563,7 @@
    :hs1997
    {:key      "HS1997"
     :title    "An interpretation of Standard ML in type theory"
-    :author   (authors harper stone)
+    :author   [harper stone]
     :date     1997
     :location (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-97-147")
     :url      "https://www.cs.cmu.edu/Groups/fox/papers/sml96-v3.ps"}
@@ -577,7 +579,7 @@
    :az1997
    {:key      "AZ1997"
     :title    "An algebra of mixin modules"
-    :author   (authors ancona zucca)
+    :author   [ancona zucca]
     :date     1997
     :location (proceedings-location "International Workshop on Algebraic Development Techniques" :pages '(92 106))
     :doi      "10.1007/3-540-64299-4_28"}
@@ -603,7 +605,7 @@
    :ds1998
    {:key      "DS1998"
     :title    "Parameterized modules, recursive modules and mixin modules"
-    :author   (authors "Dominic Duggan" "Constantinos Sourelis")
+    :author   ["Dominic Duggan" "Constantinos Sourelis"]
     :date     1998
     :month    "September"
     :location "In ACM SIGPLAN Workshop on ML, pages 87–96, Baltimore, MA, USA"}
@@ -629,7 +631,7 @@
    :ff1998a
    {:key      "FF1998a"
     :title    "Modular object-oriented programming with units and mixins"
-    :author   (authors "Robert Bruce Findler" flatt)
+    :author   ["Robert Bruce Findler" flatt]
     :date     1998
     :location (proceedings-location icfp :pages '(94 104))
     :url      "https://www2.ccs.neu.edu/racket/pubs/icfp98-ff.pdf"
@@ -638,7 +640,7 @@
    :ff1998b
    {:key      "FF1998b"
     :title    "Units: Cool modules for HOT languages"
-    :author   (authors flatt "Matthias Felleisen")
+    :author   [flatt "Matthias Felleisen"]
     :date     1998
     :location (proceedings-location pldi :pages '(236 248))
     :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"
@@ -647,7 +649,7 @@
    :az1998
    {:key      "AZ1998"
     :title    "A theory of mixin modules: Basic and derived operators"
-    :author   (authors ancona zucca)
+    :author   [ancona zucca]
     :date     1998
     :location (journal-location "Mathematical Structures in Computer Science" :volume 8 :number 4 :pages '(401 446))
     :doi      "10.1017/S0960129598002576"}
@@ -655,7 +657,7 @@
    :az1999
    {:key      "AZ1999"
     :title    "A primitive calculus for module systems"
-    :author   (authors ancona zucca)
+    :author   [ancona zucca]
     :date     1999
     :location (proceedings-location ppdp :pages '(62 79))
     :doi      "10.1007/10704567_4"}
@@ -663,7 +665,7 @@
    :chp1999
    {:key      "CHP1999"
     :title    "What is a recursive module?"
-    :author   (authors crary harper "Sidd Puri")
+    :author   [crary harper "Sidd Puri"]
     :date     1999
     :location (proceedings-location pldi :pages '(50 63))
     :url      "http://www.cs.cmu.edu/~crary/papers/1999/recmod/recmod.ps.gz"
@@ -710,7 +712,7 @@
    :wv2000
    {:key      "WV2000"
     :title    "Equational reasoning for linking with first-class primitive modules"
-    :author   (authors "J. B. Wells" "René Vestergaard")
+    :author   ["J. B. Wells" "René Vestergaard"]
     :date     2000
     :location (proceedings-location "Programming Languages and Systems" :pages '(412 428))
     :url      "http://www.macs.hw.ac.uk/~jbw/papers/Wells+Vestergaard:Equational-Reasoning-for-Linking-with-First-Class-Primitive-Modules:ESOP-2000.ps.gz"
@@ -719,7 +721,7 @@
    :sh2000
    {:key      "SH2000"
     :title    "Deciding type equivalence in a language with singleton kinds"
-    :author   (authors stone harper)
+    :author   [stone harper]
     :date     2000
     :month    "Jan"
     :location (proceedings-location popl :pages '(214 227))
@@ -751,7 +753,7 @@
    :pchs2000
    {:key      "PCHS2000"
     :title    "Implementing the TILT internal language"
-    :author   (authors "Leaf Petersen" "Perry Cheng" harper stone)
+    :author   ["Leaf Petersen" "Perry Cheng" harper stone]
     :date     2000
     :month    "Dec"
     :location (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-00-180")
@@ -760,7 +762,7 @@
    :hs2000
    {:key      "HS2000"
     :title    "A type-theoretic interpretation of Standard ML"
-    :author   (authors harper stone)
+    :author   [harper stone]
     :date     2000
     :month    "May"
     :location (book-location "Proof, language, and interaction: Essays in honor of robin milner" :publisher "MIT Press")
@@ -797,7 +799,7 @@
    :dhc2001
    {:key      "DHC2001"
     :title    "Toward a practical type theory for recursive modules"
-    :author   (authors dreyer harper crary)
+    :author   [dreyer harper crary]
     :date     2001
     :location (techrpt-location :institution "Carnegie Mellon University, School of Computer Science" :number "CMU-CS-01-112")
     :url      "https://www.cs.cmu.edu/~rwh/papers/ttrm/rmtr.pdf"}
@@ -814,7 +816,7 @@
    :hl2002
    {:key      "HL2002"
     :title    "Mixin modules in a call-by-value setting"
-    :author   (authors "Tom Hirschowitz" leroy)
+    :author   ["Tom Hirschowitz" leroy]
     :date     2002
     :location (proceedings-location esop :pages '(6 20))
     :url      "https://xavierleroy.org/publi/mixins-cbv-esop2002.pdf"
@@ -823,7 +825,7 @@
    :az2002
    {:key      "AZ2002"
     :title    "A calculus of module systems"
-    :author   (authors ancona zucca)
+    :author   [ancona zucca]
     :date     2002
     :month    "March"
     :location (journal-location jfp :volume 12 :number 2 :pages '(91 132))
@@ -832,7 +834,7 @@
    :sp2002
    {:key      "SP2002"
     :title    "First-class modules for Haskell"
-    :author   (authors "Mark Shields" "Simon Peyton Jones")
+    :author   ["Mark Shields" "Simon Peyton Jones"]
     :date     2002
     :location (proceedings-location fool)
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/first_class_modules.pdf"}
@@ -840,7 +842,7 @@
    :djh2002
    {:key      "DJH2002"
     :title    "A formal specification of the Haskell 98 module system"
-    :author   (authors "Iavor S. Diatchki" mp-jones "Thomas Hallgren")
+    :author   ["Iavor S. Diatchki" mp-jones "Thomas Hallgren"]
     :date     2002
     :month    "October"
     :location (proceedings-location "ACM SIGPLAN 2002 Haskell Workshop" :pages '(17 28))
@@ -850,7 +852,7 @@
    :afmz2003
    {:key      "AFMZ2003"
     :title    "Mixin modules and computational effects"
-    :author   (authors ancona "Sonia Fagorzi" moggi zucca)
+    :author   [ancona "Sonia Fagorzi" moggi zucca]
     :date     2003
     :location (proceedings-location icalp :pages '(224 238))
     :url      "https://www.disi.unige.it/person/MoggiE/ftp/icalp03.pdf"
@@ -867,7 +869,7 @@
    :dch2003
    {:key      "DCH2003"
     :title    "A type system for higher-order modules"
-    :author   (authors dreyer crary harper)
+    :author   [dreyer crary harper]
     :date     2003
     :location (proceedings-location popl :pages '(236 249))
     :url      "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms.pdf"
@@ -891,7 +893,7 @@
     :location (proceedings-location popl :pages '(293 305))
     :url      "https://people.mpi-sws.org/~dreyer/papers/recursion/popl.pdf"
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/recursion/tr/main.pdf"
-    :tr-with  (authors harper crary)
+    :tr-with  [harper crary]
     :tr-date  2003
     :doi      "10.1145/964001.964026"}
 
@@ -923,7 +925,7 @@
    :rfg2005
    {:key      "RFG2005"
     :title    "An expressive language of signatures"
-    :author   (authors "Norman Ramsey" "Kathleen Fisher" "Paul Govereau")
+    :author   ["Norman Ramsey" "Kathleen Fisher" "Paul Govereau"]
     :date     2005
     :location (proceedings-location icfp :pages '(27 40))
     :url      "https://www.cs.tufts.edu/~nr/pubs/els.pdf"
@@ -932,7 +934,7 @@
    :nig2005
    {:key      "NIG2005"
     :title    "Recursive object-oriented modules"
-    :author   (authors nakata "Akira Ito" garrigue)
+    :author   [nakata "Akira Ito" garrigue]
     :date     2005
     :location (proceedings-location fool)
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"
@@ -949,7 +951,7 @@
    :mw2005
    {:key      "MW2005"
     :title    "Type inference, principal typings, and let-polymorphism for first-class mixin modules"
-    :author   (authors makholm wells)
+    :author   [makholm wells]
     :date     2005
     :location (proceedings-location icfp :pages '(156 167))
     :url      "http://henning.makholm.net/papers/icfp2005.pdf"
@@ -958,7 +960,7 @@
    :hl2005
    {:key      "HL2005"
     :title    "Mixin modules in a call-by-value setting"
-    :author   (authors "Tom Hirschowitz" leroy)
+    :author   ["Tom Hirschowitz" leroy]
     :date     2005
     :location (journal-location toplas :volume 27 :number 5 :pages '(857 881))
     :doi      "10.1145/1086642.1086644"
@@ -985,7 +987,7 @@
    :ng2006
    {:key      "NG2006"
     :title    "Recursive modules for programming"
-    :author   (authors nakata garrigue)
+    :author   [nakata garrigue]
     :date     2006
     :location (proceedings-location icfp :pages '(74 86))
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/nakata-icfp2006.pdf"
@@ -995,7 +997,7 @@
    :of2006
    {:key      "OF2006"
     :title    "From structures and functors to modules and units"
-    :author   (authors "Scott Owens" flatt)
+    :author   ["Scott Owens" flatt]
     :date     2006
     :location (proceedings-location icfp :pages '(87 98))
     :url      "http://www.cs.utah.edu/plt/publications/icfp06-of.pdf"
@@ -1020,7 +1022,7 @@
    :sh2006
    {:key      "SH2006"
     :title    "Extensional equivalence and singleton types"
-    :author   (authors stone harper)
+    :author   [stone harper]
     :date     2006
     :location (journal-location "Transactions on Computational Logic" :volume 7 :number 4 :pages '(676 722))
     :url      "http://www.cs.cmu.edu/~rwh/papers/singletons/tocl.pdf"
@@ -1029,7 +1031,7 @@
    :lch2006
    {:key      "LCH2006"
     :title    "Mechanizing the metatheory of Standard ML"
-    :author   (authors lee crary harper)
+    :author   [lee crary harper]
     :date     2006
     :location (techrpt-location :institution "Carnegie Mellon University, School of Computer Science" :number "CMU-CS-06-138")
     :url      "http://www.cs.cmu.edu/~dklee/papers/tslf.pdf"
@@ -1038,7 +1040,7 @@
    :lch2007
    {:key      "LCH2007"
     :title    "Towards a mechanized metatheory of Standard ML"
-    :author   (authors lee crary harper)
+    :author   [lee crary harper]
     :date     2007
     :month    "January"
     :location (proceedings-location popl :pages '(173 184))
@@ -1076,7 +1078,7 @@
    :db2007
    {:key      "DB2007"
     :title    "Principal type schemes for modular programs"
-    :author   (authors dreyer "Matthias Blume")
+    :author   [dreyer "Matthias Blume"]
     :date     2007
     :location (proceedings-location esop :pages '(441 457))
     :url      "https://people.mpi-sws.org/~dreyer/papers/infmod/main-short.pdf"
@@ -1086,7 +1088,7 @@
    :dhc2007
    {:key      "DHC2007"
     :title    "Modular type classes"
-    :author   (authors dreyer harper "Manuel M. T. Chakravarty")
+    :author   [dreyer harper "Manuel M. T. Chakravarty"]
     :date     2007
     :location (proceedings-location popl :pages '(63 70))
     :url      "https://people.mpi-sws.org/~dreyer/papers/mtc/main-short.pdf"
@@ -1107,7 +1109,7 @@
    :ng2007
    {:key      "NG2007"
     :title    "Path resolution for recursive nested modules is undecidable"
-    :author   (authors nakata garrigue)
+    :author   [nakata garrigue]
     :date     2007
     :location (proceedings-location "9th International Workshop on Termination")
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/wst2007.pdf"}
@@ -1115,7 +1117,7 @@
    :dr2008
    {:key      "DR2008"
     :title    "Mixin’ up the ML module system"
-    :author   (authors dreyer rossberg)
+    :author   [dreyer rossberg]
     :date     2008
     :location (proceedings-location icfp :pages '(307 320))
     :url      "https://people.mpi-sws.org/~rossberg/mixml/mixml-icfp08.pdf"
@@ -1125,14 +1127,14 @@
    :mr2008a
    {:key      "MR2008a"
     :title    "Towards a simpler account of modules and generativity: Abstract types have open existential types"
-    :author   (authors "Benoît Montagu" "Didier Rémy")
+    :author   ["Benoît Montagu" "Didier Rémy"]
     :date     "January 2008"
     :url      "http://gallium.inria.fr/~remy/modules/fzip.pdf"}
 
    :mr2008b
    {:key      "MR2008b"
     :title    "A logical account of type generativity: Abstract types have open existential types"
-    :author   (authors "Benoît Montagu" "Didier Rémy")
+    :author   ["Benoît Montagu" "Didier Rémy"]
     :date     "April 14, 2008"
     :url      "http://gallium.inria.fr/~remy/modules/oat.pdf"
     :slides   "http://gallium.inria.fr/~remy/modules/fzip@msr2008.pdf"}
@@ -1156,7 +1158,7 @@
    :mr2009
    {:key      "MR2009"
     :title    "Modeling abstract types in modules with open existential types"
-    :author   (authors "Benoît Montagu" "Didier Rémy")
+    :author   ["Benoît Montagu" "Didier Rémy"]
     :date     2009
     :location (proceedings-location popl :pages '(354 365))
     :url      "http://gallium.inria.fr/~remy/modules/Montagu-Remy@popl09:fzip.pdf"
@@ -1174,7 +1176,7 @@
    :km2009
    {:key      "KM2009"
     :title    "Engineering higher-order modules in SML/NJ"
-    :author   (authors "George Kuan" macqueen)
+    :author   ["George Kuan" macqueen]
     :date     2009
     :location (proceedings-location ifl :pages '(218 235))
     :url      "https://www.researchgate.net/profile/David_Macqueen/publication/226219412_Engineering_Higher-Order_Modules_in_SMLNJ/links/0912f50a29752482c0000000.pdf"
@@ -1199,7 +1201,7 @@
    :bo2010
    {:key      "BO2010"
     :title    "A flattening strategy for SML module compilation and its implementation"
-    :author   (authors "Liu Bochao" "Atsushi Ohori")
+    :author   ["Liu Bochao" "Atsushi Ohori"]
     :date     2010
     :location (journal-location "Information and Media Technologies" :volume 5 :number 1 :pages '(58 76))
     :url      "https://www.jstage.jst.go.jp/article/imt/5/1/5_1_58/_pdf/-char/en"
@@ -1208,7 +1210,7 @@
    :rrd2010
    {:key      "RRD2010"
     :title    "F-ing modules"
-    :author   (authors rossberg russo dreyer)
+    :author   [rossberg russo dreyer]
     :date     2010
     :location (proceedings-location tldi :pages '(89 102))
     :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf"
@@ -1217,7 +1219,7 @@
    :fg2010
    {:key      "FG2010"
     :title    "First-class modules and composable signatures in Objective Caml 3.12"
-    :author   (authors frisch garrigue)
+    :author   [frisch garrigue]
     :date     2010
     :location (proceedings-location "ML Workshop")
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/ml2010.pdf"
@@ -1226,7 +1228,7 @@
    :ingp2011
    {:key      "INGP2011"
     :title    "A syntactic type system for recursive modules"
-    :author   (authors im nakata garrigue "Sungwoo Park")
+    :author   [im nakata garrigue "Sungwoo Park"]
     :date     2011
     :location (proceedings-location oopsla)
     :doi      "10.1145/2048066.2048141"
@@ -1235,7 +1237,7 @@
    :gn2012
    {:key      "GN2012"
     :title    "Path resolution for nested recursive modules"
-    :author   (authors garrigue nakata)
+    :author   [garrigue nakata]
     :date     2012 ; Issue date is 2011
     :location (journal-location "Higher-Order and Symbolic Computation" :volume 24 :number 3 :pages '(207 237))
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/path-resolution-1205.pdf"
@@ -1244,7 +1246,7 @@
    :rd2013
    {:key      "RD2013"
     :title    "Mixin’ up the ML module system"
-    :author   (authors rossberg dreyer)
+    :author   [rossberg dreyer]
     :date     2013
     :location (journal-location toplas :volume 35 :number 1)
     :url      "https://people.mpi-sws.org/~rossberg/mixml/mixml-toplas.pdf"
@@ -1253,7 +1255,7 @@
    :inp2013
    {:key      "INP2013"
     :title    "Contractive signatures with recursive types, type parameters, and abstract types"
-    :author   (authors im nakata "Sungwoo Park")
+    :author   [im nakata "Sungwoo Park"]
     :date     2013
     :location (proceedings-location icalp :pages '(299 311))
     :url      "http://pl.postech.ac.kr/~gla/paper/icalp2013.pdf"
@@ -1262,7 +1264,7 @@
    :rrd2014
    {:key      "RRD2014"
     :title    "F-ing modules"
-    :author   (authors rossberg russo dreyer)
+    :author   [rossberg russo dreyer]
     :date     2014
     :month    "September"
     :location (journal-location jfp :volume 24 :number 5)
@@ -1272,7 +1274,7 @@
    :kdpm2014
    {:key      "KDPM2014"
     :title    "Backpack: Retrofitting Haskell with interfaces"
-    :author   (authors "Scott Kilpatrick" dreyer "Simon Peyton Jones" "Simon Marlow")
+    :author   ["Scott Kilpatrick" dreyer "Simon Peyton Jones" "Simon Marlow"]
     :date     2014
     :location (proceedings-location popl :pages '(19 31))
     :url      "https://people.mpi-sws.org/~dreyer/papers/backpack/paper.pdf"
@@ -1283,7 +1285,7 @@
    :gw2014
    {:key      "GW2014"
     :title    "Type-level module aliases: independent and equal"
-    :author   (authors garrigue white)
+    :author   [garrigue white]
     :date     2014
     :month    "September"
     :location (proceedings-location "ML Family Workshop")
@@ -1312,7 +1314,7 @@
    :pykd2016
    {:key      "PYKD2016"
     :title    "Backpack to work: Towards practical mixin linking for Haskell"
-    :author   (authors "Simon Peyton Jones" "Edward Yang" "Scott Kilpatrick" dreyer)
+    :author   ["Simon Peyton Jones" "Edward Yang" "Scott Kilpatrick" dreyer]
     :date     "March 2016"
     :location "In submission"
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/backpack-2016.pdf"}
@@ -1328,7 +1330,7 @@
    :ly2017
    {:key      "LY2017"
     :title    "Extending OCaml's open (extended abstract)"
-    :author   (authors "Runhang Li" "Jeremy Yallop")
+    :author   ["Runhang Li" "Jeremy Yallop"]
     :date     2017
     :location (proceedings-location "The OCaml Users and Developers Workshop")
     :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open.pdf"}
@@ -1345,7 +1347,7 @@
    :ehao2018
    {:key      "EHAO2018"
     :title    "Static interpretation of higher-order modules in Futhark: Functional GPU programming in the large"
-    :author   (authors "Martin Elsman" "Troels Henriksen" "Danil Annenkov" "Cosmin E. Oancea")
+    :author   ["Martin Elsman" "Troels Henriksen" "Danil Annenkov" "Cosmin E. Oancea"]
     :date     2018
     :location (proceedings-location icfp :pages '(1 30))
     :url      "https://futhark-lang.org/publications/icfp18.pdf"
@@ -1373,7 +1375,7 @@
    :rfto2019
    {:key      "RFTO2019"
     :title    "Characterising renaming within OCaml’s module system: Theory and implementation"
-    :author   (authors "Reuben N. S. Rowe" "Hugo Férée" "Simon J. Thompson" "Scott Owens")
+    :author   ["Reuben N. S. Rowe" "Hugo Férée" "Simon J. Thompson" "Scott Owens"]
     :date     2019
     :location (proceedings-location pldi :pages '(950 965))
     :url      "https://www.cs.kent.ac.uk/people/staff/rnsr/docs/renaming-pldi2019.pdf"
@@ -1382,7 +1384,7 @@
    :ly2019
    {:key      "LY2019"
     :title    "Extending OCaml's open"
-    :author   (authors "Runhang Li" "Jeremy Yallop")
+    :author   ["Runhang Li" "Jeremy Yallop"]
     :date     2019
     :location (proceedings-location "ML & OCaml 2017 post-proceedings" :pages '(1 14))
     :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open-draft.pdf"
@@ -1400,7 +1402,7 @@
    :sh2021a
    {:key      "SH2021a"
     :title    "A metalanguage for multi-phase modularity"
-    :author   (authors "Jonathan Sterling" harper)
+    :author   ["Jonathan Sterling" harper]
     :date     2021
     :location "ML Family Workshop"
     :url      "https://www.jonmsterling.com/pdfs/phml.pdf"
@@ -1409,7 +1411,7 @@
    :sh2021b
    {:key      "SH2021b"
     :title    "Logical relations as types: Proof-relevant parametricity for program modules"
-    :author   (authors "Jonathan Sterling" harper)
+    :author   ["Jonathan Sterling" harper]
     :date     "To appear"
     :location (journal-location "Journal of the ACM")
     :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"
