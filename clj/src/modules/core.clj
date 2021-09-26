@@ -85,6 +85,9 @@
   (spec/keys :req [:location/type :location/title]
              :opt [:location/pages]))
 
+(defmethod location-type :type/dissertation [_]
+  (spec/keys :req [:location/type :location/institution :location/degree]))
+
 (spec/def :entry/loc
   (spec/multi-spec location-type :location/type))
 
@@ -117,6 +120,13 @@
    title
    (if pages (str ", pp. " (str-pages pages)))])
 
+(defn dissertation-location
+  [{:location/keys [institution degree]}]
+  [:p
+   degree " dissertation"
+   ", "
+   institution])
+
 (defn render
   [{:keys [key title authors date doi url tr-url tr-with tr-date slides ext-url appendix]
     :entry/keys [loc]}]
@@ -132,8 +142,9 @@
                 (if loc ", ") date)]
        (conj
         (case (:location/type parsed-location)
-          :type/journal     (journal-location parsed-location)
-          :type/proceedings (proceedings-location parsed-location))
+          :type/journal      (journal-location parsed-location)
+          :type/proceedings  (proceedings-location parsed-location)
+          :type/dissertation (dissertation-location parsed-location))
         ", "
         date)))
    (if doi
@@ -168,10 +179,6 @@
 (defn techrpt-location
   [& {:keys [institution number]}]
   (str institution ", " number))
-
-(defn dissertation-location
-  [& {:keys [institution degree]}]
-  (str degree " dissertation, " institution))
 
 (defn book-location
   [title & {:keys [publisher]}]
@@ -282,7 +289,9 @@
     :title    "Operational semantics and polymorphic type inference"
     :authors  tofte
     :date     1988
-    :entry/loc (dissertation-location :institution "University of Edinburgh" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "University of Edinburgh"
+                          :degree "PhD"}
     :url      "https://era.ed.ac.uk/handle/1842/6606"}
 
    :cm1988
@@ -432,7 +441,9 @@
     :title    "The programming language JIGSAW: Mixins, modularity and multiple inheritance"
     :authors  bracha
     :date     1992
-    :entry/loc (dissertation-location :institution "University of Utah" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "University of Utah"
+                          :degree "PhD"}
     :url      "http://www.bracha.org/jigsaw.pdf"}
 
    :tof1992
@@ -646,7 +657,9 @@
     :title    "A module system for LOOM"
     :authors  "Leaf Eames Petersen"
     :date     1996
-    :entry/loc (dissertation-location :institution "Williams College" :degree "Undergraduate")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Williams College"
+                          :degree "Undergraduate"}
     :url      "http://www.leafpetersen.com/leaf/publications/loom_thesis/thesis.pdf"}
 
    :asp1997
@@ -654,7 +667,9 @@
     :title    "Type systems for modular programs and specifications"
     :authors  "David R. Aspinall"
     :date     1997
-    :entry/loc (dissertation-location :institution "Edinburgh University, Edinburgh, Scotland" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Edinburgh University, Edinburgh, Scotland"
+                          :degree "PhD"}
     :url      "https://www.era.lib.ed.ac.uk/handle/1842/11587"}
 
    :car1997
@@ -684,7 +699,9 @@
     :title    "Translucent sums: A foundation for higher-order module systems"
     :authors  "Mark Lillibridge"
     :date     1997
-    :entry/loc (dissertation-location :institution "Carnegie Mellon University" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Carnegie Mellon University"
+                          :degree "PhD"}
     :url      "https://www.cs.cmu.edu/Groups/fox/papers/mdl-thesis.ps"}
 
    :hs1997
@@ -718,7 +735,9 @@
     :title    "Types for modules"
     :authors  russo
     :date     1998
-    :entry/loc (dissertation-location :institution "University of Edinburgh, UK" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "University of Edinburgh, UK"
+                          :degree "PhD"}
     :url      "http://www.dcs.ed.ac.uk/home/cvr/ECS-LFCS-98-389.pdf"}
 
    :sha1998
@@ -746,7 +765,9 @@
     :title    "Type-theoretic methodology for practical programming languages"
     :authors  "Karl Fredrick Crary"
     :date     1998
-    :entry/loc (dissertation-location :institution "Cornell University" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Cornell University"
+                          :degree "PhD"}
     :url      "http://www.cs.cmu.edu/~crary/papers/1998/thesis/thesis.ps.gz"}
 
    :cra1998b
@@ -845,7 +866,9 @@
     :authors  "Martin Elsman"
     :date     1999
     :month    "January"
-    :entry/loc (dissertation-location :institution "Department of Computer Science, University of Copenhagen" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Department of Computer Science, University of Copenhagen"
+                          :degree "PhD"}
     :url      "https://elsman.com/pdf/phd.pdf"}
 
    :els1999b
@@ -904,7 +927,9 @@
     :authors  stone
     :date     2000
     :month    "Aug"
-    :entry/loc (dissertation-location :institution "Carnegie Mellon University" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Carnegie Mellon University"
+                          :degree "PhD"}
     :url      "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-153.pdf"}
 
    :pchs2000
@@ -1086,7 +1111,9 @@
     :title    "Understanding and evolving the ML module system"
     :authors  dreyer
     :date     2005
-    :entry/loc (dissertation-location :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Carnegie Mellon University, Pittsburgh, Pennsylvania"
+                          :degree "PhD"}
     :url      "https://people.mpi-sws.org/~dreyer/thesis/main.pdf"}
 
    :dre2005b
@@ -1167,7 +1194,9 @@
     :title    "Certifying compilation for Standard ML in a type analysis framework"
     :authors  "Leaf Eames Petersen"
     :date     2005
-    :entry/loc (dissertation-location :institution "Carnegie Mellon University" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Carnegie Mellon University"
+                          :degree "PhD"}
     :url      "http://www.leafpetersen.com/leaf/publications/thesis/main.pdf"}
     ; http://reports-archive.adm.cs.cmu.edu/anon/2005/abstracts/05-135.html
 
@@ -1322,7 +1351,9 @@
     :title    "A module system with applicative functors and recursive path references"
     :authors  nakata
     :date     2007
-    :entry/loc (dissertation-location :institution "Kyoto University" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Kyoto University"
+                          :degree "PhD"}
     :url      "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1583.pdf"}
 
    :ng2007
@@ -1415,7 +1446,9 @@
     :title    "A true higher-order module system"
     :authors  "George Kuan"
     :date     2010
-    :entry/loc (dissertation-location :institution "University of Chicago" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "University of Chicago"
+                          :degree "PhD"}
     :url      "http://smlnj-gforge.cs.uchicago.edu/scm/viewvc.php/*checkout*/papers/hofsem/dissertation/kuan-dissertation.pdf?root=smlnj"}
 
    :mon2010
@@ -1423,7 +1456,9 @@
     :title    "Programming with first-class modules in a core language with subtyping, singleton kinds and open existential types"
     :authors  montagu
     :date     2010
-    :entry/loc (dissertation-location :institution "Ecole Polytechnique X" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Ecole Polytechnique X"
+                          :degree "PhD"}
     :url      "https://pastel.archives-ouvertes.fr/tel-00550331/document"}
 
    :bo2010
@@ -1577,7 +1612,9 @@
     :title    "Backpack: Towards practical mix-in linking in Haskell"
     :authors  "Edward Z. Yang"
     :date     "June 2017"
-    :entry/loc (dissertation-location :institution "Stanford University" :degree "PhD")
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "Stanford University"
+                          :degree "PhD"}
     :url      "https://github.com/ezyang/thesis/releases"}
 
    :ly2017
