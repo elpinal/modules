@@ -95,6 +95,9 @@
   (spec/keys :req [:location/type :location/title]
              :opt [:location/publisher]))
 
+(defmethod location-type :type/manuscript [_]
+  (spec/keys :req [:location/type]))
+
 (spec/def :entry/loc
   (spec/multi-spec location-type :location/type))
 
@@ -147,6 +150,10 @@
     (if publisher ", ")
     publisher]))
 
+(defn manuscript-location
+  [{:location/keys []}]
+  [:p "Manuscript"])
+
 (defn render
   [{:keys [key title authors date doi url tr-url tr-with tr-date slides ext-url appendix]
     :entry/keys [loc]}]
@@ -156,17 +163,15 @@
    [:p (apply-str-and authors)]
    (let [parsed-location (spec/conform :entry/loc loc)]
      (if (spec/invalid? parsed-location)
-       [:p (str (if (sequential? loc)
-                  (apply str (interpose ", " (map #(hiccup/html %) loc)))
-                  loc)
-                (if loc ", ") date)]
+       (throw (new Exception (str key " " (spec/explain-str :entry/loc loc))))
        (conj
         (case (:location/type parsed-location)
           :type/journal      (journal-location parsed-location)
           :type/proceedings  (proceedings-location parsed-location)
           :type/dissertation (dissertation-location parsed-location)
           :type/techreport   (techrpt-location parsed-location)
-          :type/in-book      (in-book-location parsed-location))
+          :type/in-book      (in-book-location parsed-location)
+          :type/manuscript   (manuscript-location parsed-location))
         ", "
         date)))
    (if doi
@@ -337,7 +342,7 @@
     :title    "Phase distinctions in type theory"
     :authors  cardelli
     :date     1988
-    :entry/loc "Manuscript"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "http://lucacardelli.name/Papers/PhaseDistinctions.A4.pdf"}
 
    :mh1988
@@ -646,7 +651,8 @@
     :title    "An exploration of modular programs"
     :authors  ["Jan Nicklish" "Simon Peyton Jones"]
     :date     1996
-    :entry/loc "In The Glasgow Workshop on Functional Programming"
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Glasgow Workshop on Functional Programming"}
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1996/01/Nicklisch-modules.pdf"}
 
    :ad1996
@@ -737,7 +743,8 @@
     :title    "Elaboration and phase-splitting in the TIL/ML compiler"
     :authors  stone
     :date     1997
-    :entry/loc "IC Research Symposium"
+    :entry/loc #:location{:type :type/proceedings
+                          :title "IC Research Symposium"}
     :url      "http://www.cs.cmu.edu/~fox/foxnet/people/cstone/papers/ic97.ps"}
 
    :az1997
@@ -778,7 +785,10 @@
     :authors  ["Dominic Duggan" "Constantinos Sourelis"]
     :date     1998
     :month    "September"
-    :entry/loc "In ACM SIGPLAN Workshop on ML, pages 87–96, Baltimore, MA, USA"}
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ACM SIGPLAN Workshop on ML"
+                          :pages '(87 96)
+                          :venue "Baltimore, MA, USA"}}
 
    :cra1998a
    {:key      "Cra1998a"
@@ -1092,7 +1102,7 @@
     :title    "A proposal for recursive modules in Objective Caml"
     :authors  leroy
     :date     2003
-    :entry/loc "Unpublished"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "http://caml.inria.fr/pub/papers/xleroy-recursive_modules-03.pdf"}
 
    :dch2003
@@ -1277,7 +1287,7 @@
     :title    "Higher-order modules in System Fω and Haskell"
     :authors  "Chung-chieh Shan"
     :date     "May 15, 2006"
-    :entry/loc "Manuscript"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "http://homes.soic.indiana.edu/ccshan/xlate/xlate.pdf"}
 
    :sh2006
@@ -1416,6 +1426,7 @@
     :title    "Towards a simpler account of modules and generativity: Abstract types have open existential types"
     :authors  ["Benoît Montagu" "Didier Rémy"]
     :date     "January 2008"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "http://gallium.inria.fr/~remy/modules/fzip.pdf"}
 
    :mr2008b
@@ -1423,6 +1434,7 @@
     :title    "A logical account of type generativity: Abstract types have open existential types"
     :authors  ["Benoît Montagu" "Didier Rémy"]
     :date     "April 14, 2008"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "http://gallium.inria.fr/~remy/modules/oat.pdf"
     :slides   "http://gallium.inria.fr/~remy/modules/fzip@msr2008.pdf"}
 
@@ -1432,6 +1444,7 @@
     :authors  nakata
     :date     2008
     :month    "July"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "http://cs.ioc.ee/~keiko/papers/Lyre08.pdf"}
 
    :nak2008b
@@ -1440,6 +1453,7 @@
     :authors  nakata
     :date     2008
     :month    "September"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "http://cs.ioc.ee/~keiko/papers/OsanLong.pdf"}
 
    :mr2009
@@ -1629,16 +1643,18 @@
     :title    "1ML with special effects (F-ing generativity polymorphism)"
     :authors  rossberg
     :date     2016
-    :entry/loc "In WadlerFest"
+    :entry/loc #:location{:type :type/proceedings
+                          :title "WadlerFest"}
     :url      "https://people.mpi-sws.org/~rossberg/1ml/1ml-effects.pdf"
     :doi      "10.1007/978-3-319-30936-1_18"}
+   ; :slides "https://events.inf.ed.ac.uk/wf2016/slides/rossberg.pdf"
 
    :pykd2016
    {:key      "PYKD2016"
     :title    "Backpack to work: Towards practical mixin linking for Haskell"
     :authors  ["Simon Peyton Jones" "Edward Yang" "Scott Kilpatrick" dreyer]
     :date     "March 2016"
-    :entry/loc "In submission"
+    :entry/loc #:location{:type :type/manuscript}
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/backpack-2016.pdf"}
 
    :yan2017
@@ -1747,7 +1763,8 @@
     :title    "A metalanguage for multi-phase modularity"
     :authors  ["Jonathan Sterling" harper]
     :date     2021
-    :entry/loc "ML Family Workshop"
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ML Family Workshop"}
     :url      "https://www.jonmsterling.com/pdfs/phml.pdf"
     :slides   "https://www.jonmsterling.com/pdfs/ml21.pdf"}
 
