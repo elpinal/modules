@@ -88,6 +88,9 @@
 (defmethod location-type :type/dissertation [_]
   (spec/keys :req [:location/type :location/institution :location/degree]))
 
+(defmethod location-type :type/techreport [_]
+  (spec/keys :req [:location/type :location/institution :location/number]))
+
 (defmethod location-type :type/in-book [_]
   (spec/keys :req [:location/type :location/title]
              :opt [:location/publisher]))
@@ -131,6 +134,10 @@
    ", "
    institution])
 
+(defn techrpt-location
+  [{:location/keys [institution number]}]
+  [:p institution ", " number])
+
 (defn in-book-location
   [{:location/keys [title publisher]}]
   (filterv
@@ -158,6 +165,7 @@
           :type/journal      (journal-location parsed-location)
           :type/proceedings  (proceedings-location parsed-location)
           :type/dissertation (dissertation-location parsed-location)
+          :type/techreport   (techrpt-location parsed-location)
           :type/in-book      (in-book-location parsed-location))
         ", "
         date)))
@@ -189,10 +197,6 @@
 (defn html-entries
   [xs]
   (apply str (interpose "\n" (map #(hiccup/html (render %)) xs))))
-
-(defn techrpt-location
-  [& {:keys [institution number]}]
-  (str institution ", " number))
 
 (def entries
   (array-map
@@ -257,7 +261,9 @@
     :title    "On understanding types, data abstraction, and polymorphism"
     :authors  [cardelli "P. Wegner"]
     :date     1985
-    :entry/loc (techrpt-location :institution "Brown University" :number "CS-85-14")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "Brown University"
+                          :number "CS-85-14"}
     :url      "http://lucacardelli.name/Papers/OnUnderstanding.A4.pdf"}
 
    :mit1986
@@ -431,7 +437,9 @@
     :title    "Modularity meets inheritance"
     :authors  [bracha "Gary Lindstrom"]
     :date     1991
-    :entry/loc (techrpt-location :institution "University of Utah" :number "UUCS-91-017")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "University of Utah"
+                          :number "UUCS-91-017"}
     :url      "http://www.bracha.org/modularity-meets-inheritance.ps"}
 
    :bl1992
@@ -657,7 +665,9 @@
     :title    "Standard ML type generativity as existential quantification"
     :authors  russo
     :date     1996
-    :entry/loc (techrpt-location :institution "University of Edinburgh" :number "ECS-LFCS-96-344")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "University of Edinburgh"
+                          :number "ECS-LFCS-96-344"}
     :url      "http://www.dcs.ed.ac.uk/home/cvr/ECS-LFCS-96-344.pdf"}
 
    :pet1996
@@ -717,7 +727,9 @@
     :title    "An interpretation of Standard ML in type theory"
     :authors  [harper stone]
     :date     1997
-    :entry/loc (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-97-147")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "Carnegie Mellon University"
+                          :number "CMU-CS-97-147"}
     :url      "https://www.cs.cmu.edu/Groups/fox/papers/sml96-v3.ps"}
 
    :sto1997
@@ -946,7 +958,9 @@
     :authors  ["Leaf Petersen" "Perry Cheng" harper stone]
     :date     2000
     :month    "Dec"
-    :entry/loc (techrpt-location :institution "Carnegie Mellon University" :number "CMU-CS-00-180")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "Carnegie Mellon University"
+                          :number "CMU-CS-00-180"}
     :url      "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-180.pdf"}
 
    :hs2000
@@ -1001,7 +1015,9 @@
     :title    "Toward a practical type theory for recursive modules"
     :authors  [dreyer harper crary]
     :date     2001
-    :entry/loc (techrpt-location :institution "Carnegie Mellon University, School of Computer Science" :number "CMU-CS-01-112")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "Carnegie Mellon University, School of Computer Science"
+                          :number "CMU-CS-01-112"}
     :url      "https://www.cs.cmu.edu/~rwh/papers/ttrm/rmtr.pdf"}
 
    :sew2001
@@ -1142,7 +1158,9 @@
     :title    "Type generativity in higher-order module systems"
     :authors  "Paul Govereau"
     :date     2005
-    :entry/loc (techrpt-location :institution harvard-cs-group :number "TR-05-05")
+    :entry/loc #:location{:type :type/techreport
+                          :institution harvard-cs-group
+                          :number "TR-05-05"}
     :url      "https://dash.harvard.edu/bitstream/handle/1/23853816/tr-05-05.pdf"}
 
    :rfg2005
@@ -1215,7 +1233,9 @@
     :title    "Path resolution for recursive modules"
     :authors  nakata
     :date     2006
-    :entry/loc (techrpt-location :institution "Kyoto University" :number "RIMS-1545")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "Kyoto University"
+                          :number "RIMS-1545"}
     :url      "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1545.pdf"}
     ; or "http://www.kurims.kyoto-u.ac.jp/~keiko/papers/RIMS-1545.pdf"
 
@@ -1247,7 +1267,9 @@
     :title    "Practical type theory for recursive modules"
     :authors  dreyer
     :date     2006
-    :entry/loc (techrpt-location :institution "University of Chicago, Department of Computer Science" :number "TR-2006-07")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "University of Chicago, Department of Computer Science"
+                          :number "TR-2006-07"}
     :url      "https://people.mpi-sws.org/~dreyer/papers/bimod/main.pdf"}
 
    :sha2006
@@ -1276,7 +1298,9 @@
     :title    "Mechanizing the metatheory of Standard ML"
     :authors  [lee crary harper]
     :date     2006
-    :entry/loc (techrpt-location :institution "Carnegie Mellon University, School of Computer Science" :number "CMU-CS-06-138")
+    :entry/loc #:location{:type :type/techreport
+                          :institution "Carnegie Mellon University, School of Computer Science"
+                          :number "CMU-CS-06-138"}
     :url      "http://www.cs.cmu.edu/~dklee/papers/tslf.pdf"
     :slides   "https://www.seas.upenn.edu/~sweirich/wmm/wmm06/lee-talk.pdf"}
 
