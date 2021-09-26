@@ -81,6 +81,10 @@
   (spec/keys :req [:location/type :location/title]
              :opt [:location/volume :location/number :location/pages]))
 
+(defmethod location-type :type/proceedings [_]
+  (spec/keys :req [:location/type :location/title]
+             :opt [:location/pages]))
+
 (spec/def :entry/loc
   (spec/multi-spec location-type :location/type))
 
@@ -107,6 +111,12 @@
         (str ", " pages)
         (str ", pp. " (str-pages pages))))]))
 
+(defn proceedings-location
+  [{:location/keys [title pages]}]
+  [:p
+   title
+   (if pages (str ", pp. " (str-pages pages)))])
+
 (defn render
   [{:keys [key title authors date doi url tr-url tr-with tr-date slides ext-url appendix]
     :entry/keys [loc]}]
@@ -120,7 +130,12 @@
                   (apply str (interpose ", " (map #(hiccup/html %) loc)))
                   loc)
                 (if loc ", ") date)]
-       (conj (journal-location parsed-location) ", " date)))
+       (conj
+        (case (:location/type parsed-location)
+          :type/journal     (journal-location parsed-location)
+          :type/proceedings (proceedings-location parsed-location))
+        ", "
+        date)))
    (if doi
      [:p "DOI: "
       [:a {:href (str "https://doi.org/" doi)} doi]])
@@ -150,10 +165,6 @@
   [xs]
   (apply str (interpose "\n" (map #(hiccup/html (render %)) xs))))
 
-(defn proceedings-location
-  [location & {:keys [pages]}]
-  (apply str location (if pages [", pp. " (str-pages pages)])))
-
 (defn techrpt-location
   [& {:keys [institution number]}]
   (str institution ", " number))
@@ -175,7 +186,9 @@
     :title    "Types, abstraction and parametric polymorphism"
     :authors  "J. C. Reynolds"
     :date     1983
-    :entry/loc (proceedings-location "Information Processing" :pages '(513 523))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Information Processing"
+                          :pages '(513 523)}
     :url      "http://www.cse.chalmers.se/edu/year/2010/course/DAT140_Types/Reynolds_typesabpara.pdf"}
 
    :bl1984
@@ -183,7 +196,9 @@
     :title    "A kernel language for abstract data types and modules"
     :authors  ["R. Burstall" "B. Lampson"]
     :date     1984
-    :entry/loc (proceedings-location "Semantics of Data Types" :pages '(1 50))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Semantics of Data Types"
+                          :pages '(1 50)}
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/35-KernelModules.pdf"
     :doi      "10.1007/3-540-13346-1_1"}
 
@@ -193,7 +208,9 @@
     :authors  macqueen
     :date     1984
     :month    "August"
-    :entry/loc (proceedings-location "ACM Conference on LISP and Functional Programming" :pages '(198 207))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ACM Conference on LISP and Functional Programming"
+                          :pages '(198 207)}
     :doi      "10.1145/800055.802036"
     :url      "https://www.researchgate.net/profile/David_Macqueen/publication/221252232_Modules_for_Standard_ML/links/0f317532689526bea1000000/Modules-for-Standard-ML.pdf"}
 
@@ -215,7 +232,9 @@
     :title    "Abstract types have existential types"
     :authors  [mitchell plotkin]
     :date     1985
-    :entry/loc (proceedings-location popl :pages '(37 51))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(37 51)}
     :doi      "10.1145/318593.318606"}
 
    :cw1985
@@ -231,7 +250,9 @@
     :title    "Representation independence and data abstraction"
     :authors  mitchell
     :date     1986
-    :entry/loc (proceedings-location popl :pages '(263 276))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(263 276)}
     :doi      "10.1145/512644.512669"}
 
    :mac1986
@@ -239,7 +260,9 @@
     :title    "Using dependent types to express modular structure"
     :authors  macqueen
     :date     1986
-    :entry/loc (proceedings-location popl :pages '(277 286))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(277 286)}
     :url      "https://www.researchgate.net/profile/David_Macqueen/publication/2385295_Using_Dependent_Types_to_Express_Modular_Structure/links/09e415148bbf0d4470000000.pdf"
     :doi      "10.1145/512644.512670"}
 
@@ -248,7 +271,9 @@
     :title    "A type discipline for program modules"
     :authors  [harper "Robin Milner" tofte]
     :date     1987
-    :entry/loc (proceedings-location tapsoft :pages '(308 319))
+    :entry/loc #:location{:type :type/proceedings
+                          :title tapsoft
+                          :pages '(308 319)}
     :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0014988.pdf"
     :doi      "10.1007/BFb0014988"}
 
@@ -265,7 +290,9 @@
     :title    "Persistence and type abstraction"
     :authors  [cardelli macqueen]
     :date     "1988. First appeared in 1985"
-    :entry/loc (proceedings-location "Data types and persistence" :pages '(31 41))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Data types and persistence"
+                          :pages '(31 41)}
     :url      "http://lucacardelli.name/Papers/Persistence%20and%20Type%20Abstraction.pdf"
     :doi      "10.1007/978-3-642-61556-6_3"}
 
@@ -295,7 +322,9 @@
     :title    "The essence of ML"
     :authors  [mitchell harper]
     :date     1988
-    :entry/loc (proceedings-location popl :pages '(28 46))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(28 46)}
     :doi      "10.1145/73560.73563"}
 
    :mog1989
@@ -303,7 +332,9 @@
     :title    "A category-theoretic account of program modules"
     :authors  moggi
     :date     1989
-    :entry/loc (proceedings-location "Category Theory and Computer Science" :pages '(101 117))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Category Theory and Computer Science"
+                          :pages '(101 117)}
     :doi      "10.1007/BFb0018347"}
 
    :hmm1990
@@ -311,7 +342,9 @@
     :title    "Higher-order modules and the phase distinction"
     :authors  [harper mitchell moggi]
     :date     1990
-    :entry/loc (proceedings-location popl :pages '(341 354))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(341 354)}
     :url      "http://theory.stanford.edu/people/jcm/papers/harper-mm-90.pdf"
     :tr-url   "http://www.lfcs.inf.ed.ac.uk/reports/90/ECS-LFCS-90-112/ECS-LFCS-90-112.pdf"
     ; tr(CMU-CS-89-197, 1989): http://www.cs.cmu.edu/~rwh/papers/phase/tr.pdf
@@ -326,7 +359,9 @@
     :title    "Abstract types and the dot notation"
     :authors  [cardelli leroy]
     :date     1990
-    :entry/loc (proceedings-location "IFIP TC2 working conference on programming concepts and methods" :pages '(479 504))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "IFIP TC2 working conference on programming concepts and methods"
+                          :pages '(479 504)}
     :url      "https://xavierleroy.org/publi/abstract-types-dot-notation.pdf"}
 
    :bc1990
@@ -334,7 +369,9 @@
     :title    "Mixin-based inheritance"
     :authors  [bracha "William Cook"]
     :date     1990
-    :entry/loc (proceedings-location "OOPSLA/ECOOP" :pages '(303 311))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "OOPSLA/ECOOP"
+                          :pages '(303 311)}
     :url      "http://www.bracha.org/oopsla90.ps"
     :doi      "10.1145/97945.97982"}
 
@@ -356,7 +393,8 @@
     :title    "Typeful programming"
     :authors  cardelli
     :date     1991
-    :entry/loc (proceedings-location "Formal Description of Programming Concepts")
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Formal Description of Programming Concepts"}
     :url      "http://lucacardelli.name/Papers/TypefulProg.A4.pdf"}
     ; publisher's site: https://www.springer.com/gp/book/9783540539612
 
@@ -365,7 +403,9 @@
     :title    "An extension of Standard ML modules with subtyping and inheritance"
     :authors  [mitchell "Sigurd Meldal" "Neel Madhav"]
     :date     1991
-    :entry/loc (proceedings-location popl :pages '(270 278))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(270 278)}
     :url      "https://www.researchgate.net/publication/2815527_An_extension_of_Standard_ML_modules_with_subtyping_and_inheritance"
     :doi      "10.1145/99583.99620"}
 
@@ -382,7 +422,9 @@
     :title    "Modularity meets inheritance"
     :authors  [bracha "Gary Lindstrom"]
     :date     1992
-    :entry/loc (proceedings-location "International Conference on Computer Languages" :pages '(282 290))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "International Conference on Computer Languages"
+                          :pages '(282 290)}
     :doi      "10.1109/ICCL.1992.185492"}
 
    :bra1992
@@ -398,7 +440,9 @@
     :title    "Principal signatures for higher-order program modules"
     :authors  tofte
     :date     1992
-    :entry/loc (proceedings-location popl :pages '(189 199))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(189 199)}
     :doi      "10.1145/143165.143206"}
 
    :apo1993
@@ -406,7 +450,9 @@
     :title    "Extending record typing to type parametric modules with sharing"
     :authors  "María Virginia Aponte"
     :date     1993
-    :entry/loc (proceedings-location popl :pages '(465 478))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(465 478)}
     :url      "https://www.researchgate.net/publication/2416181_Extending_Record_typing_to_type_parametric_modules_with_sharing"
     :doi      "10.1145/158511.158704"}
 
@@ -428,7 +474,9 @@
     :title    "A type-theoretic approach to higher-order modules with sharing"
     :authors  [harper "Mark Lillibridge"]
     :date     1994
-    :entry/loc (proceedings-location popl :pages '(123 137))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(123 137)}
     :url      "https://www.cs.cmu.edu/~rwh/papers/sharing/popl94.pdf"
     :doi      "10.1145/174675.176927"}
 
@@ -437,7 +485,9 @@
     :title    "Manifest types, modules, and separate compilation"
     :authors  leroy
     :date     1994
-    :entry/loc (proceedings-location popl :pages '(109 122))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(109 122)}
     :url      "https://xavierleroy.org/publi/manifest-types-popl.pdf"
     :doi      "10.1145/174675.176926"}
 
@@ -446,7 +496,9 @@
     :title    "A semantics for higher-order functors"
     :authors  [macqueen tofte]
     :date     1994
-    :entry/loc (proceedings-location "Programming Languages and Systems – ESOP ’94" :pages '(409 423))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Programming Languages and Systems – ESOP ’94"
+                          :pages '(409 423)}
     :url      "https://rd.springer.com/content/pdf/10.1007%2F3-540-57880-3_27.pdf"
     :doi      "10.1007/3-540-57880-3_27"}
 
@@ -467,7 +519,8 @@
     :title    "An implementation of higher-order functors"
     :authors  ["Pierre Crégut" macqueen]
     :date     1994
-    :entry/loc (proceedings-location "ACM SIGPLAN Workshop on ML and its Applications") ; :pages '(13 22)
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ACM SIGPLAN Workshop on ML and its Applications"} ; :pages '(13 22)
     :url      "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.32.1516&rep=rep1&type=pdf"}
 
    :mg1994
@@ -475,7 +528,9 @@
     :title    "Studying the ML module system in HOL"
     :authors  ["Savi Maharaj" "Elsa Gunter"]
     :date     1994
-    :entry/loc (proceedings-location "Higher Order Logic Theorem Proving and Its Applications" :pages '(346 361))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Higher Order Logic Theorem Proving and Its Applications"
+                          :pages '(346 361)}
     :url      "http://www.cs.stir.ac.uk/~sma/publications/HOLML.ps"
     :doi      "10.1007/3-540-58450-1_53"}
 
@@ -497,7 +552,9 @@
     :title    "Higher-order functors with transparent signatures"
     :authors  "Sandip K. Biswas"
     :date     1995
-    :entry/loc (proceedings-location popl :pages '(154 163))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(154 163)}
     :doi      "10.1145/199448.199478"
     :url      "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.9123&rep=rep1&type=pdf"}
 
@@ -506,7 +563,9 @@
     :title    "Applicative functors and fully transparent higher-order modules"
     :authors  leroy
     :date     1995
-    :entry/loc (proceedings-location popl :pages '(142 153))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(142 153)}
     :url      "https://xavierleroy.org/publi/applicative-functors.pdf"
     :doi      "10.1145/199448.199476"}
 
@@ -516,7 +575,8 @@
     :authors  mp-jones
     :date     1995
     :month    "June"
-    :entry/loc (proceedings-location "The Haskell workshop")
+    :entry/loc #:location{:type :type/proceedings
+                          :title "The Haskell workshop"}
     :url      "http://web.cecs.pdx.edu/~mpj/pubs/haskwork95.pdf"}
 
    :ds1996
@@ -524,7 +584,9 @@
     :title    "Mixin modules"
     :authors  ["Dominic Duggan" "Constantinos Sourelis"]
     :date     1996
-    :entry/loc (proceedings-location icfp :pages '(262 273))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(262 273)}
     :url      "https://www.cs.tufts.edu/~nr/cs257/archive/dominic-duggan/Mixin%20Modules.pdf"
     :doi      "10.1145/232627.232654"}
 
@@ -533,7 +595,9 @@
     :title    "Using parameterized signatures to express modular structure"
     :authors  "Mark P. Jones"
     :date     1996
-    :entry/loc (proceedings-location popl :pages '(66 78))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(66 78)}
     :url      "https://web.cecs.pdx.edu/~mpj/pubs/paramsig.pdf"
     :doi      "10.1145/237721.237731"}
 
@@ -563,7 +627,9 @@
     :title    "Type isomorphisms for module signatures"
     :authors  ["María-Virginia Aponte" "Roberto Di Cosmo"]
     :date     1996
-    :entry/loc (proceedings-location plilp :pages '(334 346))
+    :entry/loc #:location{:type :type/proceedings
+                          :title plilp
+                          :pages '(334 346)}
     :url      "http://www.dicosmo.org/Articles/1996-AponteDiCosmo-PLILP.pdf"
     :doi      "10.1007/3-540-61756-6_95"}
 
@@ -597,7 +663,9 @@
     :authors  "Luca Cardelli"
     :date     1997
     :month    "January"
-    :entry/loc (proceedings-location popl :pages '(266 277))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(266 277)}
     :url      "http://lucacardelli.name/Papers/Linking.A4.pdf"
     :doi      "10.1145/263699.263735"}
 
@@ -606,7 +674,8 @@
     :title    "An applicative module calculus"
     :authors  "Judicaël Courant"
     :date     1997
-    :entry/loc (proceedings-location tapsoft)
+    :entry/loc #:location{:type :type/proceedings
+                          :title tapsoft}
     :doi      "10.1007/BFb0030630"
     :url      "https://link.springer.com/content/pdf/10.1007%2FBFb0030630.pdf"}
 
@@ -639,7 +708,9 @@
     :title    "An algebra of mixin modules"
     :authors  [ancona zucca]
     :date     1997
-    :entry/loc (proceedings-location "International Workshop on Algebraic Development Techniques" :pages '(92 106))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "International Workshop on Algebraic Development Techniques"
+                          :pages '(92 106)}
     :doi      "10.1007/3-540-64299-4_28"}
 
    :rus1998
@@ -655,7 +726,9 @@
     :title    "Typed cross-module compilation"
     :authors  "Zhong Shao"
     :date     1998
-    :entry/loc (proceedings-location icfp :pages '(141 152))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(141 152)}
     :url      "http://flint.cs.yale.edu/flint/publications/tcc.pdf"
     :tr-url   "http://flint.cs.yale.edu/flint/publications/tcc-tr.pdf"
     :doi      "10.1145/289423.289436"}
@@ -681,7 +754,9 @@
     :title    "Programming language semantics in foundational type theory"
     :authors  crary
     :date     1998
-    :entry/loc (proceedings-location "International Conference on Programming Concepts and Methods" :pages '(107 125))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "International Conference on Programming Concepts and Methods"
+                          :pages '(107 125)}
     :url      "http://www.cs.cmu.edu/~crary/papers/1998/tt-semant/tt-semant.ps.gz"
     :tr-url   "http://www.cs.cmu.edu/~crary/papers/1998/tt-semant/tt-semant-tr.ps.gz"
     :doi      "10.1007/978-0-387-35358-6_11"}
@@ -691,7 +766,9 @@
     :title    "Modular object-oriented programming with units and mixins"
     :authors  ["Robert Bruce Findler" flatt]
     :date     1998
-    :entry/loc (proceedings-location icfp :pages '(94 104))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(94 104)}
     :url      "https://www2.ccs.neu.edu/racket/pubs/icfp98-ff.pdf"
     :doi      "10.1145/289423.289432"}
 
@@ -700,7 +777,9 @@
     :title    "Units: Cool modules for HOT languages"
     :authors  [flatt "Matthias Felleisen"]
     :date     1998
-    :entry/loc (proceedings-location pldi :pages '(236 248))
+    :entry/loc #:location{:type :type/proceedings
+                          :title pldi
+                          :pages '(236 248)}
     :url      "http://www.ccs.neu.edu/scheme/pubs/pldi98-ff.ps.gz"
     :doi      "10.1145/277650.277730"}
 
@@ -721,7 +800,9 @@
     :title    "A primitive calculus for module systems"
     :authors  [ancona zucca]
     :date     1999
-    :entry/loc (proceedings-location ppdp :pages '(62 79))
+    :entry/loc #:location{:type :type/proceedings
+                          :title ppdp
+                          :pages '(62 79)}
     :doi      "10.1007/10704567_4"}
 
    :chp1999
@@ -729,7 +810,9 @@
     :title    "What is a recursive module?"
     :authors  [crary harper "Sidd Puri"]
     :date     1999
-    :entry/loc (proceedings-location pldi :pages '(50 63))
+    :entry/loc #:location{:type :type/proceedings
+                          :title pldi
+                          :pages '(50 63)}
     :url      "http://www.cs.cmu.edu/~crary/papers/1999/recmod/recmod.ps.gz"
     :doi      "10.1145/301618.301641"}
 
@@ -738,7 +821,9 @@
     :title    "Non-dependent types for Standard ML modules"
     :authors  russo
     :date     1999
-    :entry/loc (proceedings-location ppdp :pages '(80 97))
+    :entry/loc #:location{:type :type/proceedings
+                          :title ppdp
+                          :pages '(80 97)}
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/1999/09/Non-Dependent-Types-for-Standard-ML-Modules.pdf"
     :doi      "10.1007/10704567_5"}
 
@@ -747,7 +832,9 @@
     :title    "Transparent modules with fully syntactic signatures"
     :authors  "Zhong Shao"
     :date     1999
-    :entry/loc (proceedings-location icfp :pages '(220 232))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(220 232)}
     :url      "http://flint.cs.yale.edu/flint/publications/fullsig.pdf"
     :tr-url   "http://flint.cs.yale.edu/flint/publications/fullsig-tr.pdf"
     :doi      "10.1145/317636.317801"}
@@ -767,7 +854,9 @@
     :authors  "Martin Elsman"
     :date     1999
     :month    "September"
-    :entry/loc (proceedings-location icfp :pages '(208 219))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(208 219)}
     :url      "https://elsman.com/pdf/icfp99.pdf"
     :doi      "10.1145/317636.317800"}
 
@@ -776,7 +865,9 @@
     :title    "Equational reasoning for linking with first-class primitive modules"
     :authors  ["J. B. Wells" "René Vestergaard"]
     :date     2000
-    :entry/loc (proceedings-location "Programming Languages and Systems" :pages '(412 428))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Programming Languages and Systems"
+                          :pages '(412 428)}
     :url      "http://www.macs.hw.ac.uk/~jbw/papers/Wells+Vestergaard:Equational-Reasoning-for-Linking-with-First-Class-Primitive-Modules:ESOP-2000.ps.gz"
     :doi      "10.1007/3-540-46425-5_27"}
 
@@ -786,7 +877,9 @@
     :authors  [stone harper]
     :date     2000
     :month    "Jan"
-    :entry/loc (proceedings-location popl :pages '(214 227))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(214 227)}
     :url      "http://www.cs.cmu.edu/~rwh/papers/singletons/popl99.pdf"
     :doi      "10.1145/325694.325724"
     :tr-url   "http://reports-archive.adm.cs.cmu.edu/anon/1999/CMU-CS-99-155.pdf"
@@ -798,7 +891,9 @@
     :authors  crary
     :date     2000
     :month    "Sep"
-    :entry/loc (proceedings-location "Workshop on Types in Compilation" :pages '(1 25))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Workshop on Types in Compilation"
+                          :pages '(1 25)}
     :url      "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-161D.pdf"
     :doi      "10.1007/3-540-45332-6"
     :tr-url   "http://reports-archive.adm.cs.cmu.edu/anon/2000/CMU-CS-00-104.pdf"}
@@ -849,7 +944,9 @@
     :title    "First-class structures for Standard ML"
     :authors  russo
     :date     2000
-    :entry/loc (proceedings-location esop :pages '(336 350))
+    :entry/loc #:location{:type :type/proceedings
+                          :title esop
+                          :pages '(336 350)}
     :url      "https://link.springer.com/content/pdf/10.1007%2F3-540-46425-5_22.pdf"
     :doi      "10.1007/3-540-46425-5_22"}
 
@@ -858,7 +955,9 @@
     :title    "Recursive structures for Standard ML"
     :authors  russo
     :date     2001
-    :entry/loc (proceedings-location icfp :pages '(50 61))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(50 61)}
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2001/09/Recursive-Structures-for-Standard-ML.pdf"
     :doi      "10.1145/507635.507644"}
 
@@ -875,7 +974,9 @@
     :title    "Modules, abstract types, and distributed versioning"
     :authors  "Peter Sewell"
     :date     2001
-    :entry/loc (proceedings-location popl :pages '(236 247))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(236 247)}
     :url      "https://www.cl.cam.ac.uk/~pes20/versions-popl.pdf"
     :doi      "10.1145/360204.360225"}
 
@@ -884,7 +985,9 @@
     :title    "Mixin modules in a call-by-value setting"
     :authors  ["Tom Hirschowitz" leroy]
     :date     2002
-    :entry/loc (proceedings-location esop :pages '(6 20))
+    :entry/loc #:location{:type :type/proceedings
+                          :title esop
+                          :pages '(6 20)}
     :url      "https://xavierleroy.org/publi/mixins-cbv-esop2002.pdf"
     :doi      "10.1007/3-540-45927-8_2"}
 
@@ -906,7 +1009,8 @@
     :title    "First-class modules for Haskell"
     :authors  ["Mark Shields" "Simon Peyton Jones"]
     :date     2002
-    :entry/loc (proceedings-location fool)
+    :entry/loc #:location{:type :type/proceedings
+                          :title fool}
     :url      "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/first_class_modules.pdf"}
 
    :djh2002
@@ -915,7 +1019,9 @@
     :authors  ["Iavor S. Diatchki" mp-jones "Thomas Hallgren"]
     :date     2002
     :month    "October"
-    :entry/loc (proceedings-location "ACM SIGPLAN 2002 Haskell Workshop" :pages '(17 28))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ACM SIGPLAN 2002 Haskell Workshop"
+                          :pages '(17 28)}
     :url      "http://web.cecs.pdx.edu/~mpj/pubs/hsmods.pdf"
     :doi      "10.1145/581690.581692"}
 
@@ -924,7 +1030,9 @@
     :title    "Mixin modules and computational effects"
     :authors  [ancona "Sonia Fagorzi" moggi zucca]
     :date     2003
-    :entry/loc (proceedings-location icalp :pages '(224 238))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icalp
+                          :pages '(224 238)}
     :url      "https://www.disi.unige.it/person/MoggiE/ftp/icalp03.pdf"
     :doi      "10.1007/3-540-45061-0_20"}
 
@@ -941,7 +1049,9 @@
     :title    "A type system for higher-order modules"
     :authors  [dreyer crary harper]
     :date     2003
-    :entry/loc (proceedings-location popl :pages '(236 249))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(236 249)}
     :url      "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms.pdf"
     :tr-url   "http://www.cs.cmu.edu/~crary/papers/2003/thoms/thoms-tr.pdf"
     :doi      "10.1145/604131.604151"}
@@ -962,7 +1072,9 @@
     :title    "A type system for well-founded recursion"
     :authors  dreyer
     :date     2004
-    :entry/loc (proceedings-location popl :pages '(293 305))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(293 305)}
     :url      "https://people.mpi-sws.org/~dreyer/papers/recursion/popl.pdf"
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/recursion/tr/main.pdf"
     :tr-with  [harper crary]
@@ -982,7 +1094,9 @@
     :title    "Recursive type generativity"
     :authors  dreyer
     :date     2005
-    :entry/loc (proceedings-location icfp :pages '(41 53))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(41 53)}
     :url      "https://people.mpi-sws.org/~dreyer/papers/dps/main.pdf"
     :doi      "10.1145/1086365.1086372"}
 
@@ -999,7 +1113,9 @@
     :title    "An expressive language of signatures"
     :authors  ["Norman Ramsey" "Kathleen Fisher" "Paul Govereau"]
     :date     2005
-    :entry/loc (proceedings-location icfp :pages '(27 40))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(27 40)}
     :url      "https://www.cs.tufts.edu/~nr/pubs/els.pdf"
     :doi      "10.1145/1086365.1086371"}
 
@@ -1008,7 +1124,8 @@
     :title    "Recursive object-oriented modules"
     :authors  [nakata "Akira Ito" garrigue]
     :date     2005
-    :entry/loc (proceedings-location fool)
+    :entry/loc #:location{:type :type/proceedings
+                          :title fool}
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/fool_2005.pdf"
     :ext-url  "http://www.kurims.kyoto-u.ac.jp/~keiko/papers/room_ext.pdf"}
 
@@ -1017,7 +1134,8 @@
     :title    "Recursion for structured modules"
     :authors  nakata
     :date     2005
-    :entry/loc (proceedings-location "JSSST Workshop on Programming and Programming Languages")
+    :entry/loc #:location{:type :type/proceedings
+                          :title "JSSST Workshop on Programming and Programming Languages"}
     :url      "http://www.kurims.kyoto-u.ac.jp/~keiko/papers/ppl05.pdf"}
 
    :mw2005
@@ -1025,7 +1143,9 @@
     :title    "Type inference, principal typings, and let-polymorphism for first-class mixin modules"
     :authors  [makholm wells]
     :date     2005
-    :entry/loc (proceedings-location icfp :pages '(156 167))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(156 167)}
     :url      "http://henning.makholm.net/papers/icfp2005.pdf"
     :doi      "10.1145/1086365.1086386"}
 
@@ -1065,7 +1185,9 @@
     :title    "Recursive modules for programming"
     :authors  [nakata garrigue]
     :date     2006
-    :entry/loc (proceedings-location icfp :pages '(74 86))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(74 86)}
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/nakata-icfp2006.pdf"
     :tr-url   "http://www.kurims.kyoto-u.ac.jp/preprint/file/RIMS1546.pdf"
     :doi      "10.1145/1159803.1159813"}
@@ -1075,7 +1197,9 @@
     :title    "From structures and functors to modules and units"
     :authors  ["Scott Owens" flatt]
     :date     2006
-    :entry/loc (proceedings-location icfp :pages '(87 98))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(87 98)}
     :url      "http://www.cs.utah.edu/plt/publications/icfp06-of.pdf"
     :doi      "10.1145/1159803.1159815"}
 
@@ -1123,7 +1247,9 @@
     :authors  [lee crary harper]
     :date     2007
     :month    "January"
-    :entry/loc (proceedings-location popl :pages '(173 184))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(173 184)}
     :url      "http://www.cs.cmu.edu/~dklee/papers/tslf-popl.pdf"
     :doi      "10.1145/1190216.1190245"}
 
@@ -1144,7 +1270,9 @@
     :title    "A type system for recursive modules"
     :authors  dreyer
     :date     2007
-    :entry/loc (proceedings-location icfp :pages '(289 302))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(289 302)}
     :url      "https://people.mpi-sws.org/~dreyer/papers/recmod/main-short.pdf"
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/recmod/main-long.pdf"
     :doi      "10.1145/1291151.1291196"}
@@ -1167,7 +1295,9 @@
     :title    "Principal type schemes for modular programs"
     :authors  [dreyer "Matthias Blume"]
     :date     2007
-    :entry/loc (proceedings-location esop :pages '(441 457))
+    :entry/loc #:location{:type :type/proceedings
+                          :title esop
+                          :pages '(441 457)}
     :url      "https://people.mpi-sws.org/~dreyer/papers/infmod/main-short.pdf"
     :tr-url   "https://people.mpi-sws.org/~dreyer/papers/infmod/main-long.pdf"
     :doi      "10.1007/978-3-540-71316-6_30"}
@@ -1177,7 +1307,9 @@
     :title    "Modular type classes"
     :authors  [dreyer harper "Manuel M. T. Chakravarty"]
     :date     2007
-    :entry/loc (proceedings-location popl :pages '(63 70))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(63 70)}
     :url      "https://people.mpi-sws.org/~dreyer/papers/mtc/main-short.pdf"
     :tr-url   "https://newtraell.cs.uchicago.edu/files/tr_authentic/TR-2006-09.pdf"
               ; which supersedes https://newtraell.cs.uchicago.edu/files/tr_authentic/TR-2006-03.pdf
@@ -1198,7 +1330,8 @@
     :title    "Path resolution for recursive nested modules is undecidable"
     :authors  [nakata garrigue]
     :date     2007
-    :entry/loc (proceedings-location "9th International Workshop on Termination")
+    :entry/loc #:location{:type :type/proceedings
+                          :title "9th International Workshop on Termination"}
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/wst2007.pdf"}
 
    :dr2008
@@ -1206,7 +1339,9 @@
     :title    "Mixin’ up the ML module system"
     :authors  [dreyer rossberg]
     :date     2008
-    :entry/loc (proceedings-location icfp :pages '(307 320))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(307 320)}
     :url      "https://people.mpi-sws.org/~rossberg/mixml/mixml-icfp08.pdf"
     :tr-url   "https://people.mpi-sws.org/~rossberg/mixml/mixml-icfp08-extended.pdf"
     :doi      "10.1145/1411204.1411248"}
@@ -1247,7 +1382,9 @@
     :title    "Modeling abstract types in modules with open existential types"
     :authors  ["Benoît Montagu" "Didier Rémy"]
     :date     2009
-    :entry/loc (proceedings-location popl :pages '(354 365))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(354 365)}
     :url      "http://gallium.inria.fr/~remy/modules/Montagu-Remy@popl09:fzip.pdf"
     :doi      "10.1145/1480881.1480926"}
 
@@ -1256,7 +1393,9 @@
     :title    "A syntactic account of singleton types via hereditary substitution"
     :authors  crary
     :date     2009
-    :entry/loc (proceedings-location "Workshop on Logical Frameworks and Meta-Languages: Theory and Practice" :pages '(21 29))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Workshop on Logical Frameworks and Meta-Languages: Theory and Practice"
+                          :pages '(21 29)}
     :url      "https://www.cs.cmu.edu/~crary/papers/2009/synsing.pdf"
     :doi      "10.1145/1577824.1577829"}
 
@@ -1265,7 +1404,9 @@
     :title    "Engineering higher-order modules in SML/NJ"
     :authors  ["George Kuan" macqueen]
     :date     2009
-    :entry/loc (proceedings-location ifl :pages '(218 235))
+    :entry/loc #:location{:type :type/proceedings
+                          :title ifl
+                          :pages '(218 235)}
     :url      "https://www.researchgate.net/profile/David_Macqueen/publication/226219412_Engineering_Higher-Order_Modules_in_SMLNJ/links/0912f50a29752482c0000000.pdf"
     :doi      "10.1007/978-3-642-16478-1_13"}
 
@@ -1303,7 +1444,9 @@
     :title    "F-ing modules"
     :authors  [rossberg russo dreyer]
     :date     2010
-    :entry/loc (proceedings-location tldi :pages '(89 102))
+    :entry/loc #:location{:type :type/proceedings
+                          :title tldi
+                          :pages '(89 102)}
     :url      "https://people.mpi-sws.org/~rossberg/f-ing/f-ing.pdf"
     :doi      "10.1145/1708016.1708028"}
 
@@ -1312,7 +1455,8 @@
     :title    "First-class modules and composable signatures in Objective Caml 3.12"
     :authors  [frisch garrigue]
     :date     2010
-    :entry/loc (proceedings-location "ML Workshop")
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ML Workshop"}
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/ml2010.pdf"
     :slides   "http://www.math.nagoya-u.ac.jp/~garrigue/papers/ml2010-show.pdf"}
 
@@ -1321,7 +1465,8 @@
     :title    "A syntactic type system for recursive modules"
     :authors  [im nakata garrigue "Sungwoo Park"]
     :date     2011
-    :entry/loc (proceedings-location oopsla)
+    :entry/loc #:location{:type :type/proceedings
+                          :title oopsla}
     :doi      "10.1145/2048066.2048141"
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/oopsla2011.pdf"}
 
@@ -1355,7 +1500,9 @@
     :title    "Contractive signatures with recursive types, type parameters, and abstract types"
     :authors  [im nakata "Sungwoo Park"]
     :date     2013
-    :entry/loc (proceedings-location icalp :pages '(299 311))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icalp
+                          :pages '(299 311)}
     :url      "http://pl.postech.ac.kr/~gla/paper/icalp2013.pdf"
     :doi      "10.1007/978-3-642-39212-2_28"}
 
@@ -1377,7 +1524,9 @@
     :title    "Backpack: Retrofitting Haskell with interfaces"
     :authors  ["Scott Kilpatrick" dreyer "Simon Peyton Jones" "Simon Marlow"]
     :date     2014
-    :entry/loc (proceedings-location popl :pages '(19 31))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(19 31)}
     :url      "https://people.mpi-sws.org/~dreyer/papers/backpack/paper.pdf"
     :appendix "https://people.mpi-sws.org/~dreyer/papers/backpack/appendix.pdf"
     :slides   "https://plv.mpi-sws.org/backpack/backpack-popl.pdf"
@@ -1389,7 +1538,8 @@
     :authors  [garrigue white]
     :date     2014
     :month    "September"
-    :entry/loc (proceedings-location "ML Family Workshop")
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ML Family Workshop"}
     :url      "http://www.math.nagoya-u.ac.jp/~garrigue/papers/modalias.pdf"
     :slides   "http://www.math.nagoya-u.ac.jp/~garrigue/papers/modalias-show.pdf"}
 
@@ -1398,7 +1548,9 @@
     :title    "1ML — Core and modules united (F-ing first-class modules)"
     :authors  rossberg
     :date     2015
-    :entry/loc (proceedings-location icfp :pages '(35 47))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(35 47)}
     :url      "https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf"
     :tr-url   "https://people.mpi-sws.org/~rossberg/1ml/1ml-extended.pdf"
     :doi      "10.1145/2784731.2784738"}
@@ -1433,7 +1585,8 @@
     :title    "Extending OCaml's open (extended abstract)"
     :authors  ["Runhang Li" "Jeremy Yallop"]
     :date     2017
-    :entry/loc (proceedings-location "The OCaml Users and Developers Workshop")
+    :entry/loc #:location{:type :type/proceedings
+                          :title "The OCaml Users and Developers Workshop"}
     :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open.pdf"}
 
    :cra2017
@@ -1441,7 +1594,9 @@
     :title    "Modules, abstraction, and parametric polymorphism"
     :authors  crary
     :date     2017
-    :entry/loc (proceedings-location popl :pages '(100 113))
+    :entry/loc #:location{:type :type/proceedings
+                          :title popl
+                          :pages '(100 113)}
     :url      "http://www.cs.cmu.edu/~crary/papers/2017/mapp.pdf"
     :doi      "10.1145/3009837.3009892"}
 
@@ -1450,7 +1605,9 @@
     :title    "Static interpretation of higher-order modules in Futhark: Functional GPU programming in the large"
     :authors  ["Martin Elsman" "Troels Henriksen" "Danil Annenkov" "Cosmin E. Oancea"]
     :date     2018
-    :entry/loc (proceedings-location icfp :pages '(1 30))
+    :entry/loc #:location{:type :type/proceedings
+                          :title icfp
+                          :pages '(1 30)}
     :url      "https://futhark-lang.org/publications/icfp18.pdf"
     :doi      "10.1145/3236792"}
 
@@ -1485,7 +1642,9 @@
     :title    "Characterising renaming within OCaml’s module system: Theory and implementation"
     :authors  ["Reuben N. S. Rowe" "Hugo Férée" "Simon J. Thompson" "Scott Owens"]
     :date     2019
-    :entry/loc (proceedings-location pldi :pages '(950 965))
+    :entry/loc #:location{:type :type/proceedings
+                          :title pldi
+                          :pages '(950 965)}
     :url      "https://www.cs.kent.ac.uk/people/staff/rnsr/docs/renaming-pldi2019.pdf"
     :doi      "10.1145/3314221.3314600"}
 
@@ -1494,7 +1653,9 @@
     :title    "Extending OCaml's open"
     :authors  ["Runhang Li" "Jeremy Yallop"]
     :date     2019
-    :entry/loc (proceedings-location "ML & OCaml 2017 post-proceedings" :pages '(1 14))
+    :entry/loc #:location{:type :type/proceedings
+                          :title "ML & OCaml 2017 post-proceedings"
+                          :pages '(1 14)}
     :url      "https://www.cl.cam.ac.uk/~jdy22/papers/extending-ocamls-open-draft.pdf"
     :doi      "10.4204/EPTCS.294.1"}
 
