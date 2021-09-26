@@ -88,6 +88,10 @@
 (defmethod location-type :type/dissertation [_]
   (spec/keys :req [:location/type :location/institution :location/degree]))
 
+(defmethod location-type :type/in-book [_]
+  (spec/keys :req [:location/type :location/title]
+             :opt [:location/publisher]))
+
 (spec/def :entry/loc
   (spec/multi-spec location-type :location/type))
 
@@ -127,6 +131,15 @@
    ", "
    institution])
 
+(defn in-book-location
+  [{:location/keys [title publisher]}]
+  (filterv
+   (comp not nil?)
+   [:p
+    [:i title]
+    (if publisher ", ")
+    publisher]))
+
 (defn render
   [{:keys [key title authors date doi url tr-url tr-with tr-date slides ext-url appendix]
     :entry/keys [loc]}]
@@ -144,7 +157,8 @@
         (case (:location/type parsed-location)
           :type/journal      (journal-location parsed-location)
           :type/proceedings  (proceedings-location parsed-location)
-          :type/dissertation (dissertation-location parsed-location))
+          :type/dissertation (dissertation-location parsed-location)
+          :type/in-book      (in-book-location parsed-location))
         ", "
         date)))
    (if doi
@@ -179,12 +193,6 @@
 (defn techrpt-location
   [& {:keys [institution number]}]
   (str institution ", " number))
-
-(defn book-location
-  [title & {:keys [publisher]}]
-  (if publisher
-    [[:i title] publisher]
-    [[:i title]]))
 
 (def entries
   (array-map
@@ -947,7 +955,9 @@
     :authors  [harper stone]
     :date     2000
     :month    "May"
-    :entry/loc (book-location "Proof, language, and interaction: Essays in honor of robin milner" :publisher "MIT Press")
+    :entry/loc #:location{:type :type/in-book
+                          :title "Proof, language, and interaction: Essays in honor of robin milner"
+                          :publisher "MIT Press"}
     :url      "https://www.cs.cmu.edu/~rwh/papers/ttisml/ttisml.pdf"}
     ; publisher's site: https://mitpress.mit.edu/books/proof-language-and-interaction
 
