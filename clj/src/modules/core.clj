@@ -1646,8 +1646,8 @@
     :entry/loc #:location{:type :type/proceedings
                           :title "WadlerFest"}
     :url      "https://people.mpi-sws.org/~rossberg/1ml/1ml-effects.pdf"
+    :slides   "https://events.inf.ed.ac.uk/wf2016/slides/rossberg.pdf"
     :doi      "10.1007/978-3-319-30936-1_18"}
-   ; :slides "https://events.inf.ed.ac.uk/wf2016/slides/rossberg.pdf"
 
    :pykd2016
    {:key      "PYKD2016"
