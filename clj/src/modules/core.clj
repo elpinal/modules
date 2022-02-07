@@ -1772,12 +1772,16 @@
    {:key      "SH2021b"
     :title    "Logical relations as types: Proof-relevant parametricity for program modules"
     :authors  ["Jonathan Sterling" harper]
-    :date     "To appear"
+    :date     2021
     :entry/loc #:location{:type :type/journal
-                         :title "Journal of the ACM"}
-    :url      "https://www.jonmsterling.com/pdfs/lrat.pdf"
+                          :title "Journal of the ACM"
+                          :volume 68
+                          :number 6
+                          :pages '(1 47)}
+    :url      "https://www.jonmsterling.com/papers/sterling-harper:2021.pdf"
+    :doi      "10.1145/3474834"
     :slides   ["https://www.cs.cmu.edu/~rwh/talks/paramstr.pdf"
-               "http://www.jonmsterling.com/pdfs/au-ccs-lrat.pdf"]}
+               "https://www.jonmsterling.com/slides/sterling:2021:au:ccs.pdf"]}
    ))
 
 (defn -main
