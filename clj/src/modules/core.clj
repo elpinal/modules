@@ -1765,8 +1765,8 @@
     :date     2021
     :entry/loc #:location{:type :type/proceedings
                           :title "ML Family Workshop"}
-    :url      "https://www.jonmsterling.com/pdfs/phml.pdf"
-    :slides   "https://www.jonmsterling.com/pdfs/ml21.pdf"}
+    :url      "https://www.jonmsterling.com/papers/sterling-harper:2021:mlw.pdf"
+    :slides   "https://www.jonmsterling.com/slides/sterling-harper:2021:mlw.pdf"}
 
    :sh2021b
    {:key      "SH2021b"
