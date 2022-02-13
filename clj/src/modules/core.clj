@@ -1782,6 +1782,16 @@
     :doi      "10.1145/3474834"
     :slides   ["https://www.cs.cmu.edu/~rwh/talks/paramstr.pdf"
                "https://www.jonmsterling.com/slides/sterling:2021:au:ccs.pdf"]}
+
+   :bla2021
+   {:key      "Bla2021"
+    :title    "OCaml modules: formalization, insights and improvements: Bringing the existential types into a generative subset"
+    :authors  ["Clément Blaudeau"]
+    :date     2021
+    :entry/loc #:location{:type :type/dissertation
+                          :institution "École polytechnique fédérale de Lausanne"
+                          :degree "Master"}
+    :url      "https://hal.inria.fr/hal-03526068/file/main.pdf"}
    ))
 
 (defn -main
