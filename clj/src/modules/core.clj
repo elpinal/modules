@@ -1792,6 +1792,14 @@
                           :institution "École polytechnique fédérale de Lausanne"
                           :degree "Master"}
     :url      "https://hal.inria.fr/hal-03526068/file/main.pdf"}
+
+   :ste2022
+   {:key       "Ste2022"
+    :title     "Reflections on existential types"
+    :authors   ["Jonathan Sterling"]
+    :date      2022
+    :entry/loc #:location{:type :type/manuscript}
+    :url       "https://www.jonmsterling.com/papers/sterling:2022:existentials.pdf"}
    ))
 
 (defn -main
