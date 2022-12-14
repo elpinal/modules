@@ -1765,8 +1765,8 @@
     :date     2021
     :entry/loc #:location{:type :type/proceedings
                           :title "ML Family Workshop"}
-    :url      "https://www.jonmsterling.com/papers/sterling-harper:2021:mlw.pdf"
-    :slides   "https://www.jonmsterling.com/slides/sterling-harper:2021:mlw.pdf"}
+    :url      "https://www.jonmsterling.com/papers/sterling-harper-2021-mlw.pdf"
+    :slides   "https://www.jonmsterling.com/slides/sterling-harper-2021-mlw.pdf"}
 
    :sh2021b
    {:key      "SH2021b"
@@ -1778,10 +1778,10 @@
                           :volume 68
                           :number 6
                           :pages '(1 47)}
-    :url      "https://www.jonmsterling.com/papers/sterling-harper:2021.pdf"
+    :url      "https://www.jonmsterling.com/papers/sterling-harper-2021.pdf"
     :doi      "10.1145/3474834"
     :slides   ["https://www.cs.cmu.edu/~rwh/talks/paramstr.pdf"
-               "https://www.jonmsterling.com/slides/sterling:2021:au:ccs.pdf"]}
+               "https://www.jonmsterling.com/slides/sterling-2021-au-ccs.pdf"]}
 
    :bla2021
    {:key      "Bla2021"
@@ -1799,7 +1799,7 @@
     :authors   ["Jonathan Sterling"]
     :date      2022
     :entry/loc #:location{:type :type/manuscript}
-    :url       "https://www.jonmsterling.com/papers/sterling:2022:existentials.pdf"}
+    :url       "https://www.jonmsterling.com/papers/sterling-2022-existentials.pdf"}
    ))
 
 (defn -main
