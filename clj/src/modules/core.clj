@@ -213,7 +213,7 @@
     :entry/loc #:location{:type :type/proceedings
                           :title "Information Processing"
                           :pages '(513 523)}
-    :url      "http://www.cse.chalmers.se/edu/year/2010/course/DAT140_Types/Reynolds_typesabpara.pdf"}
+    :url      "https://www.cs.cmu.edu/afs/cs/user/jcr/ftp/typesabpara.pdf"}
 
    :bl1984
    {:key      "BL1984"
