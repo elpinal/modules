@@ -3,7 +3,7 @@
   :url "http://example.com/FIXME"
   :license {:name "MIT"
             :url ""}
-  :dependencies [[org.clojure/clojure "1.10.3"]
+  :dependencies [[org.clojure/clojure "1.11.1"]
                  [hiccup "1.0.5"]
                  [org.clojure/data.json "2.4.0"]]
   :main modules.core)
