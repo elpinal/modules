@@ -1,6 +1,7 @@
 (ns modules.core
   (:require [hiccup.core :as hiccup]
-            [clojure.spec.alpha :as spec]))
+            [clojure.spec.alpha :as spec]
+            [clojure.data.json :as json]))
 
 (def esop "European Symposium on Programming")
 (def fool "Foundations of Object-Oriented Languages")
@@ -1812,7 +1813,12 @@
     :url       "https://hal.inria.fr/hal-03936636v2/file/main.pdf"}
    ))
 
-(defn -main
+(defn generate-json-file
+  []
+  (with-open [w (clojure.java.io/writer "bib.json")]
+    (json/write entries w)))
+
+(defn generate-readme
   []
   (write "../README.md" (str "# Modules\n\n"
                              "Type-theoretic analysis of ML-style modules.\n\n"
@@ -1848,3 +1854,9 @@
                              "## Bibliography of Modules and Data Abstraction\n\n"
                              "_DISCLAIMER: There is no warranty of accuracy._\n\n"
                              (html-entries (vals entries)))))
+
+(defn -main
+  []
+  (do
+    (generate-json-file)
+    (generate-readme)))
