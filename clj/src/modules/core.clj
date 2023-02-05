@@ -1800,6 +1800,16 @@
     :date      2022
     :entry/loc #:location{:type :type/manuscript}
     :url       "https://www.jonmsterling.com/papers/sterling-2022-existentials.pdf"}
+
+   :brr2023
+   {:key       "BRR2023"
+    :title     "Retrofitting OCaml modules: Fixing signature avoidance in the generative case"
+    :authors   ["Clément Blaudeau" "Didier Rémy" "Gabriel Radanne"]
+    :date      2023
+    :entry/loc #:location{:type :type/proceedings
+                          :title "Journées Francophones des Langages Applicatifs"
+                          :pages '(59 100)}
+    :url       "https://hal.inria.fr/hal-03936636v2/file/main.pdf"}
    ))
 
 (defn -main
